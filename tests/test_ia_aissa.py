@@ -85,3 +85,12 @@ def test_meta_intelligence_controle_de_gestion():
     assert len(decision) == len(df) and ((confiance >= 0) & (confiance <= 1)).all()
     assert len(journal) == 8 and "curiosite" in historique
     assert all("je passe" in p for p in c.principes_decouverts(conseil, df))
+
+
+def test_orientation_automatique_sans_rubrique():
+    from ia_aissa.ecole import SEUIL_CONFIANCE, repondre_automatiquement
+    for question, attendu in [("dernier entré premier sorti", "Pile (LIFO)"), ("agadir", "Souss-Massa"),
+                              ("impératif catégorique", "Kant")]:
+        meilleure = repondre_automatiquement(question)[0]
+        assert meilleure["reponse"] == attendu and meilleure["confiance"] >= SEUIL_CONFIANCE
+    assert repondre_automatiquement("zzz qwerty xyz")[0]["confiance"] < 0.9

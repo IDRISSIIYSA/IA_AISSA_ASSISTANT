@@ -4,13 +4,32 @@ import streamlit as st
 
 from ia_aissa.acces import verifier_acces
 
-from ia_aissa.ecole import MATIERES, PAR_CLE, charger, entrainer, repondre, sauvegarder
+from ia_aissa.ecole import (MATIERES, PAR_CLE, SEUIL_CONFIANCE, charger, entrainer, repondre,
+                            repondre_automatiquement, sauvegarder)
 
 st.set_page_config(page_title="École d'IA AISSA", page_icon="🎓", layout="wide")
 utilisateur = verifier_acces(st)
 st.title("🎓 L'école d'IA AISSA")
 st.caption("IA AISSA est née vide. Dans chaque matière, elle reçoit des exercices, répond, gagne +1 ou perd 1, "
            "et retient ses expériences dans sa mémoire. Personne ne lui donne les règles : elle les découvre.")
+
+# Une seule question, sans choisir de matière
+st.subheader("💬 Posez n'importe quelle question")
+question_libre = st.text_input("IA AISSA devine seule la matière, puis répond",
+                               placeholder="ex. : qui a construit la Koutoubia ? · dernier entré premier sorti · agadir")
+if question_libre:
+    propositions = repondre_automatiquement(question_libre)
+    meilleure = propositions[0]
+    if meilleure["confiance"] >= SEUIL_CONFIANCE:
+        st.success(f"**{meilleure['reponse']}**  \n"
+                   f"Matière reconnue : {meilleure['domaine']} — {meilleure['matiere']} · confiance {meilleure['confiance']:.0%}")
+    else:
+        st.warning(f"🤔 Je ne suis pas sûre (ma meilleure idée : « {meilleure['reponse']} », "
+                   f"{meilleure['matiere']}, {meilleure['confiance']:.0%}). Posez plutôt la question dans "
+                   "« 💬 Parler avec IA AISSA » : l'assistante comprend toutes les formulations.")
+    with st.expander("Mes autres pistes"):
+        for p in propositions[1:]:
+            st.write(f"- {p['matiere']} : {p['reponse']} ({p['confiance']:.0%})")
 
 # Bulletin de notes
 lignes = []

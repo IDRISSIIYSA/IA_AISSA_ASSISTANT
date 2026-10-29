@@ -608,6 +608,111 @@ MATIERES_SCOLAIRES = {
 }
 
 
+# ==========================================
+# Lycée et université
+# ==========================================
+EPOQUES = {
+    "Antiquité (jusqu'en 476)": ["construction des pyramides d'égypte", "démocratie athénienne", "empire romain",
+                                 "royaume de maurétanie et juba ii", "volubilis cité romaine", "carthage et les guerres puniques"],
+    "Moyen Âge (476-1492)": ["naissance de l'islam en 622", "fondation de fès", "croisades", "maison de la sagesse de bagdad",
+                             "al-andalus et cordoue", "construction de la koutoubia"],
+    "Époque moderne (1492-1789)": ["découverte de l'amérique par christophe colomb", "imprimerie de gutenberg diffusée",
+                                   "renaissance italienne", "bataille des trois rois", "règne de moulay ismaïl", "réforme protestante"],
+    "Époque contemporaine (depuis 1789)": ["révolution française", "révolution industrielle", "première guerre mondiale",
+                                           "seconde guerre mondiale", "indépendance du maroc en 1956", "chute du mur de berlin"],
+}
+OEUVRES_FR = {
+    "La Boîte à merveilles (Ahmed Sefrioui)": ["sidi mohammed enfant dans la médina de fès", "le msid et lalla zoubida",
+                                               "souvenirs d'enfance d'un garçon de six ans à fès"],
+    "Antigone (Jean Anouilh)": ["fille d'œdipe qui veut enterrer son frère polynice", "elle refuse la loi de créon",
+                                "tragédie moderne jouée en 1944"],
+    "Le Dernier Jour d'un condamné (Victor Hugo)": ["un condamné à mort écrit son journal avant l'exécution",
+                                                    "plaidoyer contre la peine de mort", "bicêtre et la conciergerie"],
+    "Il était une fois un vieux couple heureux (Mohammed Khaïr-Eddine)": ["un vieux couple dans un village du sud marocain",
+                                                                         "le vieux poète et sa femme dans la montagne du souss"],
+    "Le Cid (Pierre Corneille)": ["rodrigue doit venger l'honneur de son père", "chimène et le dilemme cornélien"],
+    "Les Misérables (Victor Hugo)": ["jean valjean ancien forçat", "cosette et les thénardier", "javert le policier"],
+}
+ADAB_ARABE = {
+    "المتنبي": ["الخيل والليل والبيداء تعرفني", "شاعر العصر العباسي ومدح سيف الدولة", "أبو الطيب المتنبي"],
+    "أحمد شوقي": ["أمير الشعراء", "مصرع كليوباترا", "الشوقيات"],
+    "طه حسين": ["عميد الأدب العربي", "كتاب الأيام", "في الشعر الجاهلي"],
+    "نجيب محفوظ": ["الثلاثية بين القصرين", "جائزة نوبل للآداب", "زقاق المدق"],
+    "جبران خليل جبران": ["كتاب النبي", "الأجنحة المتكسرة", "أدب المهجر والرابطة القلمية"],
+    "محمد شكري": ["الخبز الحافي", "الشطار", "طنجة في سيرته الذاتية"],
+}
+ECOLES_ECONOMIQUES = {
+    "Classiques (Smith, Ricardo)": ["la main invisible du marché", "avantages comparatifs dans le commerce international",
+                                    "division du travail et la manufacture d'épingles", "la richesse des nations"],
+    "Néoclassiques (Walras, Marshall)": ["utilité marginale", "équilibre général des marchés", "concurrence pure et parfaite"],
+    "Marxistes": ["plus-value et exploitation", "lutte des classes", "accumulation du capital", "le capital de marx"],
+    "Keynésiens": ["demande effective", "effet multiplicateur de l'investissement", "relance budgétaire contre le chômage",
+                   "théorie générale de l'emploi"],
+    "Monétaristes (Friedman)": ["l'inflation est toujours un phénomène monétaire", "contrôle de la masse monétaire",
+                                "taux de chômage naturel"],
+    "Schumpeter": ["destruction créatrice", "l'entrepreneur innovateur", "cycles d'innovation"],
+}
+METHODES_COUTS = {
+    "Coût complet (sections homogènes)": ["centres d'analyse et unités d'œuvre", "répartition primaire et secondaire des charges indirectes"],
+    "Coûts variables (direct costing)": ["marge sur coût variable", "séparer charges fixes et variables"],
+    "Imputation rationnelle": ["coefficient d'activité normale", "coût de sous-activité"],
+    "Méthode ABC": ["activités et inducteurs de coûts", "activity based costing"],
+    "Coûts standards": ["coût préétabli et analyse des écarts sur quantité et prix", "écart sur matière et sur main-d'œuvre"],
+    "Coût marginal": ["coût de la dernière unité produite", "coût d'une commande supplémentaire"],
+}
+OUTILS_FINANCE = {
+    "VAN": ["valeur actuelle nette des flux actualisés", "somme des flux actualisés moins l'investissement"],
+    "TRI": ["taux de rentabilité interne", "taux qui annule la valeur actuelle nette"],
+    "Délai de récupération": ["temps pour récupérer le capital investi", "payback"],
+    "BFR": ["besoin en fonds de roulement", "stocks plus créances clients moins dettes fournisseurs"],
+    "CMPC (WACC)": ["coût moyen pondéré du capital", "coût des fonds propres et de la dette pondéré"],
+    "Effet de levier": ["l'endettement augmente la rentabilité des capitaux propres", "levier financier"],
+    "Capacité d'autofinancement": ["caf", "ressource interne dégagée par l'activité"],
+}
+STRUCTURES_DONNEES = {
+    "Pile (LIFO)": ["dernier entré premier sorti", "empiler et dépiler", "pile d'appels de fonctions"],
+    "File (FIFO)": ["premier entré premier sorti", "file d'attente", "enfiler et défiler"],
+    "Liste chaînée": ["chaque élément pointe vers le suivant", "insertion sans décaler les éléments"],
+    "Arbre": ["racine nœuds et feuilles", "arbre binaire de recherche", "structure hiérarchique"],
+    "Graphe": ["sommets et arêtes", "réseau routier et plus court chemin", "parcours en largeur"],
+    "Table de hachage": ["clé et valeur avec fonction de hachage", "dictionnaire accès en temps constant"],
+}
+COMPLEXITES = {
+    "O(1)": ["accès à un élément d'un tableau par son indice", "empiler un élément"],
+    "O(log n)": ["recherche dichotomique dans un tableau trié", "recherche dans un arbre binaire équilibré"],
+    "O(n)": ["parcours d'un tableau", "recherche séquentielle", "trouver le maximum d'une liste"],
+    "O(n log n)": ["tri fusion", "tri rapide en moyenne", "tri par tas"],
+    "O(n²)": ["tri à bulles", "tri par insertion dans le pire cas", "deux boucles imbriquées"],
+}
+BRANCHES_DROIT = {
+    "Droit constitutionnel (public)": ["organisation des pouvoirs de l'état", "constitution et parlement", "élections législatives"],
+    "Droit administratif (public)": ["contrat administratif et marché public", "recours contre une décision de l'administration",
+                                     "fonction publique"],
+    "Droit fiscal (public)": ["contentieux fiscal", "assiette et recouvrement de l'impôt"],
+    "Droit civil (privé)": ["contrat entre particuliers", "propriété d'un bien", "responsabilité civile"],
+    "Droit commercial (privé)": ["fonds de commerce", "sociétés commerciales", "effets de commerce"],
+    "Droit du travail (privé)": ["licenciement abusif", "contrat de travail", "salaire minimum"],
+    "Droit international": ["traités entre états", "conflit de lois entre pays", "droit de la mer"],
+}
+THEORIES_ORGANISATIONS = {
+    "Taylor (organisation scientifique du travail)": ["chronométrage des tâches", "one best way", "division verticale du travail"],
+    "Fayol (administration industrielle)": ["prévoir organiser commander coordonner contrôler", "quatorze principes d'administration"],
+    "Weber (bureaucratie)": ["autorité rationnelle légale", "règles impersonnelles et hiérarchie"],
+    "Mayo (relations humaines)": ["expériences de hawthorne", "importance du groupe et du climat social"],
+    "Maslow (besoins)": ["pyramide des besoins", "besoin d'accomplissement de soi"],
+    "Herzberg (motivation)": ["facteurs d'hygiène et facteurs moteurs", "enrichissement des tâches"],
+    "Mintzberg (configurations)": ["sommet stratégique et centre opérationnel", "configurations structurelles et rôles du manager"],
+}
+AUTEURS_SCIENCES_SOCIALES = {
+    "Émile Durkheim": ["le fait social", "le suicide étude sociologique", "solidarité mécanique et organique"],
+    "Max Weber": ["éthique protestante et esprit du capitalisme", "idéal-type", "sociologie compréhensive"],
+    "Pierre Bourdieu": ["habitus", "capital culturel", "la reproduction sociale"],
+    "Sigmund Freud": ["l'inconscient", "le moi le ça et le surmoi", "interprétation des rêves"],
+    "Jean Piaget": ["stades du développement de l'enfant", "assimilation et accommodation"],
+    "Ivan Pavlov": ["conditionnement classique", "le chien et la cloche"],
+}
+
+
 def mensualite_credit(capital, taux_annuel, duree_mois):
     t = taux_annuel / 12
     m = capital / duree_mois if t == 0 else capital * t / (1 - (1 + t) ** -duree_mois)

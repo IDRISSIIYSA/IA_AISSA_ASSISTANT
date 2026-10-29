@@ -9,9 +9,9 @@ import json
 import anthropic
 
 from . import connaissances as K
-from .ecole import MATIERES, repondre
+from .ecole import MATIERES, repondre, repondre_automatiquement
 
-MATIERES_TEXTE = [m for m in MATIERES if m.texte]
+MATIERES_TEXTE = [m for m in MATIERES if m.texte and m.cle != "orientation"]
 
 MODELE = "claude-opus-5-5"
 
@@ -31,7 +31,8 @@ Méthode :
 - Pour tout calcul (IR, IS, TVA, paie, VAN, seuil de rentabilité, droits de douane, quantité de Wilson, crédit,
   statistiques, matrice BCG), utilise les outils de calcul : ne calcule pas de tête.
 - Pour une question qui relève d'une matière de ton école (imputation comptable, TVA, texte de loi, langue,
-  dynastie, Incoterm, document de transit, mix marketing…), consulte d'abord ton « cerveau d'école » (consulter_ecole). Il a appris seul et peut se tromper, surtout si sa confiance
+  dynastie, Incoterm, document de transit, mix marketing…), consulte d'abord ton « cerveau d'école » (consulter_ecole, avec matiere = "auto" si tu hésites).
+- L'utilisateur n'a jamais à préciser la rubrique : comprends seul de quoi il parle, quel que soit le domaine. Il a appris seul et peut se tromper, surtout si sa confiance
   est faible : vérifie sa réponse avec la base de connaissances et corrige-la en expliquant pourquoi.
 - Les taux viennent de la base ci-dessous (mise à jour {K.MISE_A_JOUR}). Rappelle, pour une décision réelle,
   de les confirmer avec le Code Général des Impôts (DGI), la CNSS ou un professionnel (expert-comptable, avocat).
@@ -50,9 +51,10 @@ TEXTE = {"type": "string", "description": "Texte à analyser, tel que formulé p
 NOMBRE = {"type": "number"}
 
 OUTILS = [
-    _outil("consulter_ecole", "Demande au cerveau d'école d'IA AISSA sa réponse (avec sa confiance) pour une question "
-           "d'une matière qu'elle a étudiée seule : " + "; ".join(f"{m.cle} = {m.nom}" for m in MATIERES_TEXTE) + ".",
-           {"matiere": {"type": "string", "enum": [m.cle for m in MATIERES_TEXTE]}, "question": TEXTE}),
+    _outil("consulter_ecole", "Demande au cerveau d'école d'IA AISSA sa réponse (avec sa confiance). Avec matiere = "
+           "\"auto\", IA AISSA devine seule la matière (orientation automatique). Matières : "
+           + "; ".join(f"{m.cle} = {m.nom}" for m in MATIERES_TEXTE) + ".",
+           {"matiere": {"type": "string", "enum": ["auto"] + [m.cle for m in MATIERES_TEXTE]}, "question": TEXTE}),
     _outil("calculer_ir", "Calcule l'IR annuel selon le barème marocain.",
            {"revenu_net_imposable_annuel": NOMBRE}),
     _outil("calculer_is", "Calcule l'IS marocain à partir du bénéfice fiscal.", {"benefice_fiscal": NOMBRE}),
@@ -101,6 +103,8 @@ def executer_outil(nom, entree, memoriser=None):
     if nom in CALCULS:
         return CALCULS[nom](**entree)
     if nom == "consulter_ecole":
+        if entree["matiere"] == "auto":
+            return {"propositions_ia_aissa": repondre_automatiquement(entree["question"])}
         return {"propositions_ia_aissa": repondre(entree["matiere"], entree["question"])}
     raise ValueError(f"Outil inconnu : {nom}")
 

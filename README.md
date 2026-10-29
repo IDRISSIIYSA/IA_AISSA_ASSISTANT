@@ -11,7 +11,7 @@ et espagnol, à l'écrit comme à l'oral.
 |---|---|
 | 📊 **Contrôle de gestion** | Montage à partir de données brutes + agent méta-intelligent qui pilote les écarts et sait quand il doute |
 | 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
-| 🎓 **École d'IA AISSA** | 47 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
+| 🎓 **École d'IA AISSA** | 64 matières apprises seule, question libre sans choisir de matière, bulletin de notes, courbes d'apprentissage, exercices surprise |
 | 💬 **Parler avec IA AISSA** | Moteur au choix (Claude, GPT-4o, MiniMax) ; questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
 | 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
 
@@ -53,7 +53,19 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 | Visa et voyage | Pièces du dossier de visa |
 | École — primaire | Comparer des fractions ; régions du Maroc (12 régions) |
 | École — collège et lycée | Équation du second degré (discriminant) ; corps humain (SVT) ; grandeurs et unités (physique-chimie) ; nature des mots (français) ; النحو : اسم، فعل، حرف (arabe) ; English tenses ; philosophes (bac) ; quelle matière pour un exercice |
+| École — lycée (suite) | Dérivée et sens de variation, suites, nature d'un mouvement, pH, grandes époques de l'histoire, œuvres françaises du programme, الأدب العربي |
+| Université | Écoles de pensée économique, élasticité-prix, méthodes de coûts, finance d'entreprise, structures de données, complexité des algorithmes, branches du droit, théories des organisations, auteurs des sciences sociales |
 | Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
+| Méta-intelligence | **Orientation automatique** : deviner seule la matière d'une question (38 matières) |
+
+### Répondre sans qu'on lui indique la rubrique
+
+Un cerveau « aiguilleur », né vide lui aussi, a appris par essais et erreurs (150 000 exercices) à
+reconnaître de quelle matière relève une question, en lisant à la fois les mots et les lettres
+(92,5 % de réussite à l'examen). IA AISSA choisit ainsi seule la matière, répond, et combine les
+deux confiances. En dessous de 25 %, elle dit qu'elle n'est pas sûre et passe la main à
+l'assistante, qui comprend toutes les formulations. L'assistante peut aussi utiliser l'aiguilleur
+(`consulter_ecole` avec `matiere = "auto"`).
 
 Les cerveaux entraînés sont fournis dans `ia_aissa/cerveaux/`. Pour les réentraîner :
 `python -m ia_aissa.entrainer` (toutes les matières) ou `python -m ia_aissa.entrainer tva ir`.

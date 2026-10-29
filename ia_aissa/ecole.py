@@ -95,11 +95,13 @@ class Matiere:
     perception: Callable = vectoriser
 
 
-def _matiere_texte(cle, nom, domaine, dictionnaire, note, libelle=lambda k, v: k):
+def _matiere_texte(cle, nom, domaine, dictionnaire, note, libelle=lambda k, v: k, perception=None):
     noms = list(dictionnaire)
     categories = [dictionnaire[k] if isinstance(dictionnaire[k], list) else dictionnaire[k][1] for k in noms]
     actions = [libelle(k, dictionnaire[k]) for k in noms]
-    return Matiere(cle, nom, domaine, actions, DIM_TEXTE, lambda rng: exercice_texte(rng, categories), True, note)
+    perception = perception or vectoriser
+    return Matiere(cle, nom, domaine, actions, DIM_TEXTE, lambda rng: exercice_texte(rng, categories, perception),
+                   True, note, perception)
 
 
 def _ir(rng):
@@ -286,6 +288,58 @@ def _discriminant(rng):
                     np.float32), y, f"Équation {a}x² {b:+d}x {c:+d} = 0"
 
 
+def _derivee(rng):
+    a = float(rng.choice([-1, 1]) * rng.uniform(0.2, 3))
+    b, x0 = float(rng.uniform(-6, 6)), float(rng.uniform(-4, 4))
+    if rng.random() < 0.2:
+        x0 = -b / (2 * a)                                             # au sommet de la parabole
+    pente = 2 * a * x0 + b
+    y = 1 if abs(pente) < 0.05 else (0 if pente > 0 else 2)
+    return np.array([a / 3, b / 6, x0 / 4, a * x0 / 6, pente / 10], np.float32), y, \
+        f"f(x) = {a:.2f}x² {b:+.2f}x : sens de variation en x = {x0:.2f}"
+
+
+def _suites(rng):
+    u0 = float(rng.uniform(1, 20))
+    genre = int(rng.integers(3))
+    if genre == 0:
+        r = float(rng.choice([-1, 1]) * rng.uniform(0.5, 5))
+        termes = [u0 + n * r for n in range(4)]
+    elif genre == 1:
+        q = float(rng.choice([rng.uniform(0.3, 0.8), rng.uniform(1.3, 3)]))
+        termes = [u0 * q ** n for n in range(4)]
+    else:
+        termes = list(u0 + np.cumsum(rng.uniform(-5, 8, 4)) * rng.uniform(0.5, 2))
+    t = np.array(termes)
+    d, q = np.diff(t), t[1:] / np.where(t[:-1] == 0, 1e-9, t[:-1])
+    return np.array([*(t / np.abs(t).max()), np.std(d) / (np.abs(d).mean() + 1e-9), np.std(q) / (np.abs(q).mean() + 1e-9)],
+                    np.float32), genre, f"Suite : {', '.join(f'{v:.2f}' for v in termes)}"
+
+
+def _mouvement(rng):
+    v1 = float(rng.uniform(6, 30))
+    genre = int(rng.integers(3))
+    a = 0.0 if genre == 0 else (rng.uniform(1, 5) if genre == 1 else -rng.uniform(1, v1 / 3))
+    vitesses = [v1 + a * t for t in range(3)]
+    return np.array([v / 30 for v in vitesses] + [(vitesses[2] - vitesses[0]) / 10], np.float32), genre, \
+        f"Vitesses relevées chaque seconde : {', '.join(f'{v:.1f}' for v in vitesses)} m/s"
+
+
+def _ph(rng):
+    ph = float(rng.choice([rng.uniform(0, 14), 7.0])) if rng.random() < 0.2 else float(rng.uniform(0, 14))
+    y = 1 if abs(ph - 7) < 1e-9 else (0 if ph < 7 else 2)
+    return np.array([ph / 14, (ph - 7) / 7, float(abs(ph - 7) < 1e-9)], np.float32), y, f"Solution de pH {ph:.2f} (25 °C)"
+
+
+def _elasticite(rng):
+    dp = float(rng.choice([-1, 1]) * rng.uniform(1, 20))
+    e = float(rng.choice([rng.uniform(-3, -1.05), -1.0, rng.uniform(-0.95, -0.05)]))
+    dq = e * dp
+    y = 1 if abs(abs(e) - 1) < 1e-9 else (0 if abs(e) > 1 else 2)
+    return np.array([dp / 20, dq / 60, np.log(abs(dq / dp)), float(abs(abs(e) - 1) < 1e-9)], np.float32), y, \
+        f"Le prix varie de {dp:+.1f} %, la quantité demandée de {dq:+.1f} %"
+
+
 MATIERES = [
     _matiere_texte("comptabilite", "Imputation au Plan Comptable Marocain", "Comptabilité", K.PCM,
                    "Trouver le compte du CGNC correspondant à une opération.", lambda k, v: f"{k} {v[0]}"),
@@ -390,9 +444,67 @@ MATIERES = [
                    "Philosophie (baccalauréat) : retrouver le philosophe d'une idée."),
     _matiere_texte("matiere_scolaire", "Quelle matière ?", "École — orientation", K.MATIERES_SCOLAIRES,
                    "Reconnaître la matière scolaire d'un exercice (pour l'aide aux devoirs)."),
+    Matiere("derivee", "Dérivée et sens de variation", "École — lycée",
+            ["Fonction croissante", "Extremum (dérivée nulle)", "Fonction décroissante"], 5, _derivee,
+            note="Mathématiques : signe de f'(x) = 2ax + b."),
+    Matiere("suites", "Suites numériques", "École — lycée", ["Arithmétique", "Géométrique", "Ni l'une ni l'autre"],
+            6, _suites, note="Mathématiques : différence constante ou rapport constant."),
+    Matiere("mouvement", "Nature d'un mouvement", "École — lycée", ["Uniforme", "Accéléré", "Décéléré"], 4, _mouvement,
+            note="Physique : évolution de la vitesse."),
+    Matiere("ph", "Acide, neutre ou basique", "École — lycée", ["Acide", "Neutre", "Basique"], 3, _ph,
+            note="Chimie : pH par rapport à 7 (à 25 °C)."),
+    _matiere_texte("epoques", "Les grandes époques de l'histoire", "École — lycée", K.EPOQUES,
+                   "Histoire : situer un événement dans son époque."),
+    _matiere_texte("litterature_fr", "Œuvres littéraires françaises", "École — lycée", K.OEUVRES_FR,
+                   "Français : reconnaître une œuvre du programme d'après son histoire."),
+    _matiere_texte("adab", "الأدب العربي", "École — lycée", K.ADAB_ARABE,
+                   "Arabe : reconnaître l'auteur d'après son œuvre ou son surnom.", perception=vectoriser_caracteres),
+    _matiere_texte("ecoles_eco", "Écoles de pensée économique", "Université — économie", K.ECOLES_ECONOMIQUES,
+                   "Rattacher une idée à son école de pensée."),
+    Matiere("elasticite", "Élasticité-prix de la demande", "Université — économie",
+            ["Demande élastique", "Élasticité unitaire", "Demande inélastique"], 4, _elasticite,
+            note="Microéconomie : |variation de la quantité / variation du prix| par rapport à 1."),
+    _matiere_texte("compta_analytique", "Méthodes de calcul des coûts", "Université — gestion", K.METHODES_COUTS,
+                   "Comptabilité analytique : reconnaître la méthode."),
+    _matiere_texte("finance_entreprise", "Outils de la finance d'entreprise", "Université — gestion", K.OUTILS_FINANCE,
+                   "Finance : reconnaître l'outil ou l'indicateur décrit."),
+    _matiere_texte("structures_donnees", "Structures de données", "Université — informatique", K.STRUCTURES_DONNEES,
+                   "Informatique : reconnaître la structure décrite."),
+    _matiere_texte("complexite", "Complexité des algorithmes", "Université — informatique", K.COMPLEXITES,
+                   "Informatique : complexité en temps d'un algorithme classique."),
+    _matiere_texte("branches_droit", "Branches du droit", "Université — droit", K.BRANCHES_DROIT,
+                   "Droit : rattacher une question à sa branche (publique ou privée)."),
+    _matiere_texte("theories_orga", "Théories des organisations", "Université — management", K.THEORIES_ORGANISATIONS,
+                   "Management : reconnaître l'auteur d'une théorie."),
+    _matiere_texte("sciences_sociales", "Auteurs des sciences sociales", "Université — sciences humaines",
+                   K.AUTEURS_SCIENCES_SOCIALES, "Sociologie et psychologie : reconnaître l'auteur d'un concept."),
     _matiere_texte("ia", "Types d'intelligence artificielle", "Intelligence artificielle", K.TYPES_IA,
                    "Reconnaître le type d'apprentissage adapté à un problème (dont le sien : le renforcement)."),
 ]
+
+
+# ==========================================
+# L'aiguilleur : IA AISSA devine seule de quelle matière relève une question
+# ==========================================
+HORS_ORIENTATION = {"langues", "matiere_scolaire"}      # s'appliquent à n'importe quel texte
+
+
+def vectoriser_mixte(texte):
+    """Mots et lettres à la fois : comprend le français comme l'arabe, les mots connus comme les nouveaux."""
+    return np.concatenate([vectoriser(texte), vectoriser_caracteres(texte)])
+
+
+def _orientation(rng):
+    y = int(rng.integers(len(MATIERES_ORIENTABLES)))
+    _, _, texte = MATIERES_ORIENTABLES[y].generer(rng)
+    return vectoriser_mixte(texte), y, texte
+
+
+MATIERES_ORIENTABLES = [m for m in MATIERES if m.texte and m.cle not in HORS_ORIENTATION]
+MATIERES.append(Matiere("orientation", "Orientation automatique", "Méta-intelligence",
+                        [m.cle for m in MATIERES_ORIENTABLES], 2 * DIM_TEXTE, _orientation, True,
+                        "Deviner seule la matière d'une question, pour y répondre sans qu'on la lui indique.",
+                        vectoriser_mixte))
 PAR_CLE = {m.cle: m for m in MATIERES}
 
 
@@ -455,12 +567,18 @@ def entrainer(matiere, pas=None, batch=64, lr=2e-3, seed=0, callback=None):
     return cerveau, historique
 
 
+_CACHE = {}
+
+
 def sauvegarder(matiere, cerveau, historique):
+    _CACHE.pop(matiere.cle, None)
     DOSSIER_CERVEAUX.mkdir(exist_ok=True)
     torch.save({"etat": cerveau.state_dict(), "historique": historique}, DOSSIER_CERVEAUX / f"{matiere.cle}.pt")
 
 
 def charger(cle):
+    if cle in _CACHE:
+        return _CACHE[cle]
     chemin = DOSSIER_CERVEAUX / f"{cle}.pt"
     if not chemin.exists():
         return None, None
@@ -469,7 +587,8 @@ def charger(cle):
     cerveau = Cerveau(m.dim, len(m.actions))
     cerveau.load_state_dict(donnees["etat"])
     cerveau.eval()
-    return cerveau, donnees["historique"]
+    _CACHE[cle] = (cerveau, donnees["historique"])
+    return _CACHE[cle]
 
 
 def repondre(cle, entree, cerveau=None, top=3):
@@ -483,3 +602,18 @@ def repondre(cle, entree, cerveau=None, top=3):
         proba = torch.softmax(cerveau(torch.from_numpy(x)) * 3, dim=0).numpy()
     ordre = proba.argsort()[::-1][:top]
     return [{"reponse": m.actions[i], "confiance": round(float(proba[i]), 3)} for i in ordre]
+
+
+SEUIL_CONFIANCE = 0.25    # en dessous, IA AISSA dit qu'elle n'est pas sûre et passe la main à l'assistante
+
+
+def repondre_automatiquement(question, top=3):
+    """IA AISSA choisit elle-même la matière, puis répond. Confiance = sûreté de l'orientation × de la réponse."""
+    propositions = []
+    for orientation in repondre("orientation", question, top=top):
+        cle = orientation["reponse"]
+        reponse = repondre(cle, question, top=1)[0]
+        propositions.append({"matiere": PAR_CLE[cle].nom, "domaine": PAR_CLE[cle].domaine, "cle": cle,
+                             "reponse": reponse["reponse"],
+                             "confiance": round(orientation["confiance"] * reponse["confiance"], 3)})
+    return sorted(propositions, key=lambda p: -p["confiance"])
