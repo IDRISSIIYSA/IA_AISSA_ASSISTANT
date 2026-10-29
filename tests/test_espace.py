@@ -97,3 +97,16 @@ def test_barre_de_conversation_ergonomique():
     for regle in ("stChatInputMicButton", "stChatInputApproveButton", "stChatInputCancelButton", "micro-respire",
                   ":has([data-testid=\"stChatInputApproveButton\"])", "Enregistrement", "prefers-reduced-motion"):
         assert regle in STYLE
+
+
+def test_cle_api_gardee_dans_un_cookie_du_navigateur(monkeypatch):
+    import base64
+    import ia_aissa.interface as I
+    nom = I.nom_cookie("ANTHROPIC_API_KEY")
+    assert nom == "ia_aissa_anthropic_api_key"
+    valeur = base64.urlsafe_b64encode(b"sk-ant-test").decode()
+    monkeypatch.setattr(I.st, "context", type("C", (), {"cookies": {nom: valeur}})())
+    monkeypatch.setattr(I.st, "session_state", {})
+    assert I.lire_cle_cookie(nom) == "sk-ant-test"
+    I.st.session_state["cookie_oublie"] = nom                          # « oublier » prime sur le cookie encore envoyé
+    assert I.lire_cle_cookie(nom) is None

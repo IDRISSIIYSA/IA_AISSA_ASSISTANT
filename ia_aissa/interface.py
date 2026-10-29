@@ -134,6 +134,36 @@ def ouvrir_conversation(utilisateur, conversation_id):
 
 
 # ==========================================
+# La clé API gardée sur l'appareil (cookie du navigateur), pour survivre au rechargement de la page
+# ==========================================
+def nom_cookie(nom_secret):
+    return f"ia_aissa_{nom_secret.lower()}"
+
+
+def lire_cle_cookie(nom):
+    import base64
+    if st.session_state.get("cookie_oublie") == nom:
+        return None
+    try:
+        valeur = st.context.cookies.get(nom)
+        return base64.urlsafe_b64decode(valeur.encode()).decode() if valeur else None
+    except Exception:
+        return None
+
+
+def ecrire_cookie(nom, valeur):
+    """Écrit (ou efface si valeur est None) un cookie d'un an, réservé à ce site, depuis le navigateur."""
+    import base64
+    contenu = base64.urlsafe_b64encode(valeur.encode()).decode() if valeur else ""
+    duree = 31_536_000 if valeur else 0
+    st.iframe(f"""<script>
+      let securise = "";
+      try {{ securise = window.parent.location.protocol === "https:" ? "; Secure" : ""; }} catch (e) {{}}
+      document.cookie = "{nom}={contenu}; Max-Age={duree}; Path=/; SameSite=Strict" + securise;
+    </script>""", height=1)
+
+
+# ==========================================
 # Le panneau unique des réglages
 # ==========================================
 def reglages(utilisateur):
@@ -144,15 +174,28 @@ def reglages(utilisateur):
         st.session_state["moteur_choisi"] = moteur
         config = MOTEURS[moteur]
         cle_visite = f"cle_visite_{config['secret']}"
-        cle_api = secret(config["secret"]) or st.session_state.get(cle_visite)
-        if not cle_api:
+        cookie = nom_cookie(config["secret"])
+        cle_api = secret(config["secret"]) or st.session_state.get(cle_visite) or lire_cle_cookie(cookie)
+        if secret(config["secret"]):
+            st.caption("🔑 Clé enregistrée dans les secrets de l'application.")
+        elif not cle_api:
             saisie = st.text_input(f"Clé API ({moteur.split(' (')[0]})", type="password",
-                                   help=f"Créez une clé sur {config['console']} ; gardée le temps de la visite.")
+                                   help=f"Créez une clé sur {config['console']}.")
+            souvenir = st.checkbox("🔐 Se souvenir de ma clé sur cet appareil", value=True,
+                                   help="Gardée dans un cookie de ce navigateur : elle reste après un rechargement de la "
+                                        "page. N'utilisez pas cette option sur un appareil partagé.")
             if saisie:
                 st.session_state[cle_visite] = cle_api = saisie.strip()
-        elif not secret(config["secret"]) and st.button("Changer de clé"):
-            st.session_state.pop(cle_visite, None)
-            st.rerun()
+                if souvenir:
+                    ecrire_cookie(cookie, cle_api)
+        else:
+            st.session_state[cle_visite] = cle_api
+            st.caption("🔑 Clé gardée sur cet appareil." if lire_cle_cookie(cookie) else "🔑 Clé gardée pour cette visite.")
+            if st.button("🗑️ Oublier ma clé sur cet appareil"):
+                st.session_state.pop(cle_visite, None)
+                st.session_state["cookie_oublie"] = cookie
+                ecrire_cookie(cookie, None)
+                st.rerun()
         modes = ["✍️🔊 Écrites et vocales", "✍️ Écrites", "🔊 Vocales"]
         mode = st.radio("Réponses", modes, index=modes.index(st.session_state.get("mode_reponse", modes[0])),
                         horizontal=True)
