@@ -14,8 +14,10 @@ from .ecole import MATIERES, charger
 
 FAMILLES = {
     "Sciences formelles": {"maths_financieres", "statistiques", "ia", "structures_donnees", "complexite", "fractions",
-                           "discriminant", "derivee", "suites", "orientation", "investissement", "elasticite"},
-    "Sciences naturelles": {"sciences", "familles_sciences", "corps_humain", "unites", "mouvement", "ph"},
+                           "discriminant", "derivee", "suites", "orientation", "investissement", "elasticite",
+                           "probabilite"},
+    "Sciences naturelles": {"sciences", "familles_sciences", "corps_humain", "unites", "mouvement", "ph", "genetique",
+                            "ohm"},
     "Sciences appliquées": {"production", "logistique", "transit", "incoterms", "credit", "cycle_de_vie", "bcg",
                             "commercial", "creation"},
 }

@@ -8,7 +8,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 ## À faire
 
-- [ ] Matières de lycée : SVT génétique (dominant/récessif, échiquier de croisement calculé), mathématiques (limites, probabilités simples calculées), physique (loi d'Ohm calculée)
+- [ ] Matières de lycée : mathématiques (limites de fonctions usuelles en l'infini), chimie (équilibrer une réaction simple)
 - [ ] Matières d'université : comptabilité générale (écritures débit/crédit d'une opération), audit et contrôle interne, marketing digital, logistique (choix du mode de transport)
 - [ ] Invention : matière « principes inventifs TRIZ » (reconnaître le principe d'une invention) et galerie des idées de l'atelier d'invention gardée en mémoire
 - [ ] Contrôle de gestion : prévision du réalisé du mois suivant par l'agent (tendance + saisonnalité) avec intervalle de confiance
@@ -20,8 +20,12 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée
 - [ ] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
 
+- [ ] Bibliothèque : bouton « Nourrir IA AISSA chaque jour » qui digère un article Wikipédia tiré de ses lacunes à chaque visite, dans la limite d'un appel au moteur
+
 ## Fait
 
+- [x] Lycée : génétique (croisements A/a), probabilités (urne), loi d'Ohm (ordre de grandeur de I)
+- [x] Bibliothèque reliée à l'invention (inspirations), aux lacunes (comblement) et à l'étude autonome (exploration du hors-programme)
 - [x] Formulations du quotidien (français, darija en lettres latines et arabes) et lecture mots + lettres pour toutes les matières textuelles ; banc d'essai de 20 questions libres
 - [x] Cerveaux d'origine jamais écrasés : révisions versionnées, réapprises automatiquement si l'école change
 - [x] Contrôle de gestion à partir de données brutes, agent méta-intelligent (Sutton × Dalio × GEB)

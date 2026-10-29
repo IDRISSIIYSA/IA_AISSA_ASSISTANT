@@ -350,6 +350,38 @@ def _elasticite(rng):
         f"Le prix varie de {dp:+.1f} %, la quantité demandée de {dq:+.1f} %"
 
 
+def _genetique(rng):
+    """Croisement de deux parents (allèle A dominant, a récessif) : part des descendants au phénotype dominant."""
+    genotypes = ["AA", "Aa", "aa"]
+    p1, p2 = int(rng.integers(3)), int(rng.integers(3))
+    part_a = [0.0, 0.5, 1.0]                                   # proportion d'allèles récessifs a chez le parent
+    dominant = 1 - part_a[p1] * part_a[p2]
+    y = {1.0: 0, 0.75: 1, 0.5: 2, 0.0: 3}[dominant]
+    return np.array([part_a[p1], part_a[p2], part_a[p1] * part_a[p2]], np.float32), y, \
+        f"Croisement {genotypes[p1]} × {genotypes[p2]} : part des descendants au phénotype dominant ?"
+
+
+def _probabilite(rng):
+    rouges, bleues = int(rng.integers(0, 11)), int(rng.integers(0, 11))
+    if rouges + bleues == 0:
+        bleues = 1
+    if rng.random() < 0.15:
+        bleues = rouges = max(1, rouges)                       # cas équiprobable
+    p = rouges / (rouges + bleues)
+    y = 0 if p == 0 else 4 if p == 1 else 2 if p == 0.5 else (1 if p < 0.5 else 3)
+    return np.array([rouges / 10, bleues / 10, np.log1p(rouges) - np.log1p(bleues), float(rouges == 0),
+                     float(bleues == 0), float(rouges == bleues)], np.float32), y, \
+        f"Urne : {rouges} boule(s) rouge(s) et {bleues} bleue(s). Tirer une rouge est…"
+
+
+def _ohm(rng):
+    tension, resistance = float(np.exp(rng.uniform(np.log(0.5), np.log(400)))), float(np.exp(rng.uniform(np.log(1), np.log(5000))))
+    intensite = tension / resistance
+    y = 0 if intensite < 0.1 else 1 if intensite < 1 else 2 if intensite < 10 else 3
+    return np.array([np.log10(tension) / 3, np.log10(resistance) / 4, np.log10(intensite) / 3], np.float32), y, \
+        f"Tension {tension:.1f} V aux bornes d'une résistance de {resistance:.0f} Ω : intensité I = U / R ?"
+
+
 MATIERES = [
     _matiere_texte("comptabilite", "Imputation au Plan Comptable Marocain", "Comptabilité", K.PCM,
                    "Trouver le compte du CGNC correspondant à une opération.", lambda k, v: f"{k} {v[0]}"),
@@ -463,6 +495,13 @@ MATIERES = [
             note="Physique : évolution de la vitesse."),
     Matiere("ph", "Acide, neutre ou basique", "École — lycée", ["Acide", "Neutre", "Basique"], 3, _ph,
             note="Chimie : pH par rapport à 7 (à 25 °C)."),
+    Matiere("genetique", "Génétique : croisements", "École — lycée", ["100 % dominant", "75 % dominant",
+            "50 % dominant", "0 % dominant"], 3, _genetique, note="SVT : échiquier de croisement (A dominant, a récessif)."),
+    Matiere("probabilite", "Probabilités : tirage dans une urne", "École — lycée",
+            ["Impossible", "Peu probable", "Équiprobable", "Probable", "Certain"], 6, _probabilite,
+            note="Mathématiques : probabilité = cas favorables / cas possibles."),
+    Matiere("ohm", "Loi d'Ohm : ordre de grandeur de l'intensité", "École — lycée",
+            ["Moins de 0,1 A", "0,1 à 1 A", "1 à 10 A", "Plus de 10 A"], 3, _ohm, note="Physique : I = U / R."),
     _matiere_texte("epoques", "Les grandes époques de l'histoire", "École — lycée", K.EPOQUES,
                    "Histoire : situer un événement dans son époque."),
     _matiere_texte("litterature_fr", "Œuvres littéraires françaises", "École — lycée", K.OEUVRES_FR,

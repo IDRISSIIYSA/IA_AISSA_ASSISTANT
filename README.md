@@ -11,7 +11,7 @@ et espagnol, à l'écrit comme à l'oral.
 |---|---|
 | 📊 **Contrôle de gestion** | Montage à partir de données brutes + agent méta-intelligent qui pilote les écarts et sait quand il doute |
 | 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
-| 🎓 **École d'IA AISSA** | 64 matières apprises seule, question libre sans choisir de matière, bulletin de notes, courbes d'apprentissage, exercices surprise |
+| 🎓 **École d'IA AISSA** | 67 matières apprises seule, question libre sans choisir de matière, bulletin de notes, courbes d'apprentissage, exercices surprise |
 | 💬 **Parler avec IA AISSA** | Moteur au choix (Claude, GPT-4o, MiniMax) ; questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
 | 💡 **Laboratoire d'invention** | Auto-simulation : évolution génétique des idées, débat Créateur × Critique, score de confiance et de faisabilité, galerie des inventions |
 | 📚 **Bibliothèque** | IA AISSA broute une page web, mange un livre (PDF, texte) ou explore Wikipédia seule sur ses lacunes, rumine en concepts, nourrit son école |
@@ -55,7 +55,7 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 | Visa et voyage | Pièces du dossier de visa |
 | École — primaire | Comparer des fractions ; régions du Maroc (12 régions) |
 | École — collège et lycée | Équation du second degré (discriminant) ; corps humain (SVT) ; grandeurs et unités (physique-chimie) ; nature des mots (français) ; النحو : اسم، فعل، حرف (arabe) ; English tenses ; philosophes (bac) ; quelle matière pour un exercice |
-| École — lycée (suite) | Dérivée et sens de variation, suites, nature d'un mouvement, pH, grandes époques de l'histoire, œuvres françaises du programme, الأدب العربي |
+| École — lycée (suite) | Génétique (croisements), probabilités (urne), loi d'Ohm, dérivée et sens de variation, suites, nature d'un mouvement, pH, grandes époques de l'histoire, œuvres françaises du programme, الأدب العربي |
 | Université | Écoles de pensée économique, élasticité-prix, méthodes de coûts, finance d'entreprise, structures de données, complexité des algorithmes, branches du droit, théories des organisations, auteurs des sciences sociales |
 | Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
 | Méta-intelligence | **Orientation automatique** : deviner seule la matière d'une question (38 matières) |
