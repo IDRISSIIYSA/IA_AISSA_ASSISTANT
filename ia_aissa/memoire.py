@@ -74,6 +74,23 @@ revisions = Table(
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
 
+# Visages des personnes autorisées (empreintes de 128 nombres, jamais la photo elle-même)
+visages = Table(
+    "visages", meta,
+    Column("id", Integer, primary_key=True),
+    Column("utilisateur", String(80), index=True, nullable=False),
+    Column("empreinte", LargeBinary, nullable=False),
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
+# Médias d'IA AISSA (ex. l'image de son visage d'alien)
+medias = Table(
+    "medias", meta,
+    Column("nom", String(60), primary_key=True),
+    Column("donnees", LargeBinary, nullable=False),
+    Column("type", String(60), nullable=False),
+    Column("modifie_le", DateTime(timezone=True), nullable=False),
+)
+
 
 def maintenant():
     return datetime.now(timezone.utc)
@@ -195,6 +212,41 @@ class Memoire:
     def revisions(self, limite=50):
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(select(revisions).order_by(revisions.c.id.desc()).limit(limite))]
+
+
+    # ---------- Visages ----------
+    def ajouter_visage(self, utilisateur, empreinte):
+        import numpy as np
+        with self.moteur.begin() as c:
+            c.execute(insert(visages).values(utilisateur=utilisateur, cree_le=maintenant(),
+                                             empreinte=np.asarray(empreinte, np.float32).tobytes()))
+
+    def visages_connus(self):
+        import numpy as np
+        connus = {}
+        with self.moteur.connect() as c:
+            for l in c.execute(select(visages.c.utilisateur, visages.c.empreinte)):
+                connus.setdefault(l.utilisateur, []).append(np.frombuffer(l.empreinte, np.float32))
+        return connus
+
+    def oublier_visage(self, utilisateur):
+        with self.moteur.begin() as c:
+            c.execute(delete(visages).where(visages.c.utilisateur == utilisateur))
+
+    # ---------- Médias ----------
+    def sauver_media(self, nom, donnees, type_mime):
+        with self.moteur.begin() as c:
+            c.execute(delete(medias).where(medias.c.nom == nom))
+            c.execute(insert(medias).values(nom=nom, donnees=donnees, type=type_mime, modifie_le=maintenant()))
+
+    def media(self, nom):
+        with self.moteur.connect() as c:
+            l = c.execute(select(medias.c.donnees, medias.c.type).where(medias.c.nom == nom)).first()
+            return (l.donnees, l.type) if l else (None, None)
+
+    def supprimer_media(self, nom):
+        with self.moteur.begin() as c:
+            c.execute(delete(medias).where(medias.c.nom == nom))
 
 
 def historique_api(lignes):
