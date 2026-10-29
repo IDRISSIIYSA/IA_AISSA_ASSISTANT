@@ -7,6 +7,7 @@ from ia_aissa.acces import verifier_acces
 from ia_aissa.assistant import NIVEAUX, client_anthropic, converser, profil_conversation
 from ia_aissa.ecole import repondre
 from ia_aissa.langues import LANGUES
+from ia_aissa.memoire import Memoire, historique_api
 from ia_aissa.parole import charger_oreille, synthetiser, transcrire
 from ia_aissa.voix import bouton_ecouter
 
@@ -16,22 +17,65 @@ st.title("💬 Parler avec IA AISSA")
 st.caption(f"Bonjour {utilisateur} ! Écrivez ou parlez (🎙️ dans la barre de message), en arabe, darija, français, "
            "anglais ou espagnol. IA AISSA vous répond par écrit, à voix haute, ou les deux.")
 
-try:
-    cle_secrets = st.secrets.get("ANTHROPIC_API_KEY")
-except Exception:
-    cle_secrets = None
+
+
+def secret(nom):
+    try:
+        return st.secrets.get(nom) or os.environ.get(nom)
+    except Exception:
+        return os.environ.get(nom)
+
+
+@st.cache_resource(show_spinner=False)
+def memoire():
+    return Memoire(secret("MEMOIRE_URL"))
+
+
+def ouvrir_conversation(conversation_id):
+    lignes = memoire().messages_de(utilisateur, conversation_id) if conversation_id else []
+    st.session_state["conversation_id"] = conversation_id
+    st.session_state["affichage"] = [{"role": l["role"], "texte": l["texte"], "langue": "Français"} for l in lignes]
+    st.session_state["messages_api"] = historique_api(lignes)
+
+
 with st.sidebar:
-    cle_api = cle_secrets or os.environ.get("ANTHROPIC_API_KEY") or st.text_input(
+    cle_api = secret("ANTHROPIC_API_KEY") or st.text_input(
         "Clé API Anthropic", type="password", help="Créez une clé sur console.anthropic.com. "
         "Elle reste dans votre session et n'est pas enregistrée.")
     mode = st.radio("Je veux mes réponses", ["✍️ Écrites", "🔊 Vocales", "✍️🔊 Écrites et vocales"], index=2)
     niveau = st.selectbox("Accompagnement", list(NIVEAUX),
                           help="Choisissez un niveau scolaire pour qu'IA AISSA devienne votre professeur.")
     voir_outils = st.toggle("Montrer le raisonnement (outils utilisés)", value=False)
-    if st.button("🗑️ Nouvelle conversation"):
-        for cle in ("messages_api", "affichage"):
-            st.session_state.pop(cle, None)
+
+    st.subheader("📚 Mes conversations")
+    if not memoire().persistante:
+        st.caption("⚠️ Mémoire temporaire : ajoutez le secret `MEMOIRE_URL` (base PostgreSQL) pour qu'IA AISSA "
+                   "se souvienne même après un redémarrage.")
+    if st.button("➕ Nouvelle conversation", width="stretch"):
+        ouvrir_conversation(None)
         st.rerun()
+    for conv in memoire().lister_conversations(utilisateur):
+        actuelle = conv["id"] == st.session_state.get("conversation_id")
+        if st.button(("▶ " if actuelle else "") + conv["titre"][:40], key=f"conv{conv['id']}", width="stretch",
+                     type="primary" if actuelle else "secondary"):
+            ouvrir_conversation(conv["id"])
+            st.rerun()
+    if st.session_state.get("conversation_id") and st.button("🗑️ Supprimer cette conversation"):
+        memoire().supprimer_conversation(utilisateur, st.session_state["conversation_id"])
+        ouvrir_conversation(None)
+        st.rerun()
+
+    with st.expander("🧠 Ce dont IA AISSA se souvient"):
+        for souvenir in memoire().souvenirs_de(utilisateur):
+            c1, c2 = st.columns([5, 1])
+            c1.write(souvenir["fait"])
+            if c2.button("✖", key=f"oubli{souvenir['id']}", help="Oublier"):
+                memoire().oublier(utilisateur, souvenir["id"])
+                st.rerun()
+        nouveau = st.text_input("Lui apprendre quelque chose", placeholder="ex. : je travaille dans le textile à Fès")
+        if nouveau and st.button("Retenir"):
+            memoire().memoriser(utilisateur, nouveau)
+            st.rerun()
 
 if not cle_api:
     st.info("Ajoutez une clé API Anthropic dans la barre latérale (ou dans les *Secrets* de Streamlit Cloud "
@@ -39,8 +83,8 @@ if not cle_api:
     st.stop()
 
 ecrit, vocal = "Écrites" in mode, "Vocales" in mode or "vocales" in mode
-st.session_state.setdefault("messages_api", [])
-st.session_state.setdefault("affichage", [])
+if "affichage" not in st.session_state:
+    ouvrir_conversation(None)
 
 
 @st.cache_resource(show_spinner="IA AISSA apprend à écouter (premier chargement)…")
@@ -90,8 +134,10 @@ if saisie:
     journal = []
     with st.spinner("IA AISSA réfléchit…"):
         try:
+            souvenirs = [x["fait"] for x in memoire().souvenirs_de(utilisateur)]
             texte = converser(client_anthropic(cle_api), st.session_state["messages_api"], journal=journal,
-                              profil=profil_conversation(utilisateur, niveau, vocal and not ecrit))
+                              profil=profil_conversation(utilisateur, niveau, vocal and not ecrit, souvenirs),
+                              memoriser=lambda fait: memoire().memoriser(utilisateur, fait))
         except anthropic.AuthenticationError:
             st.session_state["messages_api"].pop()
             st.error("Clé API invalide.")
@@ -100,6 +146,11 @@ if saisie:
             st.session_state["messages_api"].pop()
             st.error(f"Erreur de l'API : {e}")
             st.stop()
+
+    if not st.session_state.get("conversation_id"):
+        st.session_state["conversation_id"] = memoire().nouvelle_conversation(utilisateur, question)
+    memoire().ajouter_message(utilisateur, st.session_state["conversation_id"], "user", question)
+    memoire().ajouter_message(utilisateur, st.session_state["conversation_id"], "assistant", texte)
 
     langue = repondre("langues", texte[:300])[0]["reponse"]
     reponse = {"role": "assistant", "texte": texte, "outils": journal, "langue": langue}

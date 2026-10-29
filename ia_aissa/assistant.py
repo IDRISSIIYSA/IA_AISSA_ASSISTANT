@@ -62,6 +62,10 @@ OUTILS = [
             "description": "Taux d'actualisation décimal, ex. 0.08."}}),
     _outil("seuil_rentabilite", "Calcule le seuil de rentabilité.",
            {"prix": NOMBRE, "cout_variable_unitaire": NOMBRE, "charges_fixes": NOMBRE}),
+    _outil("memoriser_souvenir", "Retient durablement un fait utile sur la personne (métier, entreprise, secteur, "
+           "objectifs, niveau d'études, langue ou style de réponse préféré…), ou ce qu'elle demande explicitement de "
+           "retenir. Une phrase courte et autonome. Jamais de mot de passe, numéro de carte ou donnée de santé.",
+           {"fait": {"type": "string", "description": "Ex. : « Aissa est contrôleur de gestion dans une PME textile à Fès. »"}}),
 ]
 
 CALCULS = {"calculer_ir": K.calculer_ir, "calculer_is": K.calculer_is, "calculer_paie": K.calculer_paie,
@@ -70,7 +74,12 @@ CERVEAUX = {"consulter_comptabilite": "comptabilite", "consulter_tva": "tva",
             "consulter_juridique": "juridique", "consulter_langue": "langues"}
 
 
-def executer_outil(nom, entree):
+def executer_outil(nom, entree, memoriser=None):
+    if nom == "memoriser_souvenir":
+        if memoriser is None:
+            raise RuntimeError("Mémoire indisponible.")
+        memoriser(entree["fait"])
+        return {"memorise": entree["fait"]}
     if nom in CALCULS:
         return CALCULS[nom](**entree)
     if nom in CERVEAUX:
@@ -78,7 +87,7 @@ def executer_outil(nom, entree):
     raise ValueError(f"Outil inconnu : {nom}")
 
 
-def converser(client, messages, max_tours=8, journal=None, profil=None):
+def converser(client, messages, max_tours=8, journal=None, profil=None, memoriser=None):
     """Envoie la conversation à Claude, exécute les outils demandés, renvoie le texte final.
     `messages` est complété sur place (blocs de réflexion compris, à renvoyer tels quels)."""
     for _ in range(max_tours):
@@ -104,7 +113,7 @@ def converser(client, messages, max_tours=8, journal=None, profil=None):
             if bloc.type != "tool_use":
                 continue
             try:
-                contenu, erreur = json.dumps(executer_outil(bloc.name, bloc.input), ensure_ascii=False), False
+                contenu, erreur = json.dumps(executer_outil(bloc.name, bloc.input, memoriser), ensure_ascii=False), False
             except Exception as e:  # l'erreur est renvoyée au modèle pour qu'il corrige sa demande
                 contenu, erreur = f"Erreur : {e}", True
             if journal is not None:
@@ -125,9 +134,15 @@ NIVEAUX = {
 }
 
 
-def profil_conversation(utilisateur, niveau, reponse_vocale):
+def profil_conversation(utilisateur, niveau, reponse_vocale, souvenirs=()):
     lignes = [f"Tu parles avec {utilisateur}. Appelle cette personne par son prénom de temps en temps, avec chaleur : "
               "tu l'accompagnes au quotidien."]
+    if souvenirs:
+        lignes.append(f"Ce dont tu te souviens sur {utilisateur} (conversations précédentes) :\n"
+                      + "\n".join(f"- {s}" for s in souvenirs)
+                      + "\nAppuie-toi dessus naturellement, sans les réciter.")
+    lignes.append("Quand la personne t'apprend quelque chose de durable sur elle, ou te demande de retenir "
+                  "quelque chose, enregistre-le avec l'outil memoriser_souvenir (s'il n'est pas déjà dans tes souvenirs).")
     if NIVEAUX.get(niveau):
         lignes.append(
             f"Mode professeur — niveau : {NIVEAUX[niveau]}. Suis les programmes officiels marocains de ce niveau "

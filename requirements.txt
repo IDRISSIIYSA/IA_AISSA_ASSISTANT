@@ -11,3 +11,6 @@ anthropic>=2.3
 faster-whisper>=1.2
 av>=11,<17
 edge-tts>=7.0
+# Mémoire des conversations (SQLite en local, PostgreSQL en ligne)
+sqlalchemy>=2.0
+psycopg[binary]>=3.2

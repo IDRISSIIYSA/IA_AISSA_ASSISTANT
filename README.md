@@ -53,12 +53,27 @@ Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et
 - Voix : la parole est transcrite par Whisper sur le serveur ; les réponses sont dites par des voix
   neuronales (dont marocaines `ar-MA`, via edge-tts) ou, à défaut, par les voix du navigateur.
 
+## Mémoire des conversations (`ia_aissa/memoire.py`)
+
+- **Conversations** : chaque échange est enregistré ; la barre latérale de 💬 liste vos conversations
+  pour les reprendre là où vous les avez laissées, ou les supprimer.
+- **Souvenirs** : IA AISSA retient d'elle-même ce que vous lui apprenez de durable (métier, entreprise,
+  niveau d'études, langue préférée…) et s'en sert dans toutes les conversations suivantes.
+  Vous pouvez les consulter, en ajouter et les effacer (« 🧠 Ce dont IA AISSA se souvient »).
+- Chaque utilisateur autorisé a sa propre mémoire, invisible des autres.
+
+Sur Streamlit Cloud, le disque est effacé à chaque redémarrage : pour une mémoire durable, créez une
+base PostgreSQL gratuite ([Neon](https://neon.tech) ou [Supabase](https://supabase.com)) et ajoutez
+son adresse dans les secrets (`MEMOIRE_URL`, voir ci-dessous). Sans ce secret, la mémoire est
+un fichier SQLite local.
+
 ## Accès réservé et secrets
 
 Sur Streamlit Cloud : *Settings → Secrets* (en local : `.streamlit/secrets.toml`, jamais commité) :
 
 ```toml
 ANTHROPIC_API_KEY = "sk-ant-..."
+MEMOIRE_URL = "postgresql+psycopg://utilisateur:motdepasse@hote/base?sslmode=require"
 
 [utilisateurs]          # seules ces personnes peuvent parler avec IA AISSA
 Aissa = "mot-de-passe-d-aissa"
