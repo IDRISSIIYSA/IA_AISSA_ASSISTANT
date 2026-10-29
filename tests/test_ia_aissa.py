@@ -51,3 +51,19 @@ def test_reconnaissance_des_langues():
 def test_texte_ia_echappe_dans_le_html():
     h = bouton_ecouter("l'année </script><img src=x onerror=alert(1)>", "fr-FR")
     assert "</script><img" not in h and js("<") == '"\\u003c"'
+
+
+def test_douane_et_wilson():
+    d = K.calculer_droits_import(100_000, 0.175, 0.20)
+    assert d["droit_importation"] == 17_500 and d["tva_import"] == 23_500
+    w = K.quantite_wilson(12_000, 300, 8)
+    assert abs(w["quantite_economique"] - 948.7) < 0.1
+
+
+def test_outil_ecole_couvre_toutes_les_matieres_textuelles():
+    from ia_aissa.assistant import OUTILS, executer_outil
+    outil = next(o for o in OUTILS if o["name"] == "consulter_ecole")
+    assert {"histoire", "incoterms", "transit", "epistemologie", "comptabilite"} <= set(
+        outil["input_schema"]["properties"]["matiere"]["enum"])
+    r = executer_outil("consulter_ecole", {"matiere": "epistemologie", "question": "une théorie doit pouvoir être réfutée"})
+    assert r["propositions_ia_aissa"][0]["reponse"].startswith("Karl Popper")

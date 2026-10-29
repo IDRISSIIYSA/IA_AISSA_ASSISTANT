@@ -11,7 +11,7 @@ et espagnol, à l'écrit comme à l'oral.
 |---|---|
 | 📊 **Contrôle de gestion** | Montage du contrôle de gestion à partir de données brutes + agent qui apprend à piloter les écarts |
 | 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
-| 🎓 **École d'IA AISSA** | 17 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
+| 🎓 **École d'IA AISSA** | 25 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
 | 💬 **Parler avec IA AISSA** | Questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
 | 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
 
@@ -35,6 +35,13 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 | Juridique | Texte de loi applicable (Code du travail, Code de commerce, lois 17-95, 5-96, 31-08, 09-08…) |
 | Création d'entreprise | Choix de la forme juridique (auto-entrepreneur, SARL AU, SARL, SA) |
 | Langues | Reconnaître l'arabe, la darija (écriture arabe ou latine), le français, l'anglais, l'espagnol |
+| Marketing | Mix marketing (4P), cycle de vie du produit |
+| Commerce international | Incoterms 2020 (les 11 règles) |
+| Transit et douane | Documents et procédures au Maroc (DUM, BADR, connaissement, LTA, CMR, EUR.1…) |
+| Logistique | Quantité économique de commande (Wilson) |
+| Histoire | Dynasties du Maroc (Idrissides, Almoravides, Almohades, Mérinides, Saadiens, Alaouites) |
+| Sciences | Physique, chimie, SVT, mathématiques, géologie, astronomie |
+| Épistémologie | Popper, Kuhn, Bachelard, Descartes, Hume, Comte, Feyerabend, Ibn Khaldoun |
 | Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
 
 Les cerveaux entraînés sont fournis dans `ia_aissa/cerveaux/`. Pour les réentraîner :
@@ -48,8 +55,8 @@ Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et
 
 - Modèle Claude Opus 5.5 avec réflexion adaptative et repli automatique (`fallbacks: "default"`)
   si une demande est refusée par les filtres de sécurité.
-- Outils : calculs exacts (IR, IS, TVA, paie, VAN, seuil de rentabilité) et consultation des
-  cerveaux d'IA AISSA (comptabilité, TVA, juridique, langue), qu'elle vérifie avant de répondre.
+- Outils : calculs exacts (IR, IS, TVA, paie, VAN, seuil de rentabilité, droits de douane, quantité
+  de Wilson) et consultation des cerveaux d'école d'IA AISSA, qu'elle vérifie avant de répondre.
 - Voix : la parole est transcrite par Whisper sur le serveur ; les réponses sont dites par des voix
   neuronales (dont marocaines `ar-MA`, via edge-tts) ou, à défaut, par les voix du navigateur.
 

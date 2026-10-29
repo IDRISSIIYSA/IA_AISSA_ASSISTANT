@@ -9,22 +9,25 @@ import json
 import anthropic
 
 from . import connaissances as K
-from .ecole import repondre
+from .ecole import MATIERES, repondre
+
+MATIERES_TEXTE = [m for m in MATIERES if m.texte]
 
 MODELE = "claude-opus-5-5"
 
 SYSTEME = f"""Tu es IA AISSA, une intelligence artificielle marocaine spécialisée dans l'entreprise :
 comptabilité (CGNC), fiscalité (IS, IR, TVA), finance, contrôle de gestion, ressources humaines et paie,
 gestion de production, commercial, économie, mathématiques financières, droit des affaires,
-création d'entreprise et intelligence artificielle.
+création d'entreprise, marketing, commerce international, transit et douane, logistique, histoire du Maroc,
+sciences, épistémologie et intelligence artificielle.
 
 Langues : réponds dans la langue de l'utilisateur — arabe, darija marocaine (en écriture arabe ou latine
 selon ce qu'il utilise), français, anglais ou espagnol.
 
 Méthode :
-- Pour tout calcul (IR, IS, TVA, paie, VAN, seuil de rentabilité), utilise les outils de calcul : ne calcule pas de tête.
-- Pour une imputation comptable, un régime de TVA, un texte de loi ou la langue d'un texte, consulte d'abord
-  ton « cerveau d'école » (outils consulter_*). Il a appris seul et peut se tromper, surtout si sa confiance
+- Pour tout calcul (IR, IS, TVA, paie, VAN, seuil de rentabilité, droits de douane, quantité de Wilson), utilise les outils de calcul : ne calcule pas de tête.
+- Pour une question qui relève d'une matière de ton école (imputation comptable, TVA, texte de loi, langue,
+  dynastie, Incoterm, document de transit, mix marketing…), consulte d'abord ton « cerveau d'école » (consulter_ecole). Il a appris seul et peut se tromper, surtout si sa confiance
   est faible : vérifie sa réponse avec la base de connaissances et corrige-la en expliquant pourquoi.
 - Les taux viennent de la base ci-dessous (mise à jour {K.MISE_A_JOUR}). Rappelle, pour une décision réelle,
   de les confirmer avec le Code Général des Impôts (DGI), la CNSS ou un professionnel (expert-comptable, avocat).
@@ -43,12 +46,9 @@ TEXTE = {"type": "string", "description": "Texte à analyser, tel que formulé p
 NOMBRE = {"type": "number"}
 
 OUTILS = [
-    _outil("consulter_comptabilite", "Le cerveau d'IA AISSA propose les comptes du Plan Comptable Marocain "
-           "pour une opération décrite en texte, avec sa confiance.", {"operation": TEXTE}),
-    _outil("consulter_tva", "Le cerveau d'IA AISSA propose le régime de TVA 2026 d'une opération.", {"operation": TEXTE}),
-    _outil("consulter_juridique", "Le cerveau d'IA AISSA propose le texte de loi marocain applicable.", {"situation": TEXTE}),
-    _outil("consulter_langue", "Le cerveau d'IA AISSA détecte la langue d'un texte (arabe, darija, français, "
-           "anglais, espagnol).", {"texte": TEXTE}),
+    _outil("consulter_ecole", "Demande au cerveau d'école d'IA AISSA sa réponse (avec sa confiance) pour une question "
+           "d'une matière qu'elle a étudiée seule : " + "; ".join(f"{m.cle} = {m.nom}" for m in MATIERES_TEXTE) + ".",
+           {"matiere": {"type": "string", "enum": [m.cle for m in MATIERES_TEXTE]}, "question": TEXTE}),
     _outil("calculer_ir", "Calcule l'IR annuel selon le barème marocain.",
            {"revenu_net_imposable_annuel": NOMBRE}),
     _outil("calculer_is", "Calcule l'IS marocain à partir du bénéfice fiscal.", {"benefice_fiscal": NOMBRE}),
@@ -62,6 +62,11 @@ OUTILS = [
             "description": "Taux d'actualisation décimal, ex. 0.08."}}),
     _outil("seuil_rentabilite", "Calcule le seuil de rentabilité.",
            {"prix": NOMBRE, "cout_variable_unitaire": NOMBRE, "charges_fixes": NOMBRE}),
+    _outil("calculer_droits_import", "Calcule les droits de douane et la TVA à l'importation au Maroc (simplifié).",
+           {"valeur_caf": NOMBRE, "taux_droit_importation": {"type": "number", "description": "Taux décimal, ex. 0.175."},
+            "taux_tva": {"type": "number", "description": "Taux décimal de TVA à l'import, en général 0.2."}}),
+    _outil("quantite_wilson", "Calcule la quantité économique de commande (modèle de Wilson).",
+           {"demande_annuelle": NOMBRE, "cout_passation_commande": NOMBRE, "cout_stockage_unitaire_annuel": NOMBRE}),
     _outil("memoriser_souvenir", "Retient durablement un fait utile sur la personne (métier, entreprise, secteur, "
            "objectifs, niveau d'études, langue ou style de réponse préféré…), ou ce qu'elle demande explicitement de "
            "retenir. Une phrase courte et autonome. Jamais de mot de passe, numéro de carte ou donnée de santé.",
@@ -69,9 +74,8 @@ OUTILS = [
 ]
 
 CALCULS = {"calculer_ir": K.calculer_ir, "calculer_is": K.calculer_is, "calculer_paie": K.calculer_paie,
-           "calculer_tva": K.calculer_tva, "calculer_van": K.calculer_van, "seuil_rentabilite": K.seuil_rentabilite}
-CERVEAUX = {"consulter_comptabilite": "comptabilite", "consulter_tva": "tva",
-            "consulter_juridique": "juridique", "consulter_langue": "langues"}
+           "calculer_tva": K.calculer_tva, "calculer_van": K.calculer_van, "seuil_rentabilite": K.seuil_rentabilite,
+           "calculer_droits_import": K.calculer_droits_import, "quantite_wilson": K.quantite_wilson}
 
 
 def executer_outil(nom, entree, memoriser=None):
@@ -82,8 +86,8 @@ def executer_outil(nom, entree, memoriser=None):
         return {"memorise": entree["fait"]}
     if nom in CALCULS:
         return CALCULS[nom](**entree)
-    if nom in CERVEAUX:
-        return {"propositions_ia_aissa": repondre(CERVEAUX[nom], next(iter(entree.values())))}
+    if nom == "consulter_ecole":
+        return {"propositions_ia_aissa": repondre(entree["matiere"], entree["question"])}
     raise ValueError(f"Outil inconnu : {nom}")
 
 

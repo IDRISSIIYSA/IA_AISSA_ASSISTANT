@@ -218,6 +218,31 @@ def _forme_juridique(rng):
         (", besoin de lever des fonds" if levee_fonds else "")
 
 
+def _cycle_de_vie(rng):
+    croissance, part_marche = rng.uniform(-30, 60), rng.uniform(0, 40)
+    if croissance < -5:
+        y = 3
+    elif croissance > 20:
+        y = 0 if part_marche < 5 else 1
+    elif part_marche < 5:
+        y = 0
+    else:
+        y = 2
+    return np.array([croissance / 30, part_marche / 20], np.float32), y, \
+        f"Croissance des ventes {croissance:+.0f} %, part de marché {part_marche:.0f} %"
+
+
+def _wilson(rng):
+    demande, cout_commande, stockage = rng.uniform(500, 50_000), rng.uniform(50, 2_000), rng.uniform(1, 50)
+    optimale = K.quantite_wilson(demande, cout_commande, stockage)["quantite_economique"]
+    proposee = optimale * float(np.exp(rng.uniform(np.log(0.4), np.log(2.5))))
+    y = 0 if proposee < 0.85 * optimale else (2 if proposee > 1.15 * optimale else 1)
+    return np.array([np.log(demande) / 10, np.log(cout_commande) / 7, np.log(stockage) / 4,
+                     np.log(proposee) / 9], np.float32), y, \
+        f"Demande {demande:,.0f} u/an, coût d'une commande {cout_commande:,.0f} DH, stockage {stockage:.1f} DH/u/an, " \
+        f"commande proposée {proposee:,.0f} u"
+
+
 MATIERES = [
     _matiere_texte("comptabilite", "Imputation au Plan Comptable Marocain", "Comptabilité", K.PCM,
                    "Trouver le compte du CGNC correspondant à une opération.", lambda k, v: f"{k} {v[0]}"),
@@ -256,6 +281,24 @@ MATIERES = [
     Matiere("langues", "Reconnaître la langue", "Langues", list(LANGUES), DIM_TEXTE,
             lambda rng: exercice_langue(rng, [v["phrases"] for v in LANGUES.values()]), True,
             "Arabe, darija (écriture arabe et latine), français, anglais, espagnol.", vectoriser_caracteres),
+    _matiere_texte("histoire", "Dynasties du Maroc", "Histoire", K.DYNASTIES,
+                   "Rattacher un événement de l'histoire du Maroc à sa dynastie."),
+    _matiere_texte("sciences", "Disciplines scientifiques", "Sciences", K.DISCIPLINES,
+                   "Reconnaître la discipline d'une notion scientifique."),
+    _matiere_texte("epistemologie", "Épistémologie", "Épistémologie", K.EPISTEMOLOGUES,
+                   "Reconnaître le penseur derrière une idée sur la connaissance scientifique."),
+    _matiere_texte("marketing", "Mix marketing (4P)", "Marketing", K.MIX_MARKETING,
+                   "Classer une décision dans le bon « P » du mix marketing."),
+    Matiere("cycle_de_vie", "Cycle de vie du produit", "Marketing",
+            ["Lancement", "Croissance", "Maturité", "Déclin"], 2, _cycle_de_vie,
+            note="Selon la croissance des ventes et la part de marché (seuils pédagogiques)."),
+    _matiere_texte("incoterms", "Incoterms 2020", "Commerce international", K.INCOTERMS,
+                   "Reconnaître l'Incoterm d'après la répartition des frais et des risques."),
+    _matiere_texte("transit", "Documents de transit et de douane", "Transit", K.TRANSIT,
+                   "Identifier le document ou la procédure de dédouanement au Maroc."),
+    Matiere("logistique", "Quantité économique (Wilson)", "Logistique",
+            ["Commande trop petite", "Commande optimale (±15 %)", "Commande trop grande"], 4, _wilson,
+            note="Comparer la commande proposée à Q* = √(2 × demande × coût de commande / coût de stockage)."),
     _matiere_texte("ia", "Types d'intelligence artificielle", "Intelligence artificielle", K.TYPES_IA,
                    "Reconnaître le type d'apprentissage adapté à un problème (dont le sien : le renforcement)."),
 ]

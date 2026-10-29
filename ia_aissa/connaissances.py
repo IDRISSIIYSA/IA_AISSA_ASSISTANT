@@ -227,6 +227,144 @@ TYPES_IA = {
 }
 
 
+# ==========================================
+# Histoire du Maroc : les dynasties
+# ==========================================
+DYNASTIES = {
+    "Idrissides (788-974)": ["arrivée d'idriss ier à volubilis", "fondation de fès", "idriss ii fait de fès sa capitale",
+                             "première dynastie musulmane du maroc", "moulay idriss zerhoun", "construction de la mosquée al quaraouiyine par fatima al fihriya"],
+    "Almoravides (1040-1147)": ["fondation de marrakech", "youssef ibn tachfine", "bataille de zallaqa en 1086",
+                                "abdallah ibn yassin et le ribat", "empire du sahara jusqu'à l'andalousie au xie siècle"],
+    "Almohades (1121-1269)": ["ibn toumert et le mouvement almohade", "abd al mumin unifie le maghreb",
+                              "construction de la koutoubia", "tour hassan à rabat sous yacoub al mansour",
+                              "bataille d'alarcos en 1195", "défaite de las navas de tolosa en 1212"],
+    "Mérinides (1244-1465)": ["médersa bou inania de fès", "médersa attarine", "fondation de fès jdid",
+                              "nécropole du chellah", "voyages d'ibn battuta sous abou inan", "ibn khaldoun à la cour de fès"],
+    "Saadiens (1549-1659)": ["bataille des trois rois en 1578", "bataille d'oued el makhazen", "ahmed al mansour",
+                             "palais el badi", "tombeaux saadiens de marrakech", "expédition vers tombouctou en 1591"],
+    "Alaouites (depuis 1631)": ["moulay ismaïl fait de meknès sa capitale", "moulay rachid unifie le pays",
+                                "indépendance du maroc en 1956 avec mohammed v", "marche verte de 1975 sous hassan ii",
+                                "intronisation de mohammed vi en 1999", "manifeste de l'indépendance de 1944"],
+}
+
+# ==========================================
+# Sciences : quelle discipline ?
+# ==========================================
+DISCIPLINES = {
+    "Physique": ["loi d'ohm et résistance électrique", "chute libre et gravitation", "vitesse de la lumière",
+                 "énergie cinétique d'un corps", "lois de newton sur le mouvement", "optique et réfraction"],
+    "Chimie": ["réaction acide base et ph", "tableau périodique des éléments", "oxydoréduction",
+               "molécule d'eau et liaison covalente", "concentration molaire d'une solution", "combustion du méthane"],
+    "Biologie (SVT)": ["photosynthèse des plantes", "division cellulaire et mitose", "adn et génétique",
+                       "système immunitaire et anticorps", "digestion chez l'homme", "évolution des espèces"],
+    "Mathématiques": ["théorème de pythagore", "dérivée d'une fonction", "équation du second degré",
+                      "probabilités et loi binomiale", "suites arithmétiques et géométriques", "intégrale et calcul d'aire"],
+    "Géologie": ["tectonique des plaques", "formation des roches sédimentaires", "séisme et faille",
+                 "volcan et magma", "chaîne de l'atlas et orogenèse", "fossiles et datation des couches"],
+    "Astronomie": ["système solaire et planètes", "phases de la lune", "étoiles et galaxies",
+                   "éclipse de soleil", "big bang et expansion de l'univers", "trou noir"],
+}
+
+# ==========================================
+# Épistémologie : quel penseur ?
+# ==========================================
+EPISTEMOLOGUES = {
+    "Karl Popper (falsifiabilité)": ["une théorie scientifique doit pouvoir être réfutée", "critère de falsifiabilité",
+                                     "conjectures et réfutations", "la science progresse par élimination des erreurs"],
+    "Thomas Kuhn (paradigmes)": ["révolutions scientifiques", "changement de paradigme", "science normale et anomalies",
+                                "structure des révolutions scientifiques"],
+    "Gaston Bachelard (obstacle épistémologique)": ["obstacle épistémologique", "rupture avec l'opinion commune",
+                                                    "la formation de l'esprit scientifique", "l'opinion pense mal"],
+    "René Descartes (rationalisme)": ["doute méthodique", "je pense donc je suis", "discours de la méthode",
+                                      "la raison comme source de la connaissance"],
+    "David Hume (empirisme)": ["problème de l'induction", "la connaissance vient de l'expérience",
+                               "habitude et causalité", "empirisme sceptique"],
+    "Auguste Comte (positivisme)": ["loi des trois états", "positivisme", "état théologique métaphysique et positif",
+                                    "classification des sciences"],
+    "Paul Feyerabend (anarchisme épistémologique)": ["contre la méthode", "tout est bon en science",
+                                                     "anarchisme épistémologique", "pluralisme méthodologique"],
+    "Ibn Khaldoun (méthode historique)": ["critique des récits historiques", "la muqaddima",
+                                          "asabiyya et cycles des dynasties", "science de la civilisation umran"],
+}
+
+# ==========================================
+# Marketing : le mix marketing (4P)
+# ==========================================
+MIX_MARKETING = {
+    "Produit": ["caractéristiques et qualité du produit", "design et emballage", "gamme de produits",
+                "marque et nom du produit", "garantie et service après-vente", "lancement d'une nouvelle version"],
+    "Prix": ["fixation du prix de vente", "remise et promotion tarifaire", "prix psychologique à 99",
+             "politique de prix d'écrémage", "prix de pénétration", "conditions de paiement"],
+    "Distribution (Place)": ["choix des points de vente", "vente en ligne et e-commerce", "réseau de grossistes",
+                             "franchise et distributeurs", "couverture géographique", "gestion des canaux de distribution"],
+    "Communication (Promotion)": ["publicité à la télévision", "campagne sur les réseaux sociaux", "relations presse",
+                                  "salon professionnel", "marketing d'influence", "parrainage et sponsoring"],
+}
+
+# ==========================================
+# Commerce international : Incoterms 2020
+# ==========================================
+INCOTERMS = {
+    "EXW (à l'usine)": ["le vendeur met la marchandise à disposition dans ses locaux", "l'acheteur s'occupe de tout dès l'usine",
+                        "ex works marchandise non chargée"],
+    "FCA (franco transporteur)": ["remise au transporteur désigné par l'acheteur", "vendeur dédouane à l'export et remet au transporteur",
+                                  "free carrier tous modes"],
+    "FAS (franco le long du navire)": ["marchandise livrée le long du navire au port d'embarquement",
+                                       "free alongside ship sur le quai"],
+    "FOB (franco à bord)": ["marchandise livrée à bord du navire au port d'embarquement", "free on board",
+                            "risque transféré quand la marchandise est à bord au départ"],
+    "CFR (coût et fret)": ["vendeur paie le fret maritime jusqu'au port de destination sans assurance",
+                           "cost and freight"],
+    "CIF (coût assurance fret)": ["vendeur paie fret maritime et assurance jusqu'au port de destination",
+                                  "cost insurance freight maritime"],
+    "CPT (port payé jusqu'à)": ["vendeur paie le transport jusqu'à destination tous modes sans assurance",
+                                "carriage paid to"],
+    "CIP (port payé assurance comprise)": ["vendeur paie transport et assurance jusqu'à destination tous modes",
+                                           "carriage and insurance paid to couverture maximale"],
+    "DAP (rendu au lieu de destination)": ["livré au lieu de destination prêt à être déchargé non dédouané à l'import",
+                                           "delivered at place"],
+    "DPU (rendu au lieu de destination déchargé)": ["livré et déchargé au lieu de destination",
+                                                    "delivered at place unloaded déchargement par le vendeur"],
+    "DDP (rendu droits acquittés)": ["vendeur livre dédouané droits et taxes payés chez l'acheteur",
+                                     "delivered duty paid le vendeur supporte tout"],
+}
+
+# ==========================================
+# Transit et douane au Maroc : documents et procédures
+# ==========================================
+TRANSIT = {
+    "DUM (Déclaration Unique de Marchandises)": ["déclaration en douane des marchandises importées",
+                                                 "déposer la déclaration en détail à la douane", "déclaration unique de marchandises"],
+    "BADR (système informatique de la douane)": ["dédouanement électronique de la douane marocaine",
+                                                 "système informatique de dédouanement", "dépôt de la déclaration en ligne sur badr"],
+    "Connaissement (Bill of Lading)": ["titre de transport maritime", "document de transport par bateau représentant la marchandise",
+                                       "bill of lading du transporteur maritime"],
+    "LTA (Lettre de Transport Aérien)": ["document de transport par avion", "air waybill du fret aérien"],
+    "Lettre de voiture CMR": ["document de transport routier international par camion", "transport par route vers l'europe"],
+    "Certificat d'origine (EUR.1)": ["prouver l'origine pour bénéficier de l'accord préférentiel",
+                                     "certificat de circulation pour exonération de droits avec l'union européenne", "origine préférentielle"],
+    "Facture commerciale": ["document indiquant la valeur de la marchandise vendue", "prix et conditions de vente pour la douane"],
+    "Liste de colisage": ["détail des colis poids et contenu de chaque carton", "packing list"],
+}
+
+
+def calculer_droits_import(valeur_caf, taux_droit_importation, taux_tva=0.20):
+    """Droits et taxes à l'import (simplifié) : droit d'importation sur la valeur CAF, puis TVA à l'import
+    sur (valeur CAF + droit). D'autres taxes peuvent s'ajouter selon le produit (TPI, TIC…)."""
+    di = valeur_caf * taux_droit_importation
+    tva = (valeur_caf + di) * taux_tva
+    return {"valeur_caf": round(valeur_caf, 2), "droit_importation": round(di, 2), "tva_import": round(tva, 2),
+            "total_droits_et_taxes": round(di + tva, 2), "cout_total_dedouane": round(valeur_caf + di + tva, 2),
+            "remarque": "Vérifier le taux exact du produit dans le tarif douanier (ADII) et les taxes spécifiques."}
+
+
+def quantite_wilson(demande_annuelle, cout_passation_commande, cout_stockage_unitaire_annuel):
+    q = (2 * demande_annuelle * cout_passation_commande / cout_stockage_unitaire_annuel) ** 0.5
+    n = demande_annuelle / q
+    return {"quantite_economique": round(q, 1), "commandes_par_an": round(n, 2),
+            "cout_total_gestion": round(n * cout_passation_commande + q / 2 * cout_stockage_unitaire_annuel, 2)}
+
+
 def resume_connaissances():
     """Texte de référence donné à l'assistant conversationnel."""
     lignes = [f"Base de connaissances IA AISSA — mise à jour {MISE_A_JOUR}.",
@@ -251,5 +389,11 @@ def resume_connaissances():
         "4 passif circulant, 5 trésorerie, 6 charges, 7 produits, 8 résultats. Comptes usuels : " +
         "; ".join(f"{c} {n}" for c, (n, _) in PCM.items()),
         "Textes de loi : " + "; ".join(TEXTES_DE_LOI),
+        "Dynasties marocaines : " + "; ".join(DYNASTIES),
+        "Incoterms 2020 : " + "; ".join(f"{k} : {v[0]}" for k, v in INCOTERMS.items()),
+        "Transit et douane : " + "; ".join(f"{k} : {v[0]}" for k, v in TRANSIT.items()),
+        "Marketing : mix 4P (produit, prix, distribution, communication) ; cycle de vie : lancement, croissance, "
+        "maturité, déclin. Logistique : quantité économique de Wilson Q* = racine(2 × demande × coût de commande / "
+        "coût de stockage unitaire).",
     ]
     return "\n".join(lignes)
