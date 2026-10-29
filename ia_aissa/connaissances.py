@@ -365,6 +365,180 @@ def quantite_wilson(demande_annuelle, cout_passation_commande, cout_stockage_uni
             "cout_total_gestion": round(n * cout_passation_commande + q / 2 * cout_stockage_unitaire_annuel, 2)}
 
 
+# ==========================================
+# Carte des sciences : les quatre grandes familles
+# ==========================================
+FAMILLES_SCIENCES = {
+    "Sciences formelles": ["logique et raisonnement déductif", "algèbre et théorie des nombres", "géométrie et analyse",
+                           "algorithmes et structures de données", "informatique théorique et calculabilité",
+                           "statistiques et probabilités", "théorie des systèmes complexes", "théorie des graphes"],
+    "Sciences naturelles": ["mécanique et thermodynamique", "physique quantique", "chimie organique",
+                            "astronomie et cosmologie", "géologie et météorologie", "océanographie",
+                            "microbiologie et bactéries", "génétique et hérédité", "zoologie et botanique",
+                            "écologie des écosystèmes"],
+    "Sciences humaines et sociales": ["économie et gestion des entreprises", "comptabilité et contrôle de gestion",
+                                      "psychologie du comportement individuel", "sociologie des organisations",
+                                      "science politique et gouvernance", "anthropologie des cultures",
+                                      "histoire des civilisations", "linguistique et communication"],
+    "Sciences appliquées": ["génie mécanique électrique et civil", "ingénierie aéronautique", "médecine clinique et chirurgie",
+                            "pharmacie et santé publique", "agronomie et production alimentaire",
+                            "technologie des aliments", "énergies renouvelables", "recyclage et valorisation des déchets"],
+}
+
+# ==========================================
+# Droit marocain : civil, pénal, bancaire
+# ==========================================
+DROIT_MAROCAIN = {
+    "DOC — Dahir des obligations et contrats (1913)": ["formation et validité d'un contrat", "responsabilité civile délictuelle",
+                                                       "vice du consentement et nullité du contrat", "contrat de vente civile",
+                                                       "prescription des obligations", "dommages et intérêts pour inexécution"],
+    "Code de la famille — Moudawana (loi 70-03)": ["mariage et acte de mariage", "divorce et répudiation", "garde des enfants",
+                                                   "pension alimentaire", "héritage et succession", "tutelle légale"],
+    "Code pénal (1962)": ["vol et escroquerie", "abus de confiance", "faux et usage de faux", "corruption d'un agent public",
+                          "infraction et peine d'emprisonnement", "chèque sans provision poursuites pénales"],
+    "Loi bancaire 103-12 (établissements de crédit)": ["agrément d'une banque par bank al-maghrib",
+                                                       "contrôle prudentiel des établissements de crédit",
+                                                       "banques participatives", "protection de la clientèle bancaire",
+                                                       "établissement de paiement"],
+    "Loi 43-05 (blanchiment de capitaux)": ["blanchiment d'argent", "déclaration de soupçon",
+                                            "vigilance sur l'origine des fonds", "lutte contre le financement du terrorisme"],
+}
+
+# ==========================================
+# Droit comparé
+# ==========================================
+SYSTEMES_JURIDIQUES = {
+    "Droit français (tradition civiliste)": ["code civil de 1804 code napoléon", "conseil d'état et cour de cassation française",
+                                             "constitution de la ve république", "droit codifié d'inspiration romaine"],
+    "Droit musulman (fiqh)": ["coran sunna ijmâ et qiyâs sources du droit", "écoles malikite hanafite chafiite hanbalite",
+                              "fatwa d'un mufti", "maqasid al charia finalités de la loi"],
+    "Droits des pays arabes (codes modernes)": ["code civil égyptien de 1948 rédigé par sanhouri",
+                                                "codes civils inspirés du modèle de sanhouri",
+                                                "mixte de droit civil européen et de fiqh", "codification moderne des pays arabes"],
+    "Droit marocain": ["dahir des obligations et contrats", "constitution marocaine de 2011", "rite malékite et moudawana",
+                       "cour de cassation du royaume"],
+    "Common law": ["règle du précédent stare decisis", "jurisprudence anglaise et américaine", "jury populaire au civil",
+                   "droit non codifié des juges"],
+}
+
+# ==========================================
+# Fiscalité complète : quel impôt ?
+# ==========================================
+QUEL_IMPOT = {
+    "IS (impôt sur les sociétés)": ["bénéfice annuel d'une sarl", "résultat fiscal d'une société anonyme", "impôt sur le bénéfice de la société"],
+    "IR (impôt sur le revenu)": ["salaire d'un employé", "loyer perçu d'un appartement", "bénéfice d'un commerçant personne physique",
+                                 "plus-value sur la vente d'un terrain par un particulier"],
+    "TVA": ["vente facturée à un client", "prestation de services facturée", "taxe sur le chiffre d'affaires collectée"],
+    "Droits d'enregistrement": ["achat d'un terrain par acte notarié", "cession de parts sociales", "constitution de société et enregistrement des statuts"],
+    "Taxe professionnelle": ["impôt local sur l'activité selon la valeur locative du local", "exercice d'une activité commerciale dans un local"],
+    "Taxe de services communaux": ["taxe sur les services de la commune liée au local", "assainissement et voirie communale"],
+    "Retenue à la source": ["dividendes versés aux associés", "intérêts versés à un prêteur", "honoraires versés à un non résident"],
+    "Cotisation minimale": ["société en déficit paie un minimum sur son chiffre d'affaires", "minimum d'impôt même sans bénéfice"],
+}
+
+# ==========================================
+# Gestion d'entreprise : quelle fonction ?
+# ==========================================
+FONCTIONS_ENTREPRISE = {
+    "Direction générale": ["fixer la vision et les objectifs", "arbitrer entre les directions", "représenter l'entreprise"],
+    "Finance et comptabilité": ["tenir la comptabilité", "gérer la trésorerie", "établir le budget annuel"],
+    "Ressources humaines": ["recruter un collaborateur", "établir la paie", "former les salariés"],
+    "Production": ["planifier la fabrication", "contrôler la qualité des produits", "maintenir les machines"],
+    "Commercial et marketing": ["prospecter de nouveaux clients", "fixer la politique de prix", "lancer une campagne publicitaire"],
+    "Achats et logistique": ["négocier avec les fournisseurs", "gérer les stocks", "organiser les livraisons"],
+    "Juridique": ["rédiger les contrats", "gérer les litiges", "veiller à la conformité réglementaire"],
+}
+
+# ==========================================
+# Stratégie et management stratégique
+# ==========================================
+OUTILS_STRATEGIQUES = {
+    "SWOT": ["forces faiblesses opportunités menaces", "diagnostic interne et externe de l'entreprise"],
+    "PESTEL": ["facteurs politiques économiques sociaux technologiques écologiques et légaux", "analyse du macro-environnement"],
+    "5 forces de Porter": ["pouvoir de négociation des clients et des fournisseurs", "menace des nouveaux entrants et des substituts",
+                           "intensité concurrentielle du secteur"],
+    "Matrice BCG": ["portefeuille d'activités vedettes vaches à lait dilemmes et poids morts",
+                    "croissance du marché et part de marché relative"],
+    "Chaîne de valeur": ["activités principales et de soutien créatrices de valeur", "décomposer l'entreprise en activités"],
+    "Stratégies génériques de Porter": ["domination par les coûts", "différenciation de l'offre", "stratégie de focalisation sur une niche"],
+    "Matrice d'Ansoff": ["pénétration de marché développement de produits", "diversification et développement de marché"],
+}
+
+# ==========================================
+# Banque : quelle opération ?
+# ==========================================
+OPERATIONS_BANCAIRES = {
+    "Crédit": ["prêt immobilier", "crédit de trésorerie à une entreprise", "découvert autorisé", "crédit à la consommation"],
+    "Dépôts et épargne": ["ouverture d'un compte courant", "dépôt à terme", "compte d'épargne rémunéré"],
+    "Moyens de paiement": ["virement bancaire", "carte bancaire", "chèque", "lettre de change et effet de commerce"],
+    "Change et international": ["achat de devises", "crédit documentaire à l'import", "remise documentaire", "transfert vers l'étranger"],
+    "Marchés de capitaux": ["introduction en bourse", "émission d'obligations", "gestion d'opcvm", "achat d'actions à la bourse de casablanca"],
+    "Réglementation prudentielle": ["ratio de solvabilité bâle", "exigence de fonds propres", "supervision par bank al-maghrib", "ratio de liquidité"],
+}
+
+# ==========================================
+# Statistiques : quelle notion ?
+# ==========================================
+NOTIONS_STATISTIQUES = {
+    "Moyenne": ["somme des valeurs divisée par leur nombre", "valeur moyenne d'une série"],
+    "Médiane": ["valeur qui partage la série en deux moitiés", "valeur centrale peu sensible aux valeurs extrêmes"],
+    "Écart-type et variance": ["dispersion autour de la moyenne", "mesurer la variabilité des données"],
+    "Corrélation": ["lien entre deux variables", "coefficient entre moins un et un"],
+    "Régression": ["prévoir une variable à partir d'une autre", "droite des moindres carrés"],
+    "Test d'hypothèse": ["hypothèse nulle et seuil de signification", "p-valeur et rejet de l'hypothèse"],
+    "Intervalle de confiance": ["fourchette contenant le vrai paramètre à 95 %", "marge d'erreur d'un sondage"],
+    "Loi normale": ["courbe en cloche de gauss", "distribution symétrique autour de la moyenne"],
+}
+
+# ==========================================
+# Faits économiques et sociaux
+# ==========================================
+FAITS_ECONOMIQUES = {
+    "Croissance économique": ["augmentation du pib réel", "hausse de la production de richesses sur longue période"],
+    "Inflation": ["hausse générale et durable des prix", "perte de pouvoir d'achat de la monnaie"],
+    "Chômage": ["personnes sans emploi qui en cherchent un", "taux de chômage des jeunes diplômés"],
+    "Mondialisation": ["intensification des échanges internationaux", "firmes multinationales et délocalisations"],
+    "Développement durable": ["répondre aux besoins présents sans compromettre les générations futures", "transition écologique"],
+    "Inégalités sociales": ["écart de revenus entre riches et pauvres", "coefficient de gini", "mobilité sociale"],
+    "Politique budgétaire": ["dépenses publiques et déficit de l'état", "loi de finances et relance par l'investissement public"],
+    "Exode rural et urbanisation": ["migration des campagnes vers les villes", "croissance des villes et habitat"],
+}
+
+# ==========================================
+# Visa et voyage : quelle pièce du dossier ?
+# ==========================================
+DOSSIER_VISA = {
+    "Identité": ["passeport valide encore trois mois après le retour", "photos d'identité récentes", "copie de la carte nationale"],
+    "Justificatifs financiers": ["relevés bancaires des trois derniers mois", "attestation de revenus", "preuve de moyens de subsistance"],
+    "Hébergement": ["réservation d'hôtel", "attestation d'accueil chez un proche", "contrat de location sur place"],
+    "Assurance voyage": ["assurance médicale de voyage couvrant au moins 30 000 euros", "assurance rapatriement"],
+    "Motif du voyage": ["lettre d'invitation d'une entreprise", "ordre de mission", "inscription dans une université étrangère",
+                        "réservation de circuit touristique"],
+    "Situation professionnelle": ["attestation de travail", "autorisation de congé", "registre de commerce du demandeur"],
+    "Transport": ["réservation du billet d'avion aller-retour", "itinéraire du voyage"],
+}
+TYPES_VISA = "Visa Schengen de court séjour (type C : 90 jours au plus sur 180), visa national de long séjour (type D), visa de transit aéroportuaire (type A)."
+
+
+def mensualite_credit(capital, taux_annuel, duree_mois):
+    t = taux_annuel / 12
+    m = capital / duree_mois if t == 0 else capital * t / (1 - (1 + t) ** -duree_mois)
+    return {"mensualite": round(m, 2), "cout_total_credit": round(m * duree_mois - capital, 2)}
+
+
+def statistiques_descriptives(valeurs):
+    import statistics
+    v = [float(x) for x in valeurs]
+    return {"n": len(v), "moyenne": round(statistics.fmean(v), 4), "mediane": statistics.median(v),
+            "ecart_type": round(statistics.stdev(v), 4) if len(v) > 1 else 0.0, "minimum": min(v), "maximum": max(v)}
+
+
+def position_bcg(croissance_marche, part_marche_relative):
+    forte_croissance, leader = croissance_marche >= 0.10, part_marche_relative >= 1
+    return {(True, True): "Vedette", (False, True): "Vache à lait", (True, False): "Dilemme",
+            (False, False): "Poids mort"}[(forte_croissance, leader)]
+
+
 def resume_connaissances():
     """Texte de référence donné à l'assistant conversationnel."""
     lignes = [f"Base de connaissances IA AISSA — mise à jour {MISE_A_JOUR}.",
@@ -392,6 +566,10 @@ def resume_connaissances():
         "Dynasties marocaines : " + "; ".join(DYNASTIES),
         "Incoterms 2020 : " + "; ".join(f"{k} : {v[0]}" for k, v in INCOTERMS.items()),
         "Transit et douane : " + "; ".join(f"{k} : {v[0]}" for k, v in TRANSIT.items()),
+        "Droit marocain : " + "; ".join(DROIT_MAROCAIN) + ". Systèmes juridiques comparés : " + "; ".join(SYSTEMES_JURIDIQUES),
+        "Fiscalité — quel impôt : " + "; ".join(f"{k} : {', '.join(v)}" for k, v in QUEL_IMPOT.items()),
+        "Visa : " + TYPES_VISA + " Pièces : " + "; ".join(DOSSIER_VISA),
+        "Stratégie : " + "; ".join(OUTILS_STRATEGIQUES) + ". Matrice BCG : seuils 10 % de croissance et part relative 1.",
         "Marketing : mix 4P (produit, prix, distribution, communication) ; cycle de vie : lancement, croissance, "
         "maturité, déclin. Logistique : quantité économique de Wilson Q* = racine(2 × demande × coût de commande / "
         "coût de stockage unitaire).",

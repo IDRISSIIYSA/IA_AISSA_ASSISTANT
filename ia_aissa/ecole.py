@@ -243,6 +243,24 @@ def _wilson(rng):
         f"commande proposée {proposee:,.0f} u"
 
 
+def _bcg(rng):
+    croissance, part = rng.uniform(-0.05, 0.30), float(np.exp(rng.uniform(np.log(0.1), np.log(5))))
+    y = ["Vedette", "Vache à lait", "Dilemme", "Poids mort"].index(K.position_bcg(croissance, part))
+    return np.array([croissance * 5, np.log(part)], np.float32), y, \
+        f"Croissance du marché {croissance:.0%}, part de marché relative {part:.2f}"
+
+
+def _credit(rng):
+    revenu = rng.uniform(4_000, 40_000)
+    capital, taux, duree = rng.uniform(20_000, 1_500_000), rng.uniform(0.04, 0.09), int(rng.choice([60, 120, 180, 240, 300]))
+    autres = rng.uniform(0, 0.25) * revenu
+    m = K.mensualite_credit(capital, taux, duree)["mensualite"]
+    ratio = (m + autres) / revenu
+    y = 0 if ratio <= 0.33 else (1 if ratio <= 0.40 else 2)
+    return np.array([ratio * 2, revenu / 40_000, np.log(capital) / 14], np.float32), y, \
+        f"Revenu {revenu:,.0f} DH/mois, crédit {capital:,.0f} DH à {taux:.1%} sur {duree} mois, autres charges {autres:,.0f} DH"
+
+
 MATIERES = [
     _matiere_texte("comptabilite", "Imputation au Plan Comptable Marocain", "Comptabilité", K.PCM,
                    "Trouver le compte du CGNC correspondant à une opération.", lambda k, v: f"{k} {v[0]}"),
@@ -299,6 +317,30 @@ MATIERES = [
     Matiere("logistique", "Quantité économique (Wilson)", "Logistique",
             ["Commande trop petite", "Commande optimale (±15 %)", "Commande trop grande"], 4, _wilson,
             note="Comparer la commande proposée à Q* = √(2 × demande × coût de commande / coût de stockage)."),
+    _matiere_texte("familles_sciences", "Grandes familles de sciences", "Sciences", K.FAMILLES_SCIENCES,
+                   "Sciences formelles, naturelles, humaines et sociales, appliquées."),
+    _matiere_texte("droit_marocain", "Droit civil, pénal et bancaire marocain", "Juridique", K.DROIT_MAROCAIN,
+                   "DOC, Moudawana, Code pénal, loi bancaire 103-12, loi 43-05."),
+    _matiere_texte("droit_compare", "Systèmes juridiques comparés", "Juridique", K.SYSTEMES_JURIDIQUES,
+                   "Droit français, droit musulman, droits arabes modernes, droit marocain, common law."),
+    _matiere_texte("quel_impot", "Quel impôt s'applique ?", "Fiscalité", K.QUEL_IMPOT,
+                   "IS, IR, TVA, droits d'enregistrement, impôts locaux, retenue à la source, cotisation minimale."),
+    _matiere_texte("gestion", "Fonctions de l'entreprise", "Gestion d'entreprise", K.FONCTIONS_ENTREPRISE,
+                   "Rattacher une tâche à la bonne fonction de l'entreprise."),
+    _matiere_texte("strategie", "Outils du management stratégique", "Stratégie", K.OUTILS_STRATEGIQUES,
+                   "SWOT, PESTEL, Porter, BCG, chaîne de valeur, Ansoff."),
+    Matiere("bcg", "Matrice BCG", "Stratégie", ["Vedette", "Vache à lait", "Dilemme", "Poids mort"], 2, _bcg,
+            note="Croissance du marché ≥ 10 % et part de marché relative ≥ 1."),
+    _matiere_texte("banque", "Opérations bancaires", "Banque et finance", K.OPERATIONS_BANCAIRES,
+                   "Crédit, dépôts, paiements, international, marchés, prudentiel."),
+    Matiere("credit", "Décision de crédit", "Banque et finance", ["Accord", "Accord sous conditions", "Refus"], 3, _credit,
+            note="Taux d'endettement : ≤ 33 % accord, ≤ 40 % sous conditions (seuils pédagogiques)."),
+    _matiere_texte("statistiques", "Notions de statistiques", "Statistiques", K.NOTIONS_STATISTIQUES,
+                   "Reconnaître la notion statistique décrite."),
+    _matiere_texte("faits_economiques", "Faits économiques et sociaux", "Économie", K.FAITS_ECONOMIQUES,
+                   "Reconnaître le phénomène économique ou social décrit."),
+    _matiere_texte("visa", "Dossier de visa", "Visa et voyage", K.DOSSIER_VISA,
+                   "Classer une pièce dans la bonne rubrique du dossier de visa."),
     _matiere_texte("ia", "Types d'intelligence artificielle", "Intelligence artificielle", K.TYPES_IA,
                    "Reconnaître le type d'apprentissage adapté à un problème (dont le sien : le renforcement)."),
 ]

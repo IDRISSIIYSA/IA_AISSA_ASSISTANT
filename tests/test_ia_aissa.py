@@ -67,3 +67,21 @@ def test_outil_ecole_couvre_toutes_les_matieres_textuelles():
         outil["input_schema"]["properties"]["matiere"]["enum"])
     r = executer_outil("consulter_ecole", {"matiere": "epistemologie", "question": "une théorie doit pouvoir être réfutée"})
     assert r["propositions_ia_aissa"][0]["reponse"].startswith("Karl Popper")
+
+
+def test_banque_statistiques_bcg():
+    assert K.mensualite_credit(120_000, 0, 12)["mensualite"] == 10_000
+    assert abs(K.mensualite_credit(100_000, 0.06, 60)["mensualite"] - 1933.28) < 0.01
+    st = K.statistiques_descriptives([2, 4, 4, 4, 5, 5, 7, 9])
+    assert st["moyenne"] == 5 and st["mediane"] == 4.5
+    assert K.position_bcg(0.15, 2) == "Vedette" and K.position_bcg(0.02, 0.3) == "Poids mort"
+
+
+def test_meta_intelligence_controle_de_gestion():
+    import controle_gestion_ia as c
+    df = c.preparer(c.generer_donnees_exemple(18))
+    conseil, historique, journal = c.entrainer(df, n_episodes=8)
+    decision, confiance = c.decider(conseil, df)
+    assert len(decision) == len(df) and ((confiance >= 0) & (confiance <= 1)).all()
+    assert len(journal) == 8 and "curiosite" in historique
+    assert all("je passe" in p for p in c.principes_decouverts(conseil, df))

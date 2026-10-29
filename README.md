@@ -9,9 +9,9 @@ et espagnol, à l'écrit comme à l'oral.
 
 | Page | Rôle |
 |---|---|
-| 📊 **Contrôle de gestion** | Montage du contrôle de gestion à partir de données brutes + agent qui apprend à piloter les écarts |
+| 📊 **Contrôle de gestion** | Montage à partir de données brutes + agent méta-intelligent qui pilote les écarts et sait quand il doute |
 | 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
-| 🎓 **École d'IA AISSA** | 25 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
+| 🎓 **École d'IA AISSA** | 37 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
 | 💬 **Parler avec IA AISSA** | Questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
 | 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
 
@@ -42,6 +42,15 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 | Histoire | Dynasties du Maroc (Idrissides, Almoravides, Almohades, Mérinides, Saadiens, Alaouites) |
 | Sciences | Physique, chimie, SVT, mathématiques, géologie, astronomie |
 | Épistémologie | Popper, Kuhn, Bachelard, Descartes, Hume, Comte, Feyerabend, Ibn Khaldoun |
+| Sciences (suite) | Grandes familles : formelles, naturelles, humaines et sociales, appliquées |
+| Juridique (suite) | Droit civil (DOC), famille (Moudawana), pénal, bancaire (103-12), blanchiment (43-05) ; droit comparé (français, musulman, pays arabes, common law) |
+| Fiscalité (suite) | Quel impôt s'applique (IS, IR, TVA, enregistrement, impôts locaux, retenue à la source, cotisation minimale) |
+| Gestion d'entreprise | Fonctions de l'entreprise |
+| Stratégie | Outils du management stratégique (SWOT, PESTEL, Porter, BCG, Ansoff…), matrice BCG |
+| Banque et finance | Opérations bancaires, décision de crédit (taux d'endettement) |
+| Statistiques | Notions (moyenne, médiane, écart-type, corrélation, régression, tests…) |
+| Économie (suite) | Faits économiques et sociaux |
+| Visa et voyage | Pièces du dossier de visa |
 | Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
 
 Les cerveaux entraînés sont fournis dans `ia_aissa/cerveaux/`. Pour les réentraîner :
@@ -51,12 +60,27 @@ Ajouter une matière = ajouter un générateur d'exercices dans `MATIERES`.
 **Limite honnête :** un petit cerveau ne reconnaît que ce qui ressemble à ce qu'il a étudié.
 Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et corrige alors sa réponse.
 
+## Méta-intelligence : Sutton × Dalio × Hofstadter (contrôle de gestion)
+
+L'agent de contrôle de gestion ne se contente plus de décider : il sait quand il sait.
+
+- **Sutton — apprendre de zéro et explorer** : un conseil de 5 cerveaux nés vides, chacun formé sur un
+  échantillon différent de la mémoire (bootstrapped DQN). Leur désaccord mesure ce que l'agent ignore ;
+  un **bonus de curiosité** (récompense intrinsèque) le pousse à explorer ces zones, puis s'éteint.
+- **Dalio — décider par principes et par crédibilité** : chaque cerveau vote avec un poids égal à sa
+  crédibilité (ses résultats passés) ; un **journal des erreurs** suit les confusions épisode après
+  épisode ; l'agent **énonce lui-même ses principes** (« au-delà de +10 % d'écart, j'alerte »).
+- **Hofstadter (GEB) — la boucle étrange** : un **méta-cerveau** apprend, à partir des erreurs du
+  conseil, à prédire si sa propre décision est juste : ✅ Sûr, 🟡 À confirmer, 🤔 Je ne sais pas.
+  S'il doute de plus de 10 % de ses décisions, il demande à réapprendre.
+- **Curiosité** : l'agent signale aussi les écarts sous les seuils d'alerte mais inhabituels pour leur centre.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Modèle Claude Opus 5.5 avec réflexion adaptative et repli automatique (`fallbacks: "default"`)
   si une demande est refusée par les filtres de sécurité.
 - Outils : calculs exacts (IR, IS, TVA, paie, VAN, seuil de rentabilité, droits de douane, quantité
-  de Wilson) et consultation des cerveaux d'école d'IA AISSA, qu'elle vérifie avant de répondre.
+  de Wilson, crédit, statistiques, BCG) et consultation des cerveaux d'école d'IA AISSA, qu'elle vérifie avant de répondre.
 - Voix : la parole est transcrite par Whisper sur le serveur ; les réponses sont dites par des voix
   neuronales (dont marocaines `ar-MA`, via edge-tts) ou, à défaut, par les voix du navigateur.
 
