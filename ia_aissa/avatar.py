@@ -113,16 +113,18 @@ ALIEN_SVG = """
 
 _STYLE = """
 <style>
-  .scene { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
-  .alien { width: 260px; max-width: 46vw; flex: none; position: relative; }
+  body { background: transparent; color: #e6edf7; font-family: 'Exo 2', system-ui, sans-serif; }
+  .scene { display:flex; flex-direction: column; gap:10px; align-items:center; }
+  .alien { width: 440px; max-width: 94vw; flex: none; position: relative; }
   .alien:not(.photo) { aspect-ratio: 400 / 430; }
   #alien3d { position: absolute; inset: 0; height: 100% !important; }
   #alien3d canvas { width: 100% !important; height: 100% !important; display: block; border-radius: 18px; }
   .alien svg, .alien img { width: 100%; display: block; }
   .alien img { border-radius: 18px; }
-  .bulle { flex: 1; min-width: 220px; font-size: 16px; line-height: 1.45; padding: 14px 16px; border-radius: 14px;
-           background: rgba(56,189,248,.10); border: 1px solid rgba(56,189,248,.45); white-space: pre-wrap;
-           max-height: 230px; overflow:auto; }
+  .bulle { width: min(640px, 94vw); font-size: 15.5px; line-height: 1.5; padding: 12px 16px; border-radius: 16px;
+           text-align: center; color: #e6edf7; background: rgba(17,23,58,.55); backdrop-filter: blur(10px);
+           border: 1px solid rgba(56,189,248,.35); box-shadow: 0 0 22px rgba(56,189,248,.15); white-space: pre-wrap;
+           max-height: 120px; overflow:auto; }
   .respire { animation: respire 4s ease-in-out infinite; transform-origin: 200px 430px; }
   .flotte { animation: flotte 5s ease-in-out infinite; }
   .holo { animation: scintille 3.2s steps(1) infinite; }
@@ -190,7 +192,7 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
                 f'<span>· {html.escape(str(indicateur.get("details", "")))}</span></div>')
     return f"""{_SCRIPT_COMMUN}{_STYLE}
 {meta}<div class="scene">{visage}{texte_bulle}</div>
-<div style="margin-top:6px"><button id="ecouter" class="principal" style="display:none">🔊 Écouter IA AISSA</button></div>
+<div style="margin-top:8px; text-align:center"><button id="ecouter" class="principal" style="display:none; border-radius:999px; padding:8px 18px; background:rgba(56,189,248,.18); border:1px solid rgba(56,189,248,.6); color:#e0f2fe; box-shadow:0 0 16px rgba(56,189,248,.3)">🔊 Écouter IA AISSA</button></div>
 <script>
 const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};
 const alien = document.getElementById('alien'), bouton = document.getElementById('ecouter');

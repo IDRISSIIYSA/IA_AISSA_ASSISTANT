@@ -7,8 +7,9 @@ et espagnol, à l'écrit comme à l'oral.
 
 ## Un seul espace : l'alien et une ligne de conversation
 
-Toute l'application tient dans un seul écran (`ia_aissa/interface.py`) : IA AISSA, l'alien en 3D dans son
-portail cosmique, et une seule ligne de conversation qui accepte le texte, la voix (🎙️) et les fichiers (📎).
+Toute l'application tient dans un seul écran (`ia_aissa/interface.py`), dans une ambiance cosmique sombre
+(nébuleuses, étoiles, messages en verre lumineux, barre néon) : IA AISSA, l'alien en 3D réaliste, grand et centré
+dans son portail cosmique, et une seule ligne de conversation qui accepte le texte, la voix (🎙️) et les fichiers (📎).
 Les réglages (moteur, clé API, réponses écrites/vocales, niveau, conversations, souvenirs, reconnaissance du
 visage, image de l'alien) tiennent dans un seul panneau ⚙️.
 
@@ -101,8 +102,9 @@ Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et
 
 ## IA AISSA, compagnon alien qui grandit seul
 
-- **Visage en 3D** (`ia_aissa/alien3d.py`, three.js) : sculpté d'après le rendu de référence d'Aissa — peau
-  gris-bleu satinée, grands yeux ambrés brillants, oreilles pointues, bandeau argenté à LED, harnais tech,
+- **Visage en 3D réaliste** (`ia_aissa/alien3d.py`, three.js) : sculpté d'après le rendu de référence d'Aissa —
+  crâne large, menton fin, orbites creusées, peau gris-bleu satinée au grain fin et aux rides de front, éclairage
+  cinéma avec reflets, halos lumineux ; grands yeux ambrés brillants, oreilles pointues, bandeau argenté à LED, harnais tech,
   panneau « AI COMPANION · ONLINE · SYNC 100% », icônes holographiques, bureau chaleureux. Il respire, cligne
   des yeux, suit la souris du regard et bouge la bouche quand il parle ; en invention, décor cosmique et
   « QUANTUM FUSION ». Sans WebGL, l'alien dessiné en 2D s'affiche ; remplaçable par votre image (page 👋).

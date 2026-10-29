@@ -37,14 +37,55 @@ from .visage import SALUTATIONS
 from .voix import atelier_prononciation
 
 STYLE = """<style>
+  @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600&family=Orbitron:wght@500;700&display=swap');
   [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
-  .block-container { padding-top: 1.2rem; max-width: 860px; }
-  .role { display:inline-block; font-size:13px; padding:3px 10px; border-radius:999px;
-          border:1px solid rgba(56,189,248,.5); background: rgba(56,189,248,.08); }
+  .block-container { padding-top: 1rem; max-width: 860px; }
+  html, body, [data-testid="stAppViewContainer"], .stMarkdown, textarea, input, button { font-family: 'Exo 2', sans-serif; }
+
+  /* ---------- Le cosmos : nuit profonde, nébuleuses et étoiles qui scintillent ---------- */
+  [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
+    background:
+      radial-gradient(1100px 620px at 15% -8%, rgba(124,58,237,.38), transparent 62%),
+      radial-gradient(900px 520px at 92% 6%, rgba(14,165,233,.26), transparent 60%),
+      radial-gradient(800px 480px at 50% 112%, rgba(219,39,119,.20), transparent 62%),
+      #050816 !important; }
+  [data-testid="stAppViewContainer"]::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .85;
+    background-image:
+      radial-gradient(1.2px 1.2px at 6% 12%, #fff, transparent), radial-gradient(1px 1px at 18% 38%, #cfe8ff, transparent),
+      radial-gradient(1.4px 1.4px at 27% 8%, #fff, transparent), radial-gradient(1px 1px at 33% 63%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 44% 22%, #e9d5ff, transparent), radial-gradient(1px 1px at 52% 81%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 61% 44%, #fff, transparent), radial-gradient(1px 1px at 69% 15%, #cfe8ff, transparent),
+      radial-gradient(1.5px 1.5px at 77% 58%, #fff, transparent), radial-gradient(1px 1px at 84% 32%, #fff, transparent),
+      radial-gradient(1.3px 1.3px at 91% 74%, #e9d5ff, transparent), radial-gradient(1px 1px at 96% 9%, #fff, transparent),
+      radial-gradient(1px 1px at 11% 88%, #fff, transparent), radial-gradient(1.2px 1.2px at 39% 92%, #cfe8ff, transparent),
+      radial-gradient(1px 1px at 57% 5%, #fff, transparent), radial-gradient(1.3px 1.3px at 73% 90%, #fff, transparent);
+    background-size: 100% 100%; animation: cosmos-scintille 6s ease-in-out infinite; }
+  @keyframes cosmos-scintille { 50% { opacity: .45; } }
+  [data-testid="stHeader"], [data-testid="stBottom"], [data-testid="stBottom"] > div { background: transparent !important; }
+  [data-testid="stBottomBlockContainer"] { background: linear-gradient(to top, rgba(5,8,22,.95), rgba(5,8,22,0)) !important; }
+
+  /* ---------- Messages en verre dépoli lumineux ---------- */
+  [data-testid="stChatMessage"] { background: rgba(17,23,58,.55) !important; backdrop-filter: blur(12px);
+    border: 1px solid rgba(56,189,248,.22); border-radius: 18px; padding: 14px 16px;
+    box-shadow: 0 0 22px rgba(56,189,248,.07), inset 0 1px 0 rgba(255,255,255,.06); }
+  [data-testid="stChatMessage"]:has([aria-label="Chat message from user"]),
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+    border-color: rgba(167,139,250,.30); background: rgba(46,26,92,.45) !important; }
+  .role { display:inline-block; font-family:'Orbitron', sans-serif; font-size:11.5px; letter-spacing:.06em;
+          padding:4px 12px; border-radius:999px; color:#bae6fd; text-transform: uppercase;
+          border:1px solid rgba(56,189,248,.55); background: rgba(56,189,248,.10); box-shadow: 0 0 12px rgba(56,189,248,.25); }
+  [data-testid="stPopover"] button { border-radius: 999px !important; border: 1px solid rgba(56,189,248,.45) !important;
+    background: rgba(17,23,58,.6) !important; box-shadow: 0 0 12px rgba(56,189,248,.18); }
+  [data-testid="stCaptionContainer"] { color: #9fb3d9 !important; }
 
   /* ---------- Barre de conversation : boutons en 3D, grands et lisibles ---------- */
-  [data-testid="stChatInput"] { border-radius: 28px !important; box-shadow: 0 6px 24px rgba(15,23,42,.14);
+  [data-testid="stChatInput"] { border-radius: 28px !important; background: rgba(13,18,48,.85) !important;
+                                border: 1px solid rgba(56,189,248,.55) !important;
+                                box-shadow: 0 0 0 1px rgba(56,189,248,.15), 0 0 26px rgba(56,189,248,.28) !important;
                                 transition: box-shadow .3s, border-color .3s; }
+  [data-testid="stChatInput"]:focus-within { box-shadow: 0 0 0 2px rgba(56,189,248,.4), 0 0 34px rgba(56,189,248,.45) !important; }
+  [data-testid="stChatInputTextArea"] { color: #e6edf7 !important; }
   [data-testid="stChatInputTextArea"] { font-size: 16.5px !important; }
   [data-testid="stChatInputMicButton"], [data-testid="stChatInputSubmitButton"],
   [data-testid="stChatInputApproveButton"], [data-testid="stChatInputCancelButton"],
@@ -99,7 +140,7 @@ STYLE = """<style>
   [data-testid="stChatInputCancelButton"] {
     background: radial-gradient(circle at 32% 28%, #fecaca 0%, #f87171 35%, #b91c1c 75%, #7f1d1d 100%) !important; }
 
-  .astuce { font-size: 13px; opacity: .75; text-align: center; margin-top: -4px; }
+  .astuce { font-size: 13px; color: #9fb3d9; text-align: center; margin-top: -4px; }
   @media (max-width: 640px) { .block-container { padding-left: 12px; padding-right: 12px; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
       content: "● Enregistrement… ✅ envoyer · ✖ annuler"; } }
@@ -628,6 +669,6 @@ def espace_unique():
         st.iframe(avatar(parole["texte"][:400] + ("…" if len(parole["texte"]) > 400 else ""), parole.get("audio"),
                          parole.get("voix", "fr-FR"), image, type_image or "image/png",
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),
-                         indicateur=parole.get("meta")), height=380)
+                         indicateur=parole.get("meta")), height=650)
     parole["nouveau"] = False
     ecrire_cookies_en_attente()
