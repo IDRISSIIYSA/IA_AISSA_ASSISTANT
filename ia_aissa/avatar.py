@@ -113,7 +113,8 @@ _STYLE = """
 </style>"""
 
 
-def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True):
+def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
+           bulle=True):
     """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur."""
     if image:
         visage = (f'<div class="alien photo" id="alien"><img alt="IA AISSA" src="data:{html.escape(type_image)};base64,'
@@ -121,9 +122,9 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
     else:
         visage = f'<div class="alien" id="alien">{ALIEN_SVG}</div>'
     son = f"data:audio/mpeg;base64,{base64.b64encode(audio).decode()}" if audio else ""
-    bulle = f'<div class="bulle">{html.escape(texte)}</div>' if texte else ""
+    texte_bulle = f'<div class="bulle">{html.escape(texte)}</div>' if texte and bulle else ""
     return f"""{_SCRIPT_COMMUN}{_STYLE}
-<div class="scene">{visage}{bulle}</div>
+<div class="scene">{visage}{texte_bulle}</div>
 <div style="margin-top:6px"><button id="ecouter" class="principal" style="display:none">🔊 Écouter IA AISSA</button></div>
 <script>
 const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};

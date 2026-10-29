@@ -164,6 +164,7 @@ NIVEAUX = {
     "Université (licence)": "université marocaine, niveau licence",
     "Master": "université marocaine, niveau master",
     "Doctorat et recherche": "doctorat et recherche scientifique",
+    "💡 Atelier d'invention (tous domaines)": "invention",
 }
 
 
@@ -176,7 +177,16 @@ def profil_conversation(utilisateur, niveau, reponse_vocale, souvenirs=()):
                       + "\nAppuie-toi dessus naturellement, sans les réciter.")
     lignes.append("Quand la personne t'apprend quelque chose de durable sur elle, ou te demande de retenir "
                   "quelque chose, enregistre-le avec l'outil memoriser_souvenir (s'il n'est pas déjà dans tes souvenirs).")
-    if NIVEAUX.get(niveau):
+    if NIVEAUX.get(niveau) == "invention":
+        lignes.append(
+            "Mode atelier d'invention, tous domaines. Aide à inventer : reformule le besoin et la contradiction à "
+            "résoudre ; génère beaucoup d'idées en croisant les domaines (analogies : nature, autres industries, "
+            "autres cultures) ; applique TRIZ (principes inventifs, résolution des contradictions), SCAMPER "
+            "(substituer, combiner, adapter, modifier, autre usage, éliminer, inverser) et les premiers principes ; "
+            "puis évalue les meilleures idées (faisabilité, coût, impact, nouveauté) et propose un premier prototype "
+            "ou une expérience simple pour les tester. Signale ce qui existe déjà (brevets, produits) quand tu le "
+            "sais, et ce qui doit être vérifié.")
+    elif NIVEAUX.get(niveau):
         lignes.append(
             f"Mode professeur — niveau : {NIVEAUX[niveau]}. Suis les programmes officiels marocains de ce niveau "
             "(toutes matières : mathématiques, physique-chimie, SVT, langues, histoire-géographie, éducation islamique, "

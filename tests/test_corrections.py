@@ -78,3 +78,31 @@ def test_outil_de_correction_de_l_assistante(labo):
                                              "bonne_reponse": "2355"}, None,
                        lambda cle, q, rep: C.corriger(mem, "Aissa", cle, q, rep))
     assert r["bonne_reponse"] == "2355 Matériel informatique"
+
+
+def test_etude_autonome_des_lacunes(labo):
+    import json
+    from types import SimpleNamespace as NS
+    from ia_aissa import autonomie as A
+    mem, _ = labo
+    for q in ["paiement de la facture maroc telecom", "bonjour comment ça va", "achat de 3 ordinateurs pour le bureau"]:
+        assert A.noter_si_lacune(mem, q)
+    assert not A.noter_si_lacune(mem, "agadir")                       # IA AISSA est sûre d'elle : pas de lacune
+    reponses = {"paiement de la facture maroc telecom": ("comptabilite", "6145"),
+                "achat de 3 ordinateurs pour le bureau": ("comptabilite", "2355 Matériel informatique")}
+
+    def moteur(**kw):
+        consigne = kw["messages"][0]["content"]
+        lignes = consigne.split("Questions :\n")[1].split("\n\n")[0].splitlines()
+        sortie = []
+        for ligne in lignes:
+            i, q = ligne.split(". ", 1)
+            m, r = reponses.get(q, (None, None))
+            sortie.append({"id": int(i), "matiere": m, "reponse": r})
+        return NS(content=[NS(type="text", text=json.dumps(sortie))])
+
+    bilan = A.etudier_seule(mem, {"type": "anthropic", "modele": "claude-opus-5-5"}, NS(messages=NS(create=moteur)))
+    assert (bilan["etudiees"], bilan["apprises"], bilan["hors_programme"]) == (3, 2, 1)
+    assert mem.lacunes_ouvertes() == []
+    assert ecole.repondre_automatiquement("paiement de la facture maroc telecom")[0]["reponse"].startswith("6145")
+    assert {c["source"] for c in mem.croissance()} == {"étude autonome"}

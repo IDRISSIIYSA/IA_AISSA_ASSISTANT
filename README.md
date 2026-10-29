@@ -74,6 +74,21 @@ Ajouter une matière = ajouter un générateur d'exercices dans `MATIERES`.
 **Limite honnête :** un petit cerveau ne reconnaît que ce qui ressemble à ce qu'il a étudié.
 Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et corrige alors sa réponse.
 
+## IA AISSA, compagnon alien qui grandit seul
+
+- **Visage** : un petit alien virtuel (harnais tech, hologrammes « AI COMPANION · SYNC 100 % ») qui respire,
+  cligne des yeux et parle en bougeant la bouche ; remplaçable par votre propre image (page 👋).
+- **Reconnaissance** : il reconnaît les personnes autorisées à la caméra (OpenCV YuNet + SFace, sur le serveur ;
+  seules les empreintes sont gardées, dans la mémoire) et les salue selon l'heure du Maroc.
+- **Mémoire** : en ouvrant une conversation, il rappelle la précédente et ce qu'il sait de vous.
+- **Étude autonome** (`ia_aissa/autonomie.py`) : chaque question à laquelle il ne sait pas répondre avec
+  assurance devient une lacune ; dès trois lacunes, il les étudie seul avec son moteur de conversation,
+  en tire des corrections et révise. Plus on lui parle, plus il apprend vite.
+- **Atelier d'invention** : mode de conversation (TRIZ, SCAMPER, analogies, premiers principes) pour inventer
+  dans tous les domaines.
+- **Développement continu** : `ROADMAP.md` liste les prochaines compétences ; une tâche programmée les réalise
+  une à une, tests compris.
+
 ## Apprentissage par les corrections (`ia_aissa/corrections.py`)
 
 IA AISSA progresse d'elle-même au fil des conversations :

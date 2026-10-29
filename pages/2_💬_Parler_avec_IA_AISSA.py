@@ -3,6 +3,8 @@ import openai
 import streamlit as st
 
 from ia_aissa.acces import verifier_acces
+from ia_aissa.autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
+from ia_aissa.avatar import avatar
 from ia_aissa.assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, profil_conversation
 from ia_aissa.corrections import corriger, reviser_tout
 from ia_aissa.ecole import repondre
@@ -10,6 +12,8 @@ from ia_aissa.langues import LANGUES
 from ia_aissa.memoire import historique_api
 from ia_aissa.partage import memoire, secret
 from ia_aissa.parole import charger_oreille, synthetiser, transcrire
+from ia_aissa.reconnaissance import moment_de_la_journee
+from ia_aissa.visage import SALUTATIONS
 from ia_aissa.voix import bouton_ecouter
 
 st.set_page_config(page_title="Parler avec IA AISSA", page_icon="💬", layout="wide")
@@ -105,7 +109,7 @@ def oreille():
 
 
 def afficher(message, nouveau=False):
-    with st.chat_message(message["role"], avatar="🧠" if message["role"] == "assistant" else None):
+    with st.chat_message(message["role"], avatar="👽" if message["role"] == "assistant" else None):
         if message["role"] == "user" or ecrit or not message.get("audio"):
             st.markdown(message["texte"])
         if message["role"] != "assistant":
@@ -115,12 +119,31 @@ def afficher(message, nouveau=False):
                 for o in message["outils"]:
                     st.markdown(f"**{o['outil']}** `{o['entree']}`")
                     st.code(o["resultat"], language="json")
-        if message.get("audio"):
-            st.audio(message["audio"], format="audio/mp3", autoplay=nouveau)
+        if message.get("audio") and nouveau:
+            image, type_image = memoire().media("avatar")
+            st.iframe(avatar(message["texte"], message["audio"], LANGUES[message["langue"]]["voix"], image,
+                             type_image or "image/png", bulle=not ecrit), height=330 if not ecrit else 300)
+        elif message.get("audio"):
+            st.audio(message["audio"], format="audio/mp3")
         elif vocal:
             st.iframe(bouton_ecouter(message["texte"], LANGUES[message["langue"]]["voix"],
                                      f"🔊 Écouter ({message['langue']})"), height=50)
 
+
+if not st.session_state["affichage"]:
+    # L'alien accueille la personne, se souvient de la dernière conversation et de ce qu'il sait d'elle
+    accueil = [SALUTATIONS["Français"][moment_de_la_journee()].format(nom=utilisateur)]
+    precedentes = memoire().lister_conversations(utilisateur, limite=1)
+    if precedentes:
+        accueil.append(f"La dernière fois, nous parlions de « {precedentes[0]['titre']} ».")
+    souvenirs_accueil = [x["fait"] for x in memoire().souvenirs_de(utilisateur)][-2:]
+    if souvenirs_accueil:
+        accueil.append("Je me souviens que " + " Et aussi : ".join(souvenirs_accueil))
+    accueil.append("Comment puis-je t'aider aujourd'hui ?")
+    image, type_image = memoire().media("avatar")
+    st.iframe(avatar(" ".join(accueil), None, "fr-FR", image, type_image or "image/png",
+                     lecture_auto=vocal and not st.session_state.get("alien_a_salue")), height=320)
+    st.session_state["alien_a_salue"] = True
 
 for message in st.session_state["affichage"]:
     afficher(message)
@@ -148,6 +171,7 @@ if saisie:
             [{"role": m["role"], "texte": m["texte"].removeprefix("🎙️ ")} for m in st.session_state["affichage"][:-1]])
     st.session_state["moteur_historique"] = moteur
     st.session_state["messages_api"].append({"role": "user", "content": question})
+    noter_si_lacune(memoire(), question)       # IA AISSA repère seule ce qu'elle ne sait pas encore
     journal = []
     with st.spinner("IA AISSA réfléchit…"):
         try:
@@ -177,6 +201,15 @@ if saisie:
         for b in bilans:
             st.toast(("✅ Révision adoptée" if b["adoptee"] else "↩️ Révision refusée (régression)")
                      + f" : {b['matiere']} — corrections retenues {b['corrections_apres']:.0%}")
+
+    if len(memoire().lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
+        try:
+            with st.spinner("🧠 IA AISSA étudie seule ce qu'elle ne savait pas…"):
+                etude = etudier_seule(memoire(), config, client_moteur(moteur, cle_api))
+            st.toast(f"🧠 Étude autonome : {etude['etudiees']} question(s) étudiée(s), "
+                     f"{etude['apprises']} nouvelle(s) connaissance(s).")
+        except Exception:
+            pass          # l'étude autonome reprendra à la prochaine occasion
 
     langue = repondre("langues", texte[:300])[0]["reponse"]
     reponse = {"role": "assistant", "texte": texte, "outils": journal, "langue": langue}

@@ -74,6 +74,16 @@ revisions = Table(
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
 
+# Lacunes : questions auxquelles IA AISSA n'a pas su répondre avec assurance (sa matière d'étude autonome)
+lacunes = Table(
+    "lacunes", meta,
+    Column("id", Integer, primary_key=True),
+    Column("question", Text, nullable=False),
+    Column("matiere_devinee", String(60)),
+    Column("confiance", Float, nullable=False),
+    Column("resolue", Boolean, nullable=False, default=False),
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
 # Visages des personnes autorisées (empreintes de 128 nombres, jamais la photo elle-même)
 visages = Table(
     "visages", meta,
@@ -213,6 +223,30 @@ class Memoire:
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(select(revisions).order_by(revisions.c.id.desc()).limit(limite))]
 
+
+    # ---------- Lacunes ----------
+    def ajouter_lacune(self, question, matiere_devinee, confiance):
+        question = " ".join(str(question).split())[:500]
+        with self.moteur.begin() as c:
+            if c.execute(select(lacunes.c.id).where(lacunes.c.question == question)).first():
+                return
+            c.execute(insert(lacunes).values(question=question, matiere_devinee=matiere_devinee,
+                                             confiance=float(confiance), resolue=False, cree_le=maintenant()))
+
+    def lacunes_ouvertes(self, limite=30):
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(select(lacunes).where(lacunes.c.resolue.is_(False))
+                                                        .order_by(lacunes.c.id).limit(limite))]
+
+    def resoudre_lacune(self, lacune_id):
+        with self.moteur.begin() as c:
+            c.execute(update(lacunes).where(lacunes.c.id == lacune_id).values(resolue=True))
+
+    def croissance(self):
+        """Corrections apprises au fil du temps (pour la courbe de croissance)."""
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(
+                select(corrections.c.cree_le, corrections.c.source, corrections.c.apprise).order_by(corrections.c.id))]
 
     # ---------- Visages ----------
     def ajouter_visage(self, utilisateur, empreinte):

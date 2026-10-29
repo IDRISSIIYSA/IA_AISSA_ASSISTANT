@@ -3,10 +3,12 @@ import pandas as pd
 import streamlit as st
 
 from ia_aissa.acces import verifier_acces
+from ia_aissa.assistant import MOTEURS, client_moteur
+from ia_aissa.autonomie import etudier_seule, noter_si_lacune
 from ia_aissa.corrections import ORIENTATION, corriger, reviser_tout
 from ia_aissa.ecole import (MATIERES, PAR_CLE, SEUIL_CONFIANCE, charger, entrainer, repondre,
                             repondre_automatiquement, sauvegarder)
-from ia_aissa.partage import memoire
+from ia_aissa.partage import memoire, secret
 
 st.set_page_config(page_title="École d'IA AISSA", page_icon="🎓", layout="wide")
 utilisateur = verifier_acces(st)
@@ -26,6 +28,7 @@ if question_libre:
         st.success(f"**{meilleure['reponse']}**  \n"
                    f"Matière reconnue : {meilleure['domaine']} — {meilleure['matiere']} · confiance {meilleure['confiance']:.0%}")
     else:
+        noter_si_lacune(memoire(), question_libre, propositions)
         st.warning(f"🤔 Je ne suis pas sûre (ma meilleure idée : « {meilleure['reponse']} », "
                    f"{meilleure['matiere']}, {meilleure['confiance']:.0%}). Posez plutôt la question dans "
                    "« 💬 Parler avec IA AISSA » : l'assistante comprend toutes les formulations.")
@@ -52,6 +55,36 @@ if question_libre:
         reponse_juste = st.selectbox("La bonne réponse", PAR_CLE[cle_juste].actions)
         if st.button("Apprendre cette correction"):
             apprendre(cle_juste, reponse_juste)
+
+# Croissance et autonomie
+st.subheader("🚀 IA AISSA grandit seule")
+lacunes = memoire().lacunes_ouvertes(100)
+croissance = pd.DataFrame(memoire().croissance())
+a1, a2, a3 = st.columns(3)
+a1.metric("Lacunes repérées à étudier", len(lacunes))
+if not croissance.empty:
+    croissance["cree_le"] = pd.to_datetime(croissance["cree_le"], utc=True)
+    maintenant = pd.Timestamp.now(tz="UTC")
+    recentes = (croissance["cree_le"] > maintenant - pd.Timedelta(days=7)).sum()
+    avant = ((croissance["cree_le"] <= maintenant - pd.Timedelta(days=7))
+             & (croissance["cree_le"] > maintenant - pd.Timedelta(days=14))).sum()
+    a2.metric("Connaissances acquises (7 derniers jours)", int(recentes), delta=int(recentes - avant))
+    a3.metric("Dont par étude autonome", int((croissance["source"] == "étude autonome").sum()))
+    courbe = croissance.set_index("cree_le").assign(n=1)["n"].cumsum().rename("Connaissances acquises")
+    st.area_chart(courbe, y_label="Connaissances acquises (cumul)")
+moteur_etude = st.session_state.get("moteur_choisi", list(MOTEURS)[0])
+config_etude = MOTEURS[moteur_etude]
+cle_etude = secret(config_etude["secret"]) or st.session_state.get(f"cle_visite_{config_etude['secret']}")
+if lacunes and cle_etude and st.button(f"🧠 Étudier seule maintenant ({len(lacunes)} lacune(s), avec {moteur_etude})"):
+    with st.spinner("🧠 IA AISSA étudie seule…"):
+        etude = etudier_seule(memoire(), config_etude, client_moteur(moteur_etude, cle_etude))
+    st.success(f"{etude['etudiees']} question(s) étudiée(s) : {etude['apprises']} nouvelle(s) connaissance(s), "
+               f"{etude['hors_programme']} hors programme.")
+elif lacunes and not cle_etude:
+    st.caption("Pour étudier seule, IA AISSA a besoin d'une clé API (secrets, ou page 💬 Parler avec IA AISSA).")
+st.caption("IA AISSA note chaque question à laquelle elle ne sait pas répondre avec assurance. Dès que trois "
+           "lacunes s'accumulent pendant une conversation, elle les étudie d'elle-même puis révise : plus on lui "
+           "parle, plus elle apprend vite.")
 
 # Apprentissage par les corrections
 st.subheader("📚 Ce qu'IA AISSA apprend de ses corrections")

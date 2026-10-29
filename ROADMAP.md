@@ -1,0 +1,25 @@
+# Feuille de route d'IA AISSA
+
+Développement continu : à chaque séance, prendre **la première tâche non cochée**, la réaliser
+entièrement (code + tests + README), cocher la case, et ajouter en bas les idées découvertes en chemin.
+Règles : ne jamais casser l'existant (tous les tests doivent passer), rester économe en ressources
+(petits cerveaux, entraînements courts, pas de dépendance lourde sans nécessité), vérifier les faits
+marocains (taux, lois) sur des sources fiables avant de les encoder, et noter leur date de vérification.
+
+## À faire
+
+- [ ] Enrichir les formulations des matières textuelles (synonymes, darija en lettres latines et arabes, questions réelles) pour que l'aiguilleur dépasse 95 % et comprenne mieux les questions libres
+- [ ] Matières de lycée : SVT génétique (dominant/récessif, échiquier de croisement calculé), mathématiques (limites, probabilités simples calculées), physique (loi d'Ohm calculée)
+- [ ] Matières d'université : comptabilité générale (écritures débit/crédit d'une opération), audit et contrôle interne, marketing digital, logistique (choix du mode de transport)
+- [ ] Invention : matière « principes inventifs TRIZ » (reconnaître le principe d'une invention) et galerie des idées de l'atelier d'invention gardée en mémoire
+- [ ] Contrôle de gestion : prévision du réalisé du mois suivant par l'agent (tendance + saisonnalité) avec intervalle de confiance
+- [ ] Méta-intelligence : afficher pour chaque matière sa « courbe de progrès » (vitesse d'apprentissage) et étudier en priorité les matières où IA AISSA progresse le plus vite (curiosité guidée par le progrès)
+- [ ] Langues : atelier de prononciation en darija avec phrases du quotidien professionnel, et score suivi dans le temps
+- [ ] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
+- [ ] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s)
+
+## Fait
+
+- [x] Contrôle de gestion à partir de données brutes, agent méta-intelligent (Sutton × Dalio × GEB)
+- [x] École de 64 matières, orientation automatique, apprentissage par les corrections, étude autonome des lacunes
+- [x] Assistante (Claude, GPT-4o, MiniMax), voix, langues, mémoire, visage d'alien, reconnaissance des visages
