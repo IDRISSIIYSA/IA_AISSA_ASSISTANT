@@ -267,3 +267,23 @@ def converser_moteur(moteur, client, messages, **options):
     if MOTEURS[moteur]["type"] == "anthropic":
         return converser(client, messages, **options)
     return converser_openai(client, moteur, messages, **options)
+
+
+def meta_conscience(journal, duree):
+    """Indicateur de méta-conscience : confiance estimée de la réponse et efficacité du traitement.
+    Estimation : réponse du moteur seule = 0,85 ; calcul exact = 0,95 ; cerveau d'école = sa propre confiance ;
+    outil en erreur = 0,4. La confiance affichée est la moyenne de ces signaux."""
+    signaux = [0.85]
+    for o in journal:
+        resultat = str(o.get("resultat", ""))
+        if resultat.startswith("Erreur"):
+            signaux.append(0.4)
+        elif o["outil"] in CALCULS:
+            signaux.append(0.95)
+        elif o["outil"] == "consulter_ecole":
+            try:
+                signaux.append(float(json.loads(resultat)["propositions_ia_aissa"][0]["confiance"]))
+            except (ValueError, KeyError, IndexError, TypeError):
+                pass
+    return {"confiance": round(sum(signaux) / len(signaux), 3),
+            "details": f"{len(journal)} outil(s) · {duree:.1f} s"}

@@ -46,6 +46,11 @@ ALIEN_SVG = """
         <circle class="etoile" cx="150" cy="40" r="1.2"/><circle class="etoile e2" cx="250" cy="35" r="1.4"/>
         <circle class="etoile e3" cx="75" cy="300" r="1.3"/><circle class="etoile" cx="340" cy="300" r="1.1"/>
       </g>
+      <g class="warp" stroke="#e9d5ff" stroke-linecap="round">
+        <line x1="200" y1="200" x2="40" y2="90" stroke-width="2"/><line x1="200" y1="200" x2="360" y2="80" stroke-width="2"/>
+        <line x1="200" y1="200" x2="30" y2="260" stroke-width="1.5"/><line x1="200" y1="200" x2="370" y2="270" stroke-width="1.5"/>
+        <line x1="200" y1="200" x2="120" y2="25" stroke-width="1.2"/><line x1="200" y1="200" x2="290" y2="30" stroke-width="1.2"/>
+      </g>
       <g class="planete"><circle cx="335" cy="135" r="20" fill="#f59e0b"/><circle cx="329" cy="129" r="20" fill="#fbbf24"/>
         <ellipse cx="335" cy="137" rx="34" ry="8" fill="none" stroke="#fde68a" stroke-width="3" transform="rotate(-18 335 137)"/></g>
     </g>
@@ -100,7 +105,8 @@ ALIEN_SVG = """
     <circle cx="332" cy="326" r="4" fill="#7dd3fc"/>
     <text x="332" y="360" text-anchor="middle" font-size="14" font-weight="800" fill="#e0f2fe" font-family="sans-serif">AI COMPANION</text>
     <text x="332" y="378" text-anchor="middle" font-size="12" fill="#bae6fd" font-family="sans-serif">ONLINE</text>
-    <text x="332" y="395" text-anchor="middle" font-size="12" fill="#bae6fd" font-family="sans-serif">SYNC 100%</text>
+    <text class="txt-normal" x="332" y="395" text-anchor="middle" font-size="12" fill="#bae6fd" font-family="sans-serif">SYNC 100%</text>
+    <text class="txt-hyper" x="332" y="395" text-anchor="middle" font-size="11" font-weight="800" fill="#f0abfc" font-family="sans-serif">QUANTUM FUSION</text>
   </g>
 </svg>"""
 
@@ -127,6 +133,19 @@ _STYLE = """
   .photo.parle .onde { display:flex; }
   .onde i { width:5px; height:10px; background:#38bdf8; border-radius:3px; animation: onde .5s ease-in-out infinite alternate; }
   .onde i:nth-child(2){animation-delay:.1s} .onde i:nth-child(3){animation-delay:.2s} .onde i:nth-child(4){animation-delay:.3s}
+  .txt-hyper, .warp { display: none; }
+  .hyper .txt-hyper { display: inline; } .hyper .txt-normal { display: none; }
+  .hyper .warp { display: inline; animation: warp .7s linear infinite; stroke-dasharray: 14 22; }
+  .hyper .anneau { stroke: #c084fc; stroke-width: 7; animation-duration: .8s; }
+  .hyper .univers { animation: fusion 3s linear infinite; }
+  .hyper .etoile { animation-duration: .5s; }
+  .hyper .led { animation-duration: .35s; fill: #e879f9; }
+  @keyframes warp { to { stroke-dashoffset: -72; } }
+  @keyframes fusion { 50% { filter: hue-rotate(60deg) saturate(1.6); } }
+  .meta { display:inline-flex; gap:10px; align-items:center; font-size:12.5px; padding:4px 10px; margin-bottom:6px;
+          border-radius:999px; border:1px solid rgba(56,189,248,.5); background: rgba(56,189,248,.08); }
+  .meta b { font-weight:700; } .jauge { width:60px; height:6px; border-radius:3px; background: rgba(127,127,127,.25); overflow:hidden; }
+  .jauge i { display:block; height:100%; background: linear-gradient(90deg,#38bdf8,#a78bfa); }
   .etoile { animation: brille 2.6s ease-in-out infinite; } .e2 { animation-delay: .9s; } .e3 { animation-delay: 1.7s; }
   .planete { animation: orbite 14s ease-in-out infinite; transform-origin: 200px 200px; }
   .anneau { animation: anneau 4s ease-in-out infinite; }
@@ -145,17 +164,25 @@ _STYLE = """
 
 
 def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
-           bulle=True):
-    """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur."""
+           bulle=True, etat="normal", indicateur=None):
+    """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur.
+    etat = "hyper" : portail en hyper-propulsion (« QUANTUM FUSION ») pendant l'invention.
+    indicateur = {"confiance": 0-1, "details": "…"} : indicateur de méta-conscience affiché avant qu'il parle."""
     if image:
         visage = (f'<div class="alien photo" id="alien"><img alt="IA AISSA" src="data:{html.escape(type_image)};base64,'
                   f'{base64.b64encode(image).decode()}"><div class="onde"><i></i><i></i><i></i><i></i></div></div>')
     else:
-        visage = f'<div class="alien" id="alien">{ALIEN_SVG}</div>'
+        visage = f'<div class="alien{" hyper" if etat == "hyper" else ""}" id="alien">{ALIEN_SVG}</div>'
     son = f"data:audio/mpeg;base64,{base64.b64encode(audio).decode()}" if audio else ""
-    texte_bulle = f'<div class="bulle">{html.escape(texte)}</div>' if texte and bulle else ""
+    texte_bulle = f'<div class="bulle" dir="auto">{html.escape(texte)}</div>' if texte and bulle else ""
+    meta = ""
+    if indicateur:
+        c = max(0.0, min(1.0, float(indicateur.get("confiance", 0))))
+        meta = (f'<div class="meta" title="Indicateur de méta-conscience">🧠 <b>Méta-conscience</b>'
+                f'<span class="jauge"><i style="width:{c * 100:.0f}%"></i></span> confiance {c:.0%}'
+                f'<span>· {html.escape(str(indicateur.get("details", "")))}</span></div>')
     return f"""{_SCRIPT_COMMUN}{_STYLE}
-<div class="scene">{visage}{texte_bulle}</div>
+{meta}<div class="scene">{visage}{texte_bulle}</div>
 <div style="margin-top:6px"><button id="ecouter" class="principal" style="display:none">🔊 Écouter IA AISSA</button></div>
 <script>
 const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};

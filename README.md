@@ -13,6 +13,7 @@ et espagnol, à l'écrit comme à l'oral.
 | 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
 | 🎓 **École d'IA AISSA** | 64 matières apprises seule, question libre sans choisir de matière, bulletin de notes, courbes d'apprentissage, exercices surprise |
 | 💬 **Parler avec IA AISSA** | Moteur au choix (Claude, GPT-4o, MiniMax) ; questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
+| 💡 **Laboratoire d'invention** | Auto-simulation : évolution génétique des idées, débat Créateur × Critique, score de confiance et de faisabilité, galerie des inventions |
 | 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
 
 ## L'école d'IA AISSA (`ia_aissa/ecole.py`)
@@ -85,7 +86,21 @@ Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et
   assurance devient une lacune ; dès trois lacunes, il les étudie seul avec son moteur de conversation,
   en tire des corrections et révise. Plus on lui parle, plus il apprend vite.
 - **Atelier d'invention** : mode de conversation (TRIZ, SCAMPER, analogies, premiers principes) pour inventer
-  dans tous les domaines.
+  dans tous les domaines ; le portail passe en hyper-propulsion (« QUANTUM FUSION »).
+- **Laboratoire d'auto-simulation** (`ia_aissa/invention.py`, page 💡) : IA AISSA se dédouble.
+  1. *Évolution génétique* : des paires de domaines éloignés (ex. microbiologie × contrôle de gestion) donnent une
+     population d'idées ; le Critique les note (nouveauté, impact, faisabilité, coût), les meilleures survivent,
+     sont croisées et mutées (SCAMPER) en corrigeant leurs défauts.
+  2. *Débat* : pendant 3 tours, le Critique (règle de Dalio : faisabilité, efficience, équilibre financier,
+     affirmations douteuses) attaque et le Créateur révise.
+  3. *Score du contrôleur de méta-intelligence* : faisabilité finale, progrès et stabilité du débat, pénalité
+     pour chaque affirmation encore douteuse (filtre anti-hallucination).
+  L'alien annonce l'invention en darija, avec la salutation de l'heure et un proverbe marocain de sagesse.
+- **Indicateur de méta-conscience** : à côté de l'alien, la confiance estimée de chaque réponse et son
+  efficacité (outils utilisés, durée).
+- **Croissance** (`ia_aissa/croissance.py`) : concepts maîtrisés par famille de sciences au fil du temps,
+  ratio d'autonomie (appris seule / lacunes repérées) et accélération sur 7 jours, sur le tableau de bord
+  et la page École.
 - **Développement continu** : `ROADMAP.md` liste les prochaines compétences ; une tâche programmée les réalise
   une à une, tests compris.
 

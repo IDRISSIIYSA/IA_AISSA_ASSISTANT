@@ -84,6 +84,19 @@ lacunes = Table(
     Column("resolue", Boolean, nullable=False, default=False),
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
+# Galerie des inventions du laboratoire
+idees = Table(
+    "idees", meta,
+    Column("id", Integer, primary_key=True),
+    Column("utilisateur", String(80), index=True, nullable=False),
+    Column("probleme", Text, nullable=False),
+    Column("titre", String(300), nullable=False),
+    Column("description", Text, nullable=False),
+    Column("confiance", Float, nullable=False),
+    Column("faisabilite", Float, nullable=False),
+    Column("details", Text, nullable=False),               # débat et évolution (JSON)
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
 # Visages des personnes autorisées (empreintes de 128 nombres, jamais la photo elle-même)
 visages = Table(
     "visages", meta,
@@ -247,6 +260,23 @@ class Memoire:
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(
                 select(corrections.c.cree_le, corrections.c.source, corrections.c.apprise).order_by(corrections.c.id))]
+
+    # ---------- Galerie des inventions ----------
+    def garder_idee(self, utilisateur, probleme, titre, description, confiance, faisabilite, details):
+        with self.moteur.begin() as c:
+            c.execute(insert(idees).values(utilisateur=utilisateur, probleme=probleme, titre=titre[:300],
+                                           description=description, confiance=confiance, faisabilite=faisabilite,
+                                           details=details, cree_le=maintenant()))
+
+    def idees_de(self, utilisateur, limite=50):
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(select(idees).where(idees.c.utilisateur == utilisateur)
+                                                        .order_by(idees.c.id.desc()).limit(limite))]
+
+    def compter_lacunes(self):
+        with self.moteur.connect() as c:
+            lignes = list(c.execute(select(lacunes.c.resolue)))
+        return len(lignes), sum(1 for l in lignes if l.resolue)
 
     # ---------- Visages ----------
     def ajouter_visage(self, utilisateur, empreinte):

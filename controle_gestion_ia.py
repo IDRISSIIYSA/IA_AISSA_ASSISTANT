@@ -26,6 +26,8 @@ import torch.nn as nn
 import torch.optim as optim
 
 from ia_aissa.acces import verifier_acces
+from ia_aissa.croissance import afficher as afficher_croissance
+from ia_aissa.partage import memoire
 from montage import FORMATS, ROLES_AFFICHES, analyser, monter
 
 # ==========================================
@@ -360,6 +362,8 @@ def main():
     st.set_page_config(page_title="IA AISSA — Contrôle de gestion", page_icon="📊", layout="wide")
     verifier_acces(st)
     st.title("📊 IA AISSA — Contrôle de gestion")
+    with st.expander("🚀 Croissance d'IA AISSA (concepts maîtrisés par famille de sciences)"):
+        afficher_croissance(st, memoire())
     st.caption("Un agent né vide qui apprend seul à détecter les écarts et à rééquilibrer le budget.")
 
     exemples = {f.name: f for f in sorted(DOSSIER_EXEMPLES.glob("*")) if f.is_file()}

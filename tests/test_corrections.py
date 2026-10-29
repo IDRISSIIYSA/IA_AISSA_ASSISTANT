@@ -108,3 +108,15 @@ def test_etude_autonome_des_lacunes(labo):
     assert revisions["comptabilite"] and "orientation" in revisions   # l'aiguilleur révise aussi (adopté ou refusé)
     assert ecole.repondre("comptabilite", "paiement de la facture maroc telecom")[0]["reponse"].startswith("6145")
     assert {c["source"] for c in mem.croissance()} == {"étude autonome"}
+
+
+def test_croissance_par_famille_de_sciences(labo):
+    from ia_aissa import croissance
+    mem, _ = labo
+    depart = croissance.serie(mem).iloc[-1]
+    C.corriger(mem, "Aissa", "unites", "la force se mesure en ?", "newton")
+    C.reviser_tout(mem)
+    apres = croissance.serie(mem).iloc[-1]
+    assert apres["Sciences naturelles"] == depart["Sciences naturelles"] + 1
+    assert apres["Sciences formelles"] == depart["Sciences formelles"]          # l'aiguilleur ne compte pas
+    assert croissance.famille("comptabilite") == croissance.HUMAINES

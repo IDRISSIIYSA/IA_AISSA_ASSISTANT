@@ -1,3 +1,5 @@
+import time
+
 import anthropic
 import openai
 import streamlit as st
@@ -5,7 +7,8 @@ import streamlit as st
 from ia_aissa.acces import verifier_acces
 from ia_aissa.autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
 from ia_aissa.avatar import avatar
-from ia_aissa.assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, profil_conversation
+from ia_aissa.assistant import (MOTEURS, NIVEAUX, client_moteur, converser_moteur, meta_conscience,
+                                profil_conversation)
 from ia_aissa.corrections import corriger, reviser_tout
 from ia_aissa.ecole import repondre
 from ia_aissa.langues import LANGUES
@@ -119,10 +122,13 @@ def afficher(message, nouveau=False):
                 for o in message["outils"]:
                     st.markdown(f"**{o['outil']}** `{o['entree']}`")
                     st.code(o["resultat"], language="json")
+        if message.get("meta"):
+            st.caption(f"🧠 Méta-conscience : confiance {message['meta']['confiance']:.0%} · {message['meta']['details']}")
         if message.get("audio") and nouveau:
             image, type_image = memoire().media("avatar")
             st.iframe(avatar(message["texte"], message["audio"], LANGUES[message["langue"]]["voix"], image,
-                             type_image or "image/png", bulle=not ecrit), height=330 if not ecrit else 300)
+                             type_image or "image/png", bulle=not ecrit, etat=etat_alien,
+                             indicateur=message.get("meta")), height=360 if not ecrit else 330)
         elif message.get("audio"):
             st.audio(message["audio"], format="audio/mp3")
         elif vocal:
@@ -130,6 +136,7 @@ def afficher(message, nouveau=False):
                                      f"🔊 Écouter ({message['langue']})"), height=50)
 
 
+etat_alien = "hyper" if NIVEAUX.get(niveau) == "invention" else "normal"
 if not st.session_state["affichage"]:
     # L'alien accueille la personne, se souvient de la dernière conversation et de ce qu'il sait d'elle
     accueil = [SALUTATIONS["Français"][moment_de_la_journee()].format(nom=utilisateur)]
@@ -141,7 +148,7 @@ if not st.session_state["affichage"]:
         accueil.append("Je me souviens que " + " Et aussi : ".join(souvenirs_accueil))
     accueil.append("Comment puis-je t'aider aujourd'hui ?")
     image, type_image = memoire().media("avatar")
-    st.iframe(avatar(" ".join(accueil), None, "fr-FR", image, type_image or "image/png",
+    st.iframe(avatar(" ".join(accueil), None, "fr-FR", image, type_image or "image/png", etat=etat_alien,
                      lecture_auto=vocal and not st.session_state.get("alien_a_salue")), height=320)
     st.session_state["alien_a_salue"] = True
 
@@ -173,6 +180,7 @@ if saisie:
     st.session_state["messages_api"].append({"role": "user", "content": question})
     noter_si_lacune(memoire(), question)       # IA AISSA repère seule ce qu'elle ne sait pas encore
     journal = []
+    debut = time.time()
     with st.spinner("IA AISSA réfléchit…"):
         try:
             souvenirs = [x["fait"] for x in memoire().souvenirs_de(utilisateur)]
@@ -212,7 +220,8 @@ if saisie:
             pass          # l'étude autonome reprendra à la prochaine occasion
 
     langue = repondre("langues", texte[:300])[0]["reponse"]
-    reponse = {"role": "assistant", "texte": texte, "outils": journal, "langue": langue}
+    reponse = {"role": "assistant", "texte": texte, "outils": journal, "langue": langue,
+               "meta": meta_conscience(journal, time.time() - debut)}
     if vocal:
         try:
             with st.spinner("IA AISSA prépare sa voix…"):
