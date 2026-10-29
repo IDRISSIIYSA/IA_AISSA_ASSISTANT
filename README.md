@@ -45,3 +45,10 @@ L'agent n'invente pas le contrôle de gestion : il **découvre par lui-même les
 récompense** définies dans `RECOMPENSES` et `classer_situation()` (seuils `SEUIL_ALERTE`,
 `SEUIL_VIGILANCE`). Pour adapter l'IA à votre entreprise, c'est là qu'il faut ajuster les
 seuils, les actions et les récompenses.
+
+## Mise en ligne (Streamlit Community Cloud)
+
+1. Se connecter sur https://share.streamlit.io avec son compte GitHub.
+2. **Create app** → *Deploy a public app from GitHub*.
+3. Dépôt `IDRISSIIYSA/ia_aissa_assistant`, branche `main`, fichier `controle_gestion_ia.py`.
+4. **Deploy**. Le fichier `requirements.txt` installe la version CPU (légère) de PyTorch.
