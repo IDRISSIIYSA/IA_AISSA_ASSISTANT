@@ -111,7 +111,8 @@ def test_etude_autonome_des_lacunes(labo):
             sortie.append({"id": int(i), "matiere": m, "reponse": r})
         return NS(content=[NS(type="text", text=json.dumps(sortie))])
 
-    bilan = A.etudier_seule(mem, {"type": "anthropic", "modele": "claude-opus-5-5"}, NS(messages=NS(create=moteur)))
+    bilan = A.etudier_seule(mem, {"type": "anthropic", "modele": "claude-opus-5-5"}, NS(messages=NS(create=moteur)),
+                            explorer=False)
     assert (bilan["etudiees"], bilan["apprises"], bilan["hors_programme"]) == (3, 2, 1)
     assert mem.lacunes_ouvertes() == []
     revisions = {b["matiere"]: b["adoptee"] for b in bilan["revisions"]}

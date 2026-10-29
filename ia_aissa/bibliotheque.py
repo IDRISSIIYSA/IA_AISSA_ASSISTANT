@@ -196,6 +196,7 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
         if callback:
             callback(k, len(morceaux), d)
     concepts = [c for d in digestions for c in d["concepts"]]
+    comblees = combler_lacunes(memoire, concepts)
     apprises = 0
     for question, matiere, reponse in exercices_pour_ecole(moteur, client, concepts):
         try:
@@ -204,7 +205,26 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
         except ValueError:
             pass
     return {"source": source, "bouchees": len(morceaux), "concepts": len(concepts), "digestions": digestions,
-            "exercices": apprises, "revisions": reviser_tout(memoire) if apprises else []}
+            "exercices": apprises, "lacunes_comblees": comblees,
+            "revisions": reviser_tout(memoire) if apprises else []}
+
+
+SEUIL_COMBLEMENT = 0.3
+
+
+def combler_lacunes(memoire, concepts):
+    """Ferme les lacunes ouvertes auxquelles un concept digéré répond (proximité des mots et des lettres)."""
+    if not concepts:
+        return []
+    vecteurs = [vectoriser_mixte(f"{c['nom']} {c.get('explication', '')}") for c in concepts]
+    comblees = []
+    for lacune in memoire.lacunes_ouvertes(200):
+        q = vectoriser_mixte(lacune["question"])
+        score, concept = max((float(np.dot(q, v)), c["nom"]) for v, c in zip(vecteurs, concepts))
+        if score >= SEUIL_COMBLEMENT:
+            memoire.resoudre_lacune(lacune["id"])
+            comblees.append({"question": lacune["question"], "concept": concept, "proximite": round(score, 3)})
+    return comblees
 
 
 def chercher(memoire, requete, n=5):
@@ -219,13 +239,13 @@ def chercher(memoire, requete, n=5):
              "famille": d["famille"], "pertinence": round(s, 3)} for s, (d, c) in meilleurs if s > 0.05]
 
 
-def explorer_lacunes(memoire, moteur, client, nb_sujets=2, callback=None):
+def explorer_lacunes(memoire, moteur, client, nb_sujets=2, callback=None, sujets=None):
     """Initiative d'IA AISSA : elle va chercher sur Wikipédia de quoi combler ses lacunes, puis rumine."""
     bilans = []
-    for lacune in memoire.lacunes_ouvertes(nb_sujets):
+    for sujet in sujets or [l["question"] for l in memoire.lacunes_ouvertes(nb_sujets)]:
         try:
-            source, texte = brouter_wikipedia(lacune["question"])
+            source, texte = brouter_wikipedia(sujet)
             bilans.append(digerer(memoire, moteur, client, source, texte, nb_bouchees=2, callback=callback))
         except ErreurBroutage as e:
-            bilans.append({"source": lacune["question"], "erreur": str(e)})
+            bilans.append({"source": sujet, "erreur": str(e)})
     return bilans

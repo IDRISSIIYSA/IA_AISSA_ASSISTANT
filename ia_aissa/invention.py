@@ -37,10 +37,16 @@ def _inventer(moteur, client, probleme, consignes):
     return [i for i in lire_json(texte) if isinstance(i, dict) and i.get("titre")]
 
 
-def generer_population(moteur, client, probleme, taille, rng):
+def generer_population(moteur, client, probleme, taille, rng, inspirations=()):
+    """inspirations : concepts digérés par IA AISSA dans sa bibliothèque (fécondation croisée)."""
     lignes = [f"{k + 1}. Croise « {a} » et « {b} », opérateur SCAMPER : {rng.choice(SCAMPER)}"
               for k, (a, b) in enumerate(paires_eloignees(rng, taille))]
-    return _inventer(moteur, client, probleme, "Propose une idée originale pour chaque ligne :\n" + "\n".join(lignes))
+    consignes = "Propose une idée originale pour chaque ligne :\n" + "\n".join(lignes)
+    if inspirations:
+        consignes += ("\n\nInspire-toi aussi de ces connaissances qu'IA AISSA a lues et digérées (cite celle que tu "
+                      "utilises) :\n" + "\n".join(f"- {i['concept']} ({i['source']}) : {i['explication']}"
+                                               for i in inspirations))
+    return _inventer(moteur, client, probleme, consignes)
 
 
 def critiquer(moteur, client, probleme, idees):
@@ -72,10 +78,11 @@ def reproduire(moteur, client, probleme, survivants, nb_enfants, rng):
         "indiquée, pour obtenir une idée enfant meilleure que ses deux parents :\n" + "\n".join(lignes)))
 
 
-def evoluer(moteur, client, probleme, generations=3, taille=6, seed=None, callback=None):
+def evoluer(moteur, client, probleme, generations=3, taille=6, seed=None, callback=None, inspirations=()):
     """Renvoie l'historique des générations (idées notées) et la meilleure idée obtenue."""
     rng = random.Random(seed)
-    population = critiquer(moteur, client, probleme, generer_population(moteur, client, probleme, taille, rng))
+    population = critiquer(moteur, client, probleme,
+                           generer_population(moteur, client, probleme, taille, rng, inspirations))
     historique = [population]
     if callback:
         callback(1, generations, population)

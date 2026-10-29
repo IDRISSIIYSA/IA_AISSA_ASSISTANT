@@ -76,3 +76,40 @@ def test_digestion_complete_et_croissance(labo):
     assert trouve and trouve[0]["concept"] == "Photosynthèse" and trouve[0]["source"] == "Livre de test"
     with pytest.raises(B.ErreurBroutage):
         B.digerer(mem, {"type": "anthropic", "modele": "x"}, moteur(), "vide", "trop court")
+
+
+def test_connaissance_digeree_comble_les_lacunes(labo):
+    mem = labo
+    mem.ajouter_lacune("c'est quoi la photosynthèse des plantes ?", "sciences", 0.1)
+    mem.ajouter_lacune("prix du pétrole à Rotterdam", "economie", 0.1)
+    bilan = B.digerer(mem, {"type": "anthropic", "modele": "x"}, moteur(), "Livre de test", LIVRE, nb_bouchees=1)
+    assert [c["concept"] for c in bilan["lacunes_comblees"]] == ["Photosynthèse"]
+    assert [l["question"] for l in mem.lacunes_ouvertes()] == ["prix du pétrole à Rotterdam"]
+
+
+def test_hors_programme_part_en_exploration(labo, monkeypatch):
+    from ia_aissa import autonomie as A
+    mem = labo
+    mem.ajouter_lacune("comment fonctionne la photosynthèse", "sciences", 0.1)
+    explores = []
+    monkeypatch.setattr(B, "brouter_wikipedia", lambda sujet: (explores.append(sujet) or "Wikipédia — Photosynthèse", LIVRE))
+
+    def creer(**kw):
+        c = kw["messages"][0]["content"]
+        if c.startswith("Tu aides IA AISSA"):          # étude : rien dans le programme de l'école
+            return NS(content=[NS(type="text", text="[]")])
+        return moteur().messages.create(**kw)
+    bilan = A.etudier_seule(mem, {"type": "anthropic", "modele": "x"}, NS(messages=NS(create=creer)))
+    assert explores == ["comment fonctionne la photosynthèse"] and bilan["explorations"][0]["concepts"] > 0
+    assert any("Wikipédia" in d["source"] for d in mem.digestions())
+
+
+def test_inspirations_de_la_bibliotheque_dans_l_invention():
+    import random
+    from ia_aissa import invention as I
+    vus = []
+    client = NS(messages=NS(create=lambda **kw: vus.append(kw["messages"][0]["content"]) or
+                            NS(content=[NS(type="text", text="[]")])))
+    I.generer_population({"type": "anthropic", "modele": "x"}, client, "problème", 2, random.Random(1),
+                         [{"concept": "Photosynthèse", "source": "Livre", "explication": "lumière en énergie"}])
+    assert "Photosynthèse (Livre)" in vus[0]

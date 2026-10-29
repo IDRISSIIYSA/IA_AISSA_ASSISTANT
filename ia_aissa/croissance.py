@@ -79,6 +79,9 @@ def afficher(st, memoire):
               help="Comparé aux 7 jours précédents : un delta positif signifie que l'apprentissage accélère.")
     if len(s) > 1:
         st.area_chart(s, y_label="Concepts maîtrisés (cumul)")
+        par_jour = s.sum(axis=1).diff().fillna(0).clip(lower=0)
+        par_jour = par_jour.groupby(par_jour.index.floor("D")).sum().rename("Nouveaux concepts par jour")
+        st.bar_chart(par_jour, y_label="Nouveaux concepts par jour")
     else:
         st.bar_chart(s.iloc[-1], y_label="Concepts maîtrisés", horizontal=True)
     st.caption("Chaque famille part de ce qu'IA AISSA a appris à l'école, puis grandit à chaque correction apprise. "

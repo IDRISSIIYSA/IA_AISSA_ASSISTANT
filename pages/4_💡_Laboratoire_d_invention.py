@@ -7,6 +7,7 @@ import streamlit as st
 from ia_aissa.acces import verifier_acces
 from ia_aissa.assistant import MOTEURS, client_moteur
 from ia_aissa.avatar import avatar
+from ia_aissa.bibliotheque import chercher
 from ia_aissa.invention import annonce_darija, debattre, evoluer
 from ia_aissa.parole import synthetiser
 from ia_aissa.partage import memoire, secret
@@ -49,7 +50,11 @@ elif probleme.strip() and st.button("🚀 Lancer l'invention", type="primary"):
         suivi.progress(g / (total + 1), text=f"Génération {g}/{total} : meilleure idée {max(scores):.1f}/10")
 
     with st.spinner("🧬 Évolution des idées…"):
-        historique, meilleure = evoluer(config, client, probleme, generations, taille, callback=apres_generation)
+        inspirations = chercher(memoire(), probleme, n=4)        # ce qu'IA AISSA a lu nourrit l'invention
+        historique, meilleure = evoluer(config, client, probleme, generations, taille, callback=apres_generation,
+                                        inspirations=inspirations)
+    if inspirations:
+        st.caption("📚 Inspirations tirées de sa bibliothèque : " + " · ".join(i["concept"] for i in inspirations))
     with st.spinner("⚔️ Débat entre le Créateur et le Critique…"):
         finale, debat, meta = debattre(config, client, probleme, meilleure, tours,
                                        callback=lambda t, n, i: suivi.progress(

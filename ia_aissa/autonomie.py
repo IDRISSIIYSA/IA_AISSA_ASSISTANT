@@ -61,14 +61,16 @@ def lire_json(texte):
     return json.loads(texte[debut:fin + 1]) if debut >= 0 and fin > debut else []
 
 
-def etudier_seule(memoire, moteur_config, client, limite=25):
-    """Étudie les lacunes ouvertes, enregistre les corrections et révise. Renvoie un bilan."""
+def etudier_seule(memoire, moteur_config, client, limite=25, explorer=True):
+    """Étudie les lacunes ouvertes, enregistre les corrections et révise. Ce qui sort du programme de l'école
+    n'est pas abandonné : IA AISSA part l'explorer sur Wikipédia et le digère (un sujet par cycle)."""
     lacunes = memoire.lacunes_ouvertes(limite)
     if not lacunes:
         return {"etudiees": 0, "apprises": 0, "hors_programme": 0, "revisions": []}
     reponses = {r.get("id"): r for r in lire_json(demander(moteur_config, client, consigne_etude(lacunes)))
                 if isinstance(r, dict)}
     apprises = hors_programme = 0
+    a_explorer = []
     for l in lacunes:
         r = reponses.get(l["id"], {})
         if r.get("matiere") and r.get("reponse") and r["matiere"] in PAR_CLE:
@@ -79,6 +81,12 @@ def etudier_seule(memoire, moteur_config, client, limite=25):
                 hors_programme += 1
         else:
             hors_programme += 1
+            if len(l["question"]) >= 12:            # assez précis pour être cherché (pas « bonjour »)
+                a_explorer.append(l["question"])
         memoire.resoudre_lacune(l["id"])
-    return {"etudiees": len(lacunes), "apprises": apprises, "hors_programme": hors_programme,
-            "revisions": reviser_tout(memoire) if apprises else []}
+    bilan = {"etudiees": len(lacunes), "apprises": apprises, "hors_programme": hors_programme,
+             "revisions": reviser_tout(memoire) if apprises else [], "explorations": []}
+    if explorer and a_explorer:
+        from .bibliotheque import explorer_lacunes
+        bilan["explorations"] = explorer_lacunes(memoire, moteur_config, client, sujets=a_explorer[:1])
+    return bilan
