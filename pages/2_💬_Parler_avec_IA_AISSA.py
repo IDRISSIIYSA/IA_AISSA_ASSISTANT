@@ -29,12 +29,31 @@ def ouvrir_conversation(conversation_id):
 
 
 with st.sidebar:
-    moteur = st.selectbox("🧠 Moteur de conversation", list(MOTEURS),
+    # Les valeurs des champs sont effacées quand on change de page : on les garde dans la session de la visite.
+    moteurs = list(MOTEURS)
+    moteur = st.selectbox("🧠 Moteur de conversation", moteurs,
+                          index=moteurs.index(st.session_state.get("moteur_choisi", moteurs[0])),
                           help="IA AISSA garde ses connaissances, ses outils et sa mémoire quel que soit le moteur.")
+    st.session_state["moteur_choisi"] = moteur
     config = MOTEURS[moteur]
-    cle_api = secret(config["secret"]) or st.text_input(
-        f"Clé API ({moteur.split(' (')[0]})", type="password", key=f"cle_{config['secret']}",
-        help=f"Créez une clé sur {config['console']}. Elle reste dans votre session et n'est pas enregistrée.")
+    cle_visite = f"cle_visite_{config['secret']}"
+    cle_api = secret(config["secret"])
+    if cle_api:
+        st.caption("🔑 Clé API enregistrée dans les secrets de l'application.")
+    elif st.session_state.get(cle_visite):
+        cle_api = st.session_state[cle_visite]
+        st.caption("🔑 Clé gardée pour toute la visite (elle s'efface si vous fermez ou rafraîchissez la page). "
+                   "Pour ne plus jamais la saisir, ajoutez-la dans les Secrets de Streamlit Cloud.")
+        if st.button("Changer de clé"):
+            del st.session_state[cle_visite]
+            st.rerun()
+    else:
+        saisie = st.text_input(f"Clé API ({moteur.split(' (')[0]})", type="password",
+                               help=f"Créez une clé sur {config['console']}. Elle est gardée le temps de la visite, "
+                                    "jamais enregistrée sur le serveur.")
+        if saisie:
+            st.session_state[cle_visite] = cle_api = saisie.strip()
+            st.rerun()
     mode = st.radio("Je veux mes réponses", ["✍️ Écrites", "🔊 Vocales", "✍️🔊 Écrites et vocales"], index=2)
     niveau = st.selectbox("Accompagnement", list(NIVEAUX),
                           help="Choisissez un niveau scolaire pour qu'IA AISSA devienne votre professeur.")
