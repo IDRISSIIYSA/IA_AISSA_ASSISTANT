@@ -90,3 +90,10 @@ def test_espace_unique_s_ouvre_et_repond_sans_cle(tmp_path, monkeypatch):
     assert not at.exception and "Souss-Massa" in at.chat_message[-1].markdown[1].value
     ecole.STOCKAGE = None
     ecole._CACHE.clear()
+
+
+def test_barre_de_conversation_ergonomique():
+    from ia_aissa.interface import STYLE
+    for regle in ("stChatInputMicButton", "stChatInputApproveButton", "stChatInputCancelButton", "micro-respire",
+                  ":has([data-testid=\"stChatInputApproveButton\"])", "Enregistrement", "prefers-reduced-motion"):
+        assert regle in STYLE

@@ -41,6 +41,70 @@ STYLE = """<style>
   .block-container { padding-top: 1.2rem; max-width: 860px; }
   .role { display:inline-block; font-size:13px; padding:3px 10px; border-radius:999px;
           border:1px solid rgba(56,189,248,.5); background: rgba(56,189,248,.08); }
+
+  /* ---------- Barre de conversation : boutons en 3D, grands et lisibles ---------- */
+  [data-testid="stChatInput"] { border-radius: 28px !important; box-shadow: 0 6px 24px rgba(15,23,42,.14);
+                                transition: box-shadow .3s, border-color .3s; }
+  [data-testid="stChatInputTextArea"] { font-size: 16.5px !important; }
+  [data-testid="stChatInputMicButton"], [data-testid="stChatInputSubmitButton"],
+  [data-testid="stChatInputApproveButton"], [data-testid="stChatInputCancelButton"],
+  [data-testid="stChatInputFileUploadButton"] button {
+    width: 48px !important; height: 48px !important; min-width: 48px !important; border-radius: 50% !important;
+    border: none !important; color: #fff !important; margin: 0 3px !important; position: relative;
+    box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 10px 18px rgba(15,23,42,.28),
+                inset 0 2px 3px rgba(255,255,255,.55), inset 0 -4px 6px rgba(0,0,0,.22) !important;
+    transition: transform .12s, box-shadow .12s, filter .2s;
+  }
+  [data-testid="stChatInputMicButton"] svg, [data-testid="stChatInputSubmitButton"] svg,
+  [data-testid="stChatInputApproveButton"] svg, [data-testid="stChatInputCancelButton"] svg,
+  [data-testid="stChatInputFileUploadButton"] button svg { width: 24px !important; height: 24px !important;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+  /* le micro : bleu cosmique bombé, qui respire pour attirer le regard */
+  [data-testid="stChatInputMicButton"] {
+    background: radial-gradient(circle at 32% 28%, #bae6fd 0%, #38bdf8 28%, #2563eb 62%, #1e3a8a 100%) !important;
+    animation: micro-respire 2.8s ease-in-out infinite; }
+  @keyframes micro-respire { 50% { box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 0 0 7px rgba(56,189,248,.22),
+    0 10px 22px rgba(37,99,235,.45), inset 0 2px 3px rgba(255,255,255,.55), inset 0 -4px 6px rgba(0,0,0,.22); } }
+  /* l'envoi : vert émeraude bombé, terne tant qu'il n'y a rien à envoyer */
+  [data-testid="stChatInputSubmitButton"] {
+    background: radial-gradient(circle at 32% 28%, #bbf7d0 0%, #34d399 30%, #059669 65%, #064e3b 100%) !important; }
+  [data-testid="stChatInputSubmitButton"]:disabled { filter: grayscale(.85) opacity(.5); }
+  [data-testid="stChatInputFileUploadButton"] button {
+    background: radial-gradient(circle at 32% 28%, #f5f5f4 0%, #d6d3d1 40%, #a8a29e 75%, #57534e 100%) !important; }
+  [data-testid="stChatInputMicButton"]:hover, [data-testid="stChatInputSubmitButton"]:not(:disabled):hover,
+  [data-testid="stChatInputApproveButton"]:hover, [data-testid="stChatInputFileUploadButton"] button:hover {
+    transform: translateY(-2px) scale(1.06); }
+  [data-testid="stChatInputMicButton"]:active, [data-testid="stChatInputSubmitButton"]:active,
+  [data-testid="stChatInputApproveButton"]:active, [data-testid="stChatInputCancelButton"]:active {
+    transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18), inset 0 2px 6px rgba(0,0,0,.3) !important; }
+
+  /* ---------- Enregistrement en cours : impossible de le manquer ---------- */
+  [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"]) {
+    border: 2px solid #ef4444 !important; animation: rec-halo 1.2s ease-in-out infinite; }
+  @keyframes rec-halo { 50% { box-shadow: 0 0 0 8px rgba(239,68,68,.22), 0 6px 24px rgba(239,68,68,.35); } }
+  [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
+    content: "● Enregistrement… parle, puis appuie sur ✅ pour envoyer (✖ pour annuler)";
+    position: absolute; left: 16px; top: -34px; z-index: 5; pointer-events: none; white-space: nowrap;
+    padding: 4px 12px; border-radius: 999px; background: #dc2626; color: #fff;
+    font-size: 13.5px; font-weight: 600; box-shadow: 0 4px 12px rgba(220,38,38,.35);
+    animation: rec-clignote 1s steps(1) infinite; }
+  @keyframes rec-clignote { 50% { opacity: .55; } }
+  [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"]) { overflow: visible !important; }
+  [data-testid="stChatInputApproveButton"] {
+    width: 56px !important; height: 56px !important; min-width: 56px !important;
+    background: radial-gradient(circle at 32% 28%, #bbf7d0 0%, #22c55e 35%, #15803d 70%, #14532d 100%) !important;
+    animation: envoi-pulse 1.2s ease-in-out infinite; }
+  @keyframes envoi-pulse { 50% { box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 0 0 9px rgba(34,197,94,.28),
+    inset 0 2px 3px rgba(255,255,255,.55), inset 0 -4px 6px rgba(0,0,0,.22); } }
+  [data-testid="stChatInputCancelButton"] {
+    background: radial-gradient(circle at 32% 28%, #fecaca 0%, #f87171 35%, #b91c1c 75%, #7f1d1d 100%) !important; }
+
+  .astuce { font-size: 13px; opacity: .75; text-align: center; margin-top: -4px; }
+  @media (max-width: 640px) { .block-container { padding-left: 12px; padding-right: 12px; }
+    [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
+      content: "● Enregistrement… ✅ envoyer · ✖ annuler"; } }
+  @media (prefers-reduced-motion: reduce) { [data-testid="stChatInputMicButton"],
+    [data-testid="stChatInputApproveButton"], [data-testid="stChatInput"] { animation: none !important; } }
 </style>"""
 
 
@@ -382,6 +446,9 @@ def espace_unique():
         st.session_state["parole"] = {"texte": texte, "audio": _dire(salut, "Darija"), "voix": "ar-MA",
                                       "nouveau": True}
 
+    if not st.session_state["affichage"]:
+        st.markdown('<p class="astuce">🎙️ Appuie sur le micro bleu pour parler · ✅ pour envoyer ta voix · '
+                    '📎 pour déposer un fichier · ou écris simplement</p>', unsafe_allow_html=True)
     for i, m in enumerate(st.session_state["affichage"]):
         afficher_message(m, i, r["voir_outils"])
 
@@ -392,6 +459,7 @@ def espace_unique():
         texte = saisie.text or ""
         fichiers = list(saisie.files or [])
         if getattr(saisie, "audio", None) is not None:
+            st.toast("🎙️ Message vocal reçu, je l'écoute…")
             with st.spinner("👂 Je t'écoute…"):
                 texte = f"{texte} {transcrire(oreille(), saisie.audio)[0]}".strip()
         affiche = (("🎙️ " if getattr(saisie, "audio", None) is not None else "") + texte
