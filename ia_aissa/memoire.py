@@ -237,6 +237,18 @@ class Memoire:
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(requete)]
 
+    def marquer_non_apprises(self, matiere):
+        with self.moteur.begin() as c:
+            c.execute(update(corrections).where(corrections.c.matiere == matiere).values(apprise=False))
+
+    def matieres_revisees(self):
+        with self.moteur.connect() as c:
+            return [l[0] for l in c.execute(select(cerveaux.c.matiere))]
+
+    def oublier_cerveau(self, matiere):
+        with self.moteur.begin() as c:
+            c.execute(delete(cerveaux).where(cerveaux.c.matiere == matiere))
+
     def marquer_apprises(self, matiere):
         with self.moteur.begin() as c:
             c.execute(update(corrections).where(corrections.c.matiere == matiere).values(apprise=True))

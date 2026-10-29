@@ -29,9 +29,14 @@ PLANCHER_EXAMEN = 0.03           # et jamais plus de 3 points sous la note obten
 
 
 def brancher(memoire):
-    """Les cerveaux révisés sont lus et écrits dans la mémoire durable."""
+    """Les cerveaux révisés sont lus et écrits dans la mémoire durable. Si un cerveau d'origine a changé
+    (nouvelle version de l'école), sa révision périmée est oubliée et ses corrections seront réapprises."""
     ecole.STOCKAGE = memoire
     ecole._CACHE.clear()
+    for cle in memoire.matieres_revisees():
+        if cle in PAR_CLE and ecole.revision_valide(cle) is None:
+            memoire.oublier_cerveau(cle)
+            memoire.marquer_non_apprises(cle)
 
 
 def _cle(texte):
@@ -135,7 +140,8 @@ def reviser(memoire, cle):
                         and bilan["examen_apres"] >= note_ecole - PLANCHER_EXAMEN
                         and bilan["corrections_apres"] >= bilan["corrections_avant"])
     if bilan["adoptee"]:
-        ecole.sauvegarder(m, nouveau, (historique or []) + [{"pas": "révision", "precision": bilan["examen_apres"]}])
+        ecole.sauvegarder(m, nouveau, (historique or []) + [{"pas": "révision", "precision": bilan["examen_apres"]}],
+                          revision=True)
         memoire.marquer_apprises(cle)
     memoire.noter_revision(**bilan)
     return bilan

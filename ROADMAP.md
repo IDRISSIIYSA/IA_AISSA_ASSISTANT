@@ -8,7 +8,6 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 ## À faire
 
-- [ ] Enrichir les formulations des matières textuelles (synonymes, darija en lettres latines et arabes, questions réelles) pour que l'aiguilleur dépasse 95 % et comprenne mieux les questions libres
 - [ ] Matières de lycée : SVT génétique (dominant/récessif, échiquier de croisement calculé), mathématiques (limites, probabilités simples calculées), physique (loi d'Ohm calculée)
 - [ ] Matières d'université : comptabilité générale (écritures débit/crédit d'une opération), audit et contrôle interne, marketing digital, logistique (choix du mode de transport)
 - [ ] Invention : matière « principes inventifs TRIZ » (reconnaître le principe d'une invention) et galerie des idées de l'atelier d'invention gardée en mémoire
@@ -18,8 +17,13 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
 - [ ] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s)
 
+- [ ] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée
+- [ ] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
+
 ## Fait
 
+- [x] Formulations du quotidien (français, darija en lettres latines et arabes) et lecture mots + lettres pour toutes les matières textuelles ; banc d'essai de 20 questions libres
+- [x] Cerveaux d'origine jamais écrasés : révisions versionnées, réapprises automatiquement si l'école change
 - [x] Contrôle de gestion à partir de données brutes, agent méta-intelligent (Sutton × Dalio × GEB)
 - [x] École de 64 matières, orientation automatique, apprentissage par les corrections, étude autonome des lacunes
 - [x] Assistante (Claude, GPT-4o, MiniMax), voix, langues, mémoire, visage d'alien, reconnaissance des visages

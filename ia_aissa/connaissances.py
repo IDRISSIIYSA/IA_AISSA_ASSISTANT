@@ -768,3 +768,67 @@ def resume_connaissances():
         "coût de stockage unitaire).",
     ]
     return "\n".join(lignes)
+
+
+# ==========================================
+# Formulations du quotidien (français, darija en lettres latines et arabes), ajoutées le 29/10/2026
+# ==========================================
+def _enrichir(dico, ajouts):
+    for cle, phrases in ajouts.items():
+        cible = dico[cle][1] if isinstance(dico[cle], tuple) else dico[cle]
+        cible.extend(p for p in phrases if p not in cible)
+
+
+_enrichir(PCM, {
+    "6125": ["fatoura dyal dow", "khlast fatoura dyal lma", "facture lydec", "facture redal eau et électricité",
+             "cartouches d'encre et papeterie", "فاتورة الضو والما"],
+    "6131": ["kra dyal lmagasin", "khlast lkra", "loyer de l'entrepôt", "location d'un local", "الكرا ديال المحل"],
+    "6145": ["facture inwi", "abonnement maroc telecom", "recharge orange", "facture du téléphone portable",
+             "internet dyal charika", "فاتورة الهاتف"],
+    "2355": ["chrit ordinateur", "achat d'un pc portable", "achat de laptops", "شريت حاسوب",
+             "achat d'une imprimante pour le bureau"],
+    "2340": ["chrit tomobil", "achat d'une voiture pour l'entreprise", "شريت سيارة للشركة", "achat d'une camionnette"],
+    "6171": ["khlast lkhdama", "salaires du mois", "خلصت الخدامة", "paie des salariés"],
+    "6111": ["chrit sel3a bach nbi3ha", "achat de produits à revendre"],
+    "7111": ["bi3t sel3a", "vente de marchandises aux clients"],
+    "1481": ["kredi mn lbanka", "prêt bancaire obtenu pour l'entreprise"],
+    "6311": ["fayda dyal lbanka", "intérêts payés à la banque"],
+    "4411": ["khlast lfournisseur", "règlement du fournisseur"],
+    "3421": ["client khallas", "le client a payé sa facture"],
+})
+_enrichir(TVA_OPERATIONS, {
+    "Exonéré": ["dwa", "médicaments en pharmacie", "khobz", "lma dyal dar", "الدوا"],
+    "10 %": ["nuitée d'hôtel", "makla f restaurant", "frais bancaires"],
+    "20 %": ["bi3 dyal lhwayj", "vente de vêtements et chaussures", "conseil juridique facturé"],
+})
+_enrichir(TEXTES_DE_LOI, {
+    "Code du travail (loi 65-99)": ["tred mn lkhdma", "licencier un employé", "congé de l'employé", "الطرد من العمل",
+                                    "contrat de travail du salarié"],
+    "Baux commerciaux (loi 49-16)": ["kra dyal lmahal tijari", "bail du local commercial"],
+    "Délais de paiement (loi 69-21)": ["client ma bghach ykhless", "retard de paiement d'une facture client"],
+    "Données personnelles (loi 09-08)": ["data dyal clients", "protéger les données des clients"],
+})
+_enrichir(OPERATIONS_BANCAIRES, {
+    "Crédit": ["kredi", "prêt pour acheter un appartement", "emprunt immobilier", "قرض السكن", "crédit auto"],
+    "Dépôts et épargne": ["nhel compte", "ouvrir un compte bancaire", "épargne à la banque"],
+    "Moyens de paiement": ["carte guichet", "payer par carte"],
+})
+_enrichir(QUEL_IMPOT, {
+    "IS (impôt sur les sociétés)": ["dariba 3la charika", "impôt sur le bénéfice de la sarl", "الضريبة على الشركات"],
+    "IR (impôt sur le revenu)": ["dariba 3la salaire", "impôt sur mon salaire", "الضريبة على الدخل"],
+    "TVA": ["tva 3la lbi3", "taxe sur la vente"],
+})
+_enrichir(DYNASTIES, {
+    "Almohades (1121-1269)": ["qui a bâti la koutoubia", "lkoutoubia", "صومعة الكتبية", "la koutoubia de marrakech"],
+    "Alaouites (depuis 1631)": ["lmasira lkhadra", "المسيرة الخضراء"],
+})
+_enrichir(INCOTERMS, {
+    "CIF (coût assurance fret)": ["le vendeur paie le transport maritime et l'assurance",
+                                  "fret et assurance payés par le vendeur jusqu'au port d'arrivée"],
+    "FOB (franco à bord)": ["chargement sur le bateau payé par le vendeur"],
+})
+_enrichir(TRANSIT, {
+    "Certificat d'origine (EUR.1)": ["prouver que la marchandise est d'origine marocaine",
+                                     "origine pour bénéficier de l'accord avec l'europe"],
+})
+_enrichir(UNITES_SI, {"Newton (N)": ["unité de la force"]})

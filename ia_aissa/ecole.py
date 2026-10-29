@@ -31,8 +31,9 @@ DIM_TEXTE = 512
 # Perception du texte : mots et paires de mots -> vecteur (hachage)
 # ==========================================
 def mots(texte):
+    """Mots en minuscules, sans accents ; garde les lettres arabes (darija et arabe) comme les lettres latines."""
     texte = "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
-    return [m for m in re.split(r"[^a-z0-9]+", texte) if len(m) > 1]
+    return [m for m in re.split(r"[\W_]+", texte) if len(m) > 1]
 
 
 def vectoriser(texte, dim=DIM_TEXTE):
@@ -52,6 +53,11 @@ def vectoriser_caracteres(texte, dim=DIM_TEXTE):
         v[zlib.crc32(t[i:i + 3].encode()) % dim] += 1.0
     n = np.linalg.norm(v)
     return v / n if n else v
+
+
+def vectoriser_mixte(texte):
+    """Mots et lettres à la fois : comprend le français comme l'arabe, les mots connus comme les nouveaux."""
+    return np.concatenate([vectoriser(texte), vectoriser_caracteres(texte)])
 
 
 def exercice_langue(rng, categories):
@@ -97,11 +103,14 @@ class Matiere:
 
 
 def _matiere_texte(cle, nom, domaine, dictionnaire, note, libelle=lambda k, v: k, perception=None):
+    """Par défaut, le cerveau lit les mots ET les lettres : il comprend le français, l'arabe et la darija
+    (écrite en lettres latines ou arabes), même avec des fautes ou des variantes d'orthographe."""
     noms = list(dictionnaire)
     categories = [dictionnaire[k] if isinstance(dictionnaire[k], list) else dictionnaire[k][1] for k in noms]
     actions = [libelle(k, dictionnaire[k]) for k in noms]
-    perception = perception or vectoriser
-    return Matiere(cle, nom, domaine, actions, DIM_TEXTE, lambda rng: exercice_texte(rng, categories, perception),
+    perception = perception or vectoriser_mixte
+    dim = 2 * DIM_TEXTE if perception is vectoriser_mixte else DIM_TEXTE
+    return Matiere(cle, nom, domaine, actions, dim, lambda rng: exercice_texte(rng, categories, perception),
                    True, note, perception)
 
 
@@ -490,11 +499,6 @@ MATIERES = [
 HORS_ORIENTATION = {"langues", "matiere_scolaire"}      # s'appliquent à n'importe quel texte
 
 
-def vectoriser_mixte(texte):
-    """Mots et lettres à la fois : comprend le français comme l'arabe, les mots connus comme les nouveaux."""
-    return np.concatenate([vectoriser(texte), vectoriser_caracteres(texte)])
-
-
 def _orientation(rng):
     y = int(rng.integers(len(MATIERES_ORIENTABLES)))
     _, _, texte = MATIERES_ORIENTABLES[y].generer(rng)
@@ -572,26 +576,58 @@ _CACHE = {}
 STOCKAGE = None     # mémoire durable (base de données) où sont gardés les cerveaux révisés, si branchée
 
 
-def sauvegarder(matiere, cerveau, historique):
+def dossier_revises():
+    return DOSSIER_CERVEAUX / "revises"
+
+
+def empreinte_base(cle):
+    """Empreinte du cerveau d'origine (celui de l'école) : une révision n'est valable que pour lui."""
+    import hashlib
+    chemin = DOSSIER_CERVEAUX / f"{cle}.pt"
+    return hashlib.sha1(chemin.read_bytes()).hexdigest() if chemin.exists() else None
+
+
+def sauvegarder(matiere, cerveau, historique, revision=False):
+    """École : écrit le cerveau d'origine. Révision : le garde à part (mémoire durable, sinon dossier local),
+    avec l'empreinte du cerveau d'origine dont il est issu ; l'original n'est jamais écrasé."""
     _CACHE.pop(matiere.cle, None)
-    DOSSIER_CERVEAUX.mkdir(exist_ok=True)
     donnees = {"etat": cerveau.state_dict(), "historique": historique}
-    torch.save(donnees, DOSSIER_CERVEAUX / f"{matiere.cle}.pt")
+    if not revision:
+        DOSSIER_CERVEAUX.mkdir(exist_ok=True)
+        torch.save(donnees, DOSSIER_CERVEAUX / f"{matiere.cle}.pt")
+        return
+    donnees["base"] = empreinte_base(matiere.cle)
     if STOCKAGE is not None:
         tampon = io.BytesIO()
         torch.save(donnees, tampon)
         STOCKAGE.sauver_cerveau(matiere.cle, tampon.getvalue())
+    else:
+        dossier_revises().mkdir(parents=True, exist_ok=True)
+        torch.save(donnees, dossier_revises() / f"{matiere.cle}.pt")
+
+
+def revision_valide(cle):
+    """Le cerveau révisé, s'il existe et s'il est issu du cerveau d'origine actuel ; sinon None."""
+    brut = STOCKAGE.cerveau(cle) if STOCKAGE is not None else None
+    if brut is None:
+        chemin = dossier_revises() / f"{cle}.pt"
+        brut = chemin.read_bytes() if chemin.exists() else None
+    if brut is None:
+        return None
+    donnees = torch.load(io.BytesIO(brut), weights_only=True)
+    return donnees if donnees.get("base") == empreinte_base(cle) else None
 
 
 def charger(cle):
     if cle in _CACHE:
         return _CACHE[cle]
     chemin = DOSSIER_CERVEAUX / f"{cle}.pt"
-    revise = STOCKAGE.cerveau(cle) if STOCKAGE is not None else None
-    if revise is None and not chemin.exists():
-        return None, None
+    donnees = revision_valide(cle)
+    if donnees is None:
+        if not chemin.exists():
+            return None, None
+        donnees = torch.load(chemin, weights_only=True)
     m = PAR_CLE[cle]
-    donnees = torch.load(io.BytesIO(revise) if revise is not None else chemin, weights_only=True)
     cerveau = Cerveau(m.dim, len(m.actions))
     cerveau.load_state_dict(donnees["etat"])
     cerveau.eval()

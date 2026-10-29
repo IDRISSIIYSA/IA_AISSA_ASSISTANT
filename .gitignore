@@ -6,3 +6,4 @@ __pycache__/
 .pytest_cache/
 .streamlit/secrets.toml
 memoire_ia_aissa.db
+ia_aissa/cerveaux/revises/

@@ -52,9 +52,19 @@ def test_revision_apprend_et_persiste(labo):
     assert bilan["adoptee"] and bilan["corrections_apres"] == 1.0
     assert bilan["examen_apres"] >= bilan["examen_avant"] - C.TOLERANCE_EXAMEN
     assert mem.corrections_de("comptabilite", seulement_nouvelles=True) == []
-    # même sans le fichier local (redémarrage sur Streamlit Cloud), le cerveau révisé revient de la base
-    (ecole.DOSSIER_CERVEAUX / "comptabilite.pt").unlink()
+    # redémarrage (nouvelle connexion, cache vidé) : le cerveau révisé revient de la base, l'original est intact
+    assert not (ecole.dossier_revises() / "comptabilite.pt").exists()
     C.brancher(Memoire(f"sqlite:///{tmp / 'm.db'}"))
+    assert ecole.repondre("comptabilite", question)[0]["reponse"] == "6145 Frais postaux et de télécommunications"
+    # nouvelle version de l'école (cerveau d'origine changé) : la révision périmée est oubliée, les corrections
+    # repassent « à apprendre », puis sont réapprises sur le nouveau cerveau
+    original = ecole.DOSSIER_CERVEAUX / "comptabilite.pt"
+    original.write_bytes(original.read_bytes() + b" ")
+    mem2 = Memoire(f"sqlite:///{tmp / 'm.db'}")
+    C.brancher(mem2)
+    assert mem2.matieres_revisees() == [] or "comptabilite" not in mem2.matieres_revisees()
+    assert mem2.corrections_de("comptabilite", seulement_nouvelles=True)
+    C.reviser_tout(mem2)
     assert ecole.repondre("comptabilite", question)[0]["reponse"] == "6145 Frais postaux et de télécommunications"
 
 
@@ -85,11 +95,11 @@ def test_etude_autonome_des_lacunes(labo):
     from types import SimpleNamespace as NS
     from ia_aissa import autonomie as A
     mem, _ = labo
-    for q in ["paiement de la facture maroc telecom", "bonjour comment ça va", "achat de 3 ordinateurs pour le bureau"]:
+    for q in ["paiement de la facture maroc telecom", "bonjour comment ça va", "chrit pc jdid l charika"]:
         assert A.noter_si_lacune(mem, q)
     assert not A.noter_si_lacune(mem, "agadir")                       # IA AISSA est sûre d'elle : pas de lacune
     reponses = {"paiement de la facture maroc telecom": ("comptabilite", "6145"),
-                "achat de 3 ordinateurs pour le bureau": ("comptabilite", "2355 Matériel informatique")}
+                "chrit pc jdid l charika": ("comptabilite", "2355 Matériel informatique")}
 
     def moteur(**kw):
         consigne = kw["messages"][0]["content"]

@@ -73,6 +73,10 @@ Les cerveaux entraînés sont fournis dans `ia_aissa/cerveaux/`. Pour les réent
 `python -m ia_aissa.entrainer` (toutes les matières) ou `python -m ia_aissa.entrainer tva ir`.
 Ajouter une matière = ajouter un générateur d'exercices dans `MATIERES`.
 
+**Lecture mots + lettres** : chaque cerveau textuel lit à la fois les mots et les lettres ; il comprend le
+français, l'arabe et la darija (en lettres latines ou arabes), même avec des variantes d'orthographe. Banc
+d'essai de questions libres : `python tests/banc_questions.py` (11/20 au 29/10/2026, contre 3/20 avant).
+
 **Limite honnête :** un petit cerveau ne reconnaît que ce qui ressemble à ce qu'il a étudié.
 Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et corrige alors sa réponse.
 
