@@ -34,6 +34,7 @@ Méthode :
   dynastie, Incoterm, document de transit, mix marketing…), consulte d'abord ton « cerveau d'école » (consulter_ecole, avec matiere = "auto" si tu hésites).
 - Quand ton cerveau d'école s'est trompé, corrige-le avec corriger_ia_aissa : c'est ainsi que tu progresses.
   Ne corrige que ce que tu as vérifié.
+- Consulte aussi ta bibliothèque (consulter_bibliotheque) : ce que tu as appris en lisant. Cite la source.
 - L'utilisateur n'a jamais à préciser la rubrique : comprends seul de quoi il parle, quel que soit le domaine. Il a appris seul et peut se tromper, surtout si sa confiance
   est faible : vérifie sa réponse avec la base de connaissances et corrige-la en expliquant pourquoi.
 - Les taux viennent de la base ci-dessous (mise à jour {K.MISE_A_JOUR}). Rappelle, pour une décision réelle,
@@ -88,6 +89,9 @@ OUTILS = [
            "correction. bonne_reponse doit être l'une des réponses possibles de la matière.",
            {"matiere": {"type": "string", "enum": [m.cle for m in MATIERES_TEXTE]}, "question": TEXTE,
             "bonne_reponse": {"type": "string", "description": "Ex. : « 2355 Matériel informatique », « Kant »."}}),
+    _outil("consulter_bibliotheque", "Cherche dans la bibliothèque d'IA AISSA (concepts qu'elle a digérés en lisant "
+           "des pages web, des livres et Wikipédia) les connaissances utiles à une question, avec leurs sources.",
+           {"question": TEXTE}),
     _outil("memoriser_souvenir", "Retient durablement un fait utile sur la personne (métier, entreprise, secteur, "
            "objectifs, niveau d'études, langue ou style de réponse préféré…), ou ce qu'elle demande explicitement de "
            "retenir. Une phrase courte et autonome. Jamais de mot de passe, numéro de carte ou donnée de santé.",
@@ -101,7 +105,11 @@ CALCULS = {"calculer_ir": K.calculer_ir, "calculer_is": K.calculer_is, "calculer
            "position_bcg": lambda **e: {"position": K.position_bcg(**e)}}
 
 
-def executer_outil(nom, entree, memoriser=None, corriger=None):
+def executer_outil(nom, entree, memoriser=None, corriger=None, bibliotheque=None):
+    if nom == "consulter_bibliotheque":
+        if bibliotheque is None:
+            raise RuntimeError("Bibliothèque indisponible.")
+        return {"concepts": bibliotheque(entree["question"])}
     if nom == "corriger_ia_aissa":
         if corriger is None:
             raise RuntimeError("Corrections indisponibles.")
@@ -120,7 +128,8 @@ def executer_outil(nom, entree, memoriser=None, corriger=None):
     raise ValueError(f"Outil inconnu : {nom}")
 
 
-def converser(client, messages, max_tours=8, journal=None, profil=None, memoriser=None, corriger=None):
+def converser(client, messages, max_tours=8, journal=None, profil=None, memoriser=None, corriger=None,
+              bibliotheque=None):
     """Envoie la conversation à Claude, exécute les outils demandés, renvoie le texte final.
     `messages` est complété sur place (blocs de réflexion compris, à renvoyer tels quels)."""
     for _ in range(max_tours):
@@ -146,7 +155,8 @@ def converser(client, messages, max_tours=8, journal=None, profil=None, memorise
             if bloc.type != "tool_use":
                 continue
             try:
-                contenu, erreur = json.dumps(executer_outil(bloc.name, bloc.input, memoriser, corriger), ensure_ascii=False), False
+                contenu, erreur = json.dumps(executer_outil(bloc.name, bloc.input, memoriser, corriger, bibliotheque),
+                                     ensure_ascii=False), False
             except Exception as e:  # l'erreur est renvoyée au modèle pour qu'il corrige sa demande
                 contenu, erreur = f"Erreur : {e}", True
             if journal is not None:
@@ -228,7 +238,7 @@ def client_moteur(moteur, cle_api):
 
 
 def converser_openai(client, moteur, messages, max_tours=8, journal=None, profil=None, memoriser=None,
-                     corriger=None):
+                     corriger=None, bibliotheque=None):
     """Même boucle d'outils pour les API au format OpenAI (GPT-4o, MiniMax).
     `messages` (sans message système) est complété sur place, raisonnement compris."""
     import re
@@ -254,7 +264,8 @@ def converser_openai(client, moteur, messages, max_tours=8, journal=None, profil
         for appel in message.tool_calls:
             try:
                 entree = json.loads(appel.function.arguments or "{}")
-                contenu = json.dumps(executer_outil(appel.function.name, entree, memoriser, corriger), ensure_ascii=False)
+                contenu = json.dumps(executer_outil(appel.function.name, entree, memoriser, corriger, bibliotheque),
+                                     ensure_ascii=False)
             except Exception as e:  # l'erreur est renvoyée au modèle pour qu'il corrige sa demande
                 entree, contenu = appel.function.arguments, f"Erreur : {e}"
             if journal is not None:

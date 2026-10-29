@@ -2,9 +2,11 @@
 Croissance d'IA AISSA : concepts maîtrisés par grande famille de sciences, au fil du temps.
 
 Point de départ : ce que chaque cerveau a appris à l'école (nombre de réponses possibles × note d'examen).
-Ensuite, chaque correction apprise (par l'utilisateur, l'assistante ou l'étude autonome) ajoute un concept
-à la famille de sa matière. Le ratio d'autonomie compare ce qu'IA AISSA a appris seule à ses lacunes repérées.
+Ensuite, chaque correction apprise (par l'utilisateur, l'assistante, l'étude autonome ou la lecture) ajoute un
+concept à la famille de sa matière, et chaque concept digéré en lisant (pages web, livres, Wikipédia) aussi. Le ratio d'autonomie compare ce qu'IA AISSA a appris seule à ses lacunes repérées.
 """
+
+import json
 
 import pandas as pd
 
@@ -38,13 +40,15 @@ def concepts_ecole():
 def serie(memoire):
     """Cumul des concepts maîtrisés par famille et par date (DataFrame large : une colonne par famille)."""
     base = concepts_ecole()
-    apprises = [c for c in memoire.corrections_de() if c["apprise"] and c["matiere"] != "orientation"]
-    if not apprises:
+    evenements = [{"date": c["cree_le"], "famille": famille(c["matiere"]), "n": 1}
+                  for c in memoire.corrections_de() if c["apprise"] and c["matiere"] != "orientation"]
+    evenements += [{"date": d["cree_le"], "famille": d["famille"], "n": len(json.loads(d["concepts"]))}
+                   for d in memoire.digestions()]                  # concepts digérés en lisant
+    if not evenements:
         return pd.DataFrame([base], index=pd.DatetimeIndex([pd.Timestamp.now(tz="UTC")], name="date"))
-    df = pd.DataFrame(apprises)
-    df["date"] = pd.to_datetime(df["cree_le"], utc=True)
-    df["famille"] = df["matiere"].map(famille)
-    cumul = df.pivot_table(index="date", columns="famille", values="id", aggfunc="count").fillna(0).cumsum()
+    df = pd.DataFrame(evenements)
+    df["date"] = pd.to_datetime(df["date"], utc=True)
+    cumul = df.pivot_table(index="date", columns="famille", values="n", aggfunc="sum").fillna(0).cumsum()
     for f, v in base.items():
         cumul[f] = cumul.get(f, 0) + v
     depart = pd.DataFrame([base], index=pd.DatetimeIndex([cumul.index.min() - pd.Timedelta(hours=1)], name="date"))

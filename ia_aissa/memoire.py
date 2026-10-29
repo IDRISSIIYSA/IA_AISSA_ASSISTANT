@@ -97,6 +97,18 @@ idees = Table(
     Column("details", Text, nullable=False),               # débat et évolution (JSON)
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
+# Bibliothèque : concepts digérés à partir de pages web, de livres et de Wikipédia (jamais le texte complet)
+digestions = Table(
+    "digestions", meta,
+    Column("id", Integer, primary_key=True),
+    Column("utilisateur", String(80), nullable=False),
+    Column("source", String(500), nullable=False),
+    Column("famille", String(60), nullable=False),
+    Column("concepts", Text, nullable=False),             # JSON : [{"nom", "explication"}]
+    Column("analogie", Text, nullable=False),
+    Column("confiance", Float, nullable=False),
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
 # Visages des personnes autorisées (empreintes de 128 nombres, jamais la photo elle-même)
 visages = Table(
     "visages", meta,
@@ -288,6 +300,18 @@ class Memoire:
         with self.moteur.connect() as c:
             lignes = list(c.execute(select(lacunes.c.resolue)))
         return len(lignes), sum(1 for l in lignes if l.resolue)
+
+    # ---------- Bibliothèque ----------
+    def garder_digestion(self, utilisateur, source, famille, concepts, analogie, confiance):
+        with self.moteur.begin() as c:
+            c.execute(insert(digestions).values(utilisateur=utilisateur, source=source[:500], famille=famille,
+                                                concepts=concepts, analogie=analogie, confiance=confiance,
+                                                cree_le=maintenant()))
+
+    def digestions(self, limite=2000):
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(select(digestions).order_by(digestions.c.id.desc())
+                                                        .limit(limite))]
 
     # ---------- Visages ----------
     def ajouter_visage(self, utilisateur, empreinte):

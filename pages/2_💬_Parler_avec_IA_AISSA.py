@@ -7,6 +7,7 @@ import streamlit as st
 from ia_aissa.acces import verifier_acces
 from ia_aissa.autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
 from ia_aissa.avatar import avatar
+from ia_aissa.bibliotheque import chercher
 from ia_aissa.assistant import (MOTEURS, NIVEAUX, client_moteur, converser_moteur, meta_conscience,
                                 profil_conversation)
 from ia_aissa.corrections import corriger, reviser_tout
@@ -186,7 +187,8 @@ if saisie:
                                      journal=journal,
                                      profil=profil_conversation(utilisateur, niveau, vocal and not ecrit, souvenirs),
                                      memoriser=lambda fait: memoire().memoriser(utilisateur, fait),
-                                     corriger=lambda cle, q, rep: corriger(memoire(), utilisateur, cle, q, rep))
+                                     corriger=lambda cle, q, rep: corriger(memoire(), utilisateur, cle, q, rep),
+                                     bibliotheque=lambda q: chercher(memoire(), q))
         except (anthropic.AuthenticationError, openai.AuthenticationError):
             st.session_state["messages_api"].pop()
             st.error("Clé API invalide.")

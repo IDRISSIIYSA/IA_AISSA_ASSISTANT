@@ -14,6 +14,7 @@ et espagnol, à l'écrit comme à l'oral.
 | 🎓 **École d'IA AISSA** | 64 matières apprises seule, question libre sans choisir de matière, bulletin de notes, courbes d'apprentissage, exercices surprise |
 | 💬 **Parler avec IA AISSA** | Moteur au choix (Claude, GPT-4o, MiniMax) ; questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
 | 💡 **Laboratoire d'invention** | Auto-simulation : évolution génétique des idées, débat Créateur × Critique, score de confiance et de faisabilité, galerie des inventions |
+| 📚 **Bibliothèque** | IA AISSA broute une page web, mange un livre (PDF, texte) ou explore Wikipédia seule sur ses lacunes, rumine en concepts, nourrit son école |
 | 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
 
 ## L'école d'IA AISSA (`ia_aissa/ecole.py`)
@@ -96,6 +97,13 @@ Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et
   3. *Score du contrôleur de méta-intelligence* : faisabilité finale, progrès et stabilité du débat, pénalité
      pour chaque affirmation encore douteuse (filtre anti-hallucination).
   L'alien annonce l'invention en darija, avec la salutation de l'heure et un proverbe marocain de sagesse.
+- **Bibliothèque** (`ia_aissa/bibliotheque.py`, page 📚) : IA AISSA *broute* (page web, livre entier découpé en
+  bouchées réparties du début à la fin, ou Wikipédia sur les sujets de ses lacunes, de sa propre initiative),
+  *rumine* (concepts clés, famille de sciences, analogie avec le contrôle de gestion, confiance de digestion)
+  et *intègre* : les concepts entrent dans sa bibliothèque (consultée par l'assistante, outil
+  `consulter_bibliotheque`), deviennent des exercices et des révisions de ses cerveaux, et font monter sa
+  courbe de croissance. Seuls les concepts sont gardés, jamais le texte complet ; les adresses internes sont
+  refusées par sécurité.
 - **Indicateur de méta-conscience** : à côté de l'alien, la confiance estimée de chaque réponse et son
   efficacité (outils utilisés, durée).
 - **Croissance** (`ia_aissa/croissance.py`) : concepts maîtrisés par famille de sciences au fil du temps,
