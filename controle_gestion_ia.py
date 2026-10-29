@@ -25,6 +25,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from ia_aissa.acces import verifier_acces
 from montage import FORMATS, ROLES_AFFICHES, analyser, monter
 
 # ==========================================
@@ -251,8 +252,9 @@ def monter_interface(st, nom, contenu):
 def main():
     import streamlit as st
 
-    st.set_page_config(page_title="Contrôle de Gestion IA", page_icon="📊", layout="wide")
-    st.title("📊 Contrôle de Gestion IA")
+    st.set_page_config(page_title="IA AISSA — Contrôle de gestion", page_icon="📊", layout="wide")
+    verifier_acces(st)
+    st.title("📊 IA AISSA — Contrôle de gestion")
     st.caption("Un agent né vide qui apprend seul à détecter les écarts et à rééquilibrer le budget.")
 
     exemples = {f.name: f for f in sorted(DOSSIER_EXEMPLES.glob("*")) if f.is_file()}

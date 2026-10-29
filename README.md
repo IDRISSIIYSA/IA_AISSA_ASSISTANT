@@ -1,8 +1,85 @@
-# IA_AISSA_ASSISTANT — Contrôle de Gestion IA
+# IA AISSA — l'intelligence artificielle marocaine de l'entreprise
 
-Un agent d'intelligence artificielle **« tabula rasa »** : il naît sans aucune connaissance
-en contrôle de gestion et apprend seul, par essais, récompenses et pénalités, à surveiller
-les écarts budgétaires d'une entreprise.
+IA AISSA est un **nouveau-né numérique** : elle naît sans aucune connaissance et apprend seule,
+par essais, récompenses et pénalités, les métiers de l'entreprise marocaine. Elle est complétée
+par une **assistante conversationnelle** (API Claude) qui parle arabe, darija, français, anglais
+et espagnol, à l'écrit comme à l'oral.
+
+## Les pages de l'application
+
+| Page | Rôle |
+|---|---|
+| 📊 **Contrôle de gestion** | Montage du contrôle de gestion à partir de données brutes + agent qui apprend à piloter les écarts |
+| 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
+| 🎓 **École d'IA AISSA** | 17 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
+| 💬 **Parler avec IA AISSA** | Questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
+| 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
+
+## L'école d'IA AISSA (`ia_aissa/ecole.py`)
+
+Chaque matière génère des exercices tirés des règles marocaines (`ia_aissa/connaissances.py`) ;
+IA AISSA y répond, gagne +1 ou perd 1, garde ses expériences en mémoire et ajuste son petit
+réseau de neurones. Personne ne lui donne les règles : elle les découvre.
+
+| Domaine | Matières |
+|---|---|
+| Comptabilité | Imputation au Plan Comptable Marocain (CGNC, 30 comptes) |
+| Fiscalité | Régime de TVA 2026, tranche d'IR, taux d'IS |
+| Ressources humaines | Plafond CNSS, diagnostic social |
+| Gestion de production | Réapprovisionnement (point de commande) |
+| Finance | Décision d'investissement (VAN), analyse financière |
+| Mathématiques | Placements à intérêts composés |
+| Commercial | Seuil de rentabilité |
+| Économie | Politique monétaire de Bank Al-Maghrib (règle stylisée) |
+| Contrôle de gestion | Pilotage des écarts |
+| Juridique | Texte de loi applicable (Code du travail, Code de commerce, lois 17-95, 5-96, 31-08, 09-08…) |
+| Création d'entreprise | Choix de la forme juridique (auto-entrepreneur, SARL AU, SARL, SA) |
+| Langues | Reconnaître l'arabe, la darija (écriture arabe ou latine), le français, l'anglais, l'espagnol |
+| Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
+
+Les cerveaux entraînés sont fournis dans `ia_aissa/cerveaux/`. Pour les réentraîner :
+`python -m ia_aissa.entrainer` (toutes les matières) ou `python -m ia_aissa.entrainer tva ir`.
+Ajouter une matière = ajouter un générateur d'exercices dans `MATIERES`.
+
+**Limite honnête :** un petit cerveau ne reconnaît que ce qui ressemble à ce qu'il a étudié.
+Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et corrige alors sa réponse.
+
+## L'assistante conversationnelle (`ia_aissa/assistant.py`)
+
+- Modèle Claude Opus 5.5 avec réflexion adaptative et repli automatique (`fallbacks: "default"`)
+  si une demande est refusée par les filtres de sécurité.
+- Outils : calculs exacts (IR, IS, TVA, paie, VAN, seuil de rentabilité) et consultation des
+  cerveaux d'IA AISSA (comptabilité, TVA, juridique, langue), qu'elle vérifie avant de répondre.
+- Voix : la parole est transcrite par Whisper sur le serveur ; les réponses sont dites par des voix
+  neuronales (dont marocaines `ar-MA`, via edge-tts) ou, à défaut, par les voix du navigateur.
+
+## Accès réservé et secrets
+
+Sur Streamlit Cloud : *Settings → Secrets* (en local : `.streamlit/secrets.toml`, jamais commité) :
+
+```toml
+ANTHROPIC_API_KEY = "sk-ant-..."
+
+[utilisateurs]          # seules ces personnes peuvent parler avec IA AISSA
+Aissa = "mot-de-passe-d-aissa"
+Karim = "mot-de-passe-de-karim"
+```
+
+La reconnaissance du visage (page 👋) se fait dans le navigateur et l'empreinte reste sur l'appareil.
+Une photo pouvant tromper une caméra, c'est le mot de passe qui protège réellement l'accès.
+
+## Base de connaissances marocaine
+
+Les taux (IR, IS, TVA, CNSS/AMO, sociétés, auto-entrepreneur) ont été vérifiés le 29/10/2026 pour
+l'exercice 2026 auprès de sources secondaires. **À confirmer avec le CGI (DGI) et la CNSS avant
+tout usage réel, et à mettre à jour à chaque loi de finances** dans `ia_aissa/connaissances.py`.
+
+---
+
+# Contrôle de gestion IA
+
+Un agent **« tabula rasa »** naît sans aucune connaissance en contrôle de gestion et apprend seul,
+par essais, récompenses et pénalités, à surveiller les écarts budgétaires d'une entreprise.
 
 > Moins d'espace, plus d'intelligence : un cerveau de quelques kilo-octets qui compense
 > sa petite taille par une méthode d'apprentissage (mémoire profonde + renforcement).
@@ -54,7 +131,7 @@ Ce que le montage gère automatiquement :
 Dans l'application, un panneau **« Montage »** affiche la structure détectée, le rôle de chaque
 colonne (modifiable), un rapport de montage et le tableau obtenu, téléchargeable en CSV.
 
-Tests : `pip install pytest && pytest tests`
+Tests : `pip install pytest && pytest tests` (montage, connaissances, école, voix).
 
 ## Limites à connaître
 

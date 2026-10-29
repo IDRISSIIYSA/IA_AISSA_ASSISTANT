@@ -1,4 +1,7 @@
 __pycache__/
 *.pyc
 *.pt
+!ia_aissa/cerveaux/*.pt
 .venv/
+.pytest_cache/
+.streamlit/secrets.toml

@@ -1,7 +1,13 @@
 # Version CPU de PyTorch : bien plus légère, indispensable pour Streamlit Cloud
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
-streamlit>=1.40
+streamlit>=1.66
 pandas>=2.0
 numpy>=1.26
 openpyxl>=3.1
+# Assistante conversationnelle (API Claude)
+anthropic>=2.3
+# Voix : écoute (Whisper) et parole (voix neuronales, dont marocaines)
+faster-whisper>=1.2
+av>=11,<17
+edge-tts>=7.0
