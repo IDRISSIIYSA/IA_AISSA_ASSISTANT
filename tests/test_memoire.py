@@ -75,3 +75,12 @@ def test_moteur_openai_minimax_boucle_outils():
     assert messages[2] == {"role": "tool", "tool_call_id": "c1", "content": journal[0]["resultat"]}
     assert '"is": 200000.0' in journal[0]["resultat"]
     assert MOTEURS["GPT-4o (OpenAI)"]["modele"] == "gpt-4o" and len(OUTILS_OPENAI) > 10
+
+
+def test_adresse_neon_ou_supabase_acceptee_telle_quelle():
+    from ia_aissa.memoire import normaliser_url
+    assert normaliser_url("postgresql://u:p@ep-x.eu-central-1.aws.neon.tech/neondb?sslmode=require") == \
+        "postgresql+psycopg://u:p@ep-x.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+    assert normaliser_url(' "postgres://u:p@db.supabase.co:5432/postgres" ') == \
+        "postgresql+psycopg://u:p@db.supabase.co:5432/postgres?sslmode=require"
+    assert normaliser_url("sqlite:///x.db") == "sqlite:///x.db"

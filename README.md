@@ -159,9 +159,11 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
 - Chaque utilisateur autorisé a sa propre mémoire, invisible des autres.
 
 Sur Streamlit Cloud, le disque est effacé à chaque redémarrage : pour une mémoire durable, créez une
-base PostgreSQL gratuite ([Neon](https://neon.tech) ou [Supabase](https://supabase.com)) et ajoutez
-son adresse dans les secrets (`MEMOIRE_URL`, voir ci-dessous). Sans ce secret, la mémoire est
-un fichier SQLite local.
+base PostgreSQL gratuite ([Neon](https://neon.tech) ou [Supabase](https://supabase.com)) et collez
+son adresse **telle quelle** (`postgresql://…`) dans les secrets (`MEMOIRE_URL`, voir ci-dessous).
+Les pages 👋 et 💬 indiquent l'état : 🟢 mémoire durable connectée, 🔴 adresse erronée (avec la cause),
+⚠️ mémoire temporaire (avec la marche à suivre). Testé sur PostgreSQL 16 : tout revient après un
+redémarrage, y compris les cerveaux révisés. Sans ce secret, la mémoire est un fichier SQLite local.
 
 ## Accès réservé et secrets
 
@@ -171,7 +173,7 @@ Sur Streamlit Cloud : *Settings → Secrets* (en local : `.streamlit/secrets.tom
 ANTHROPIC_API_KEY = "sk-ant-..."     # Claude
 OPENAI_API_KEY = "sk-..."            # GPT-4o (facultatif)
 MINIMAX_API_KEY = "..."              # MiniMax (facultatif)
-MEMOIRE_URL = "postgresql+psycopg://utilisateur:motdepasse@hote/base?sslmode=require"
+MEMOIRE_URL = "postgresql://utilisateur:motdepasse@hote/base?sslmode=require"   # adresse copiée de Neon
 
 [utilisateurs]          # seules ces personnes peuvent parler avec IA AISSA
 Aissa = "mot-de-passe-d-aissa"

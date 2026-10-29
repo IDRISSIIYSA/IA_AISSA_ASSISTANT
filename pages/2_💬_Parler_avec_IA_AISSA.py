@@ -13,7 +13,7 @@ from ia_aissa.corrections import corriger, reviser_tout
 from ia_aissa.ecole import repondre
 from ia_aissa.langues import LANGUES
 from ia_aissa.memoire import historique_api
-from ia_aissa.partage import memoire, secret
+from ia_aissa.partage import etat_memoire, memoire, secret
 from ia_aissa.parole import charger_oreille, synthetiser, transcrire
 from ia_aissa.reconnaissance import moment_de_la_journee
 from ia_aissa.visage import SALUTATIONS
@@ -67,9 +67,7 @@ with st.sidebar:
     voir_outils = st.toggle("Montrer le raisonnement (outils utilisés)", value=False)
 
     st.subheader("📚 Mes conversations")
-    if not memoire().persistante:
-        st.caption("⚠️ Mémoire temporaire : ajoutez le secret `MEMOIRE_URL` (base PostgreSQL) pour qu'IA AISSA "
-                   "se souvienne même après un redémarrage.")
+    etat_memoire(st)
     if st.button("➕ Nouvelle conversation", width="stretch"):
         ouvrir_conversation(None)
         st.rerun()

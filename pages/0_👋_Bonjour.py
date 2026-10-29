@@ -4,7 +4,7 @@ from ia_aissa.acces import utilisateurs_autorises, verifier_acces
 from ia_aissa.avatar import avatar
 from ia_aissa.langues import LANGUES
 from ia_aissa.parole import synthetiser
-from ia_aissa.partage import memoire
+from ia_aissa.partage import etat_memoire, memoire
 from ia_aissa.reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from ia_aissa.visage import SALUTATIONS
 
@@ -45,10 +45,7 @@ langue = c2.selectbox("Langue de salutation", langues,
                       index=langues.index(st.session_state.get("langue_salut", "Darija")))
 st.session_state["langue_salut"] = langue
 
-if not mem.persistante:
-    st.warning("⚠️ La mémoire d'IA AISSA est temporaire : les visages mémorisés sont effacés à chaque redémarrage "
-               "de l'application. Ajoutez le secret `MEMOIRE_URL` (base PostgreSQL gratuite Neon ou Supabase) "
-               "pour qu'elle vous reconnaisse pour toujours.")
+etat_memoire(st)
 
 photo = st.camera_input("Regardez la caméra et prenez une photo : IA AISSA vous regarde")
 if photo is None:

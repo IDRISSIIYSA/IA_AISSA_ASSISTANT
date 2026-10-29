@@ -115,13 +115,24 @@ medias = Table(
 )
 
 
+def normaliser_url(url):
+    """Accepte l'adresse telle que la donnent Neon ou Supabase (postgresql://… ou postgres://…)."""
+    url = str(url).strip().strip('"').strip("'")
+    for prefixe in ("postgres://", "postgresql://"):
+        if url.startswith(prefixe):
+            url = "postgresql+psycopg://" + url[len(prefixe):]
+    if url.startswith("postgresql+psycopg://") and "sslmode=" not in url:
+        url += ("&" if "?" in url else "?") + "sslmode=require"
+    return url
+
+
 def maintenant():
     return datetime.now(timezone.utc)
 
 
 class Memoire:
     def __init__(self, url=None):
-        self.url = url or f"sqlite:///{FICHIER_LOCAL}"
+        self.url = normaliser_url(url) if url else f"sqlite:///{FICHIER_LOCAL}"
         self.persistante = url is not None
         self.moteur = create_engine(self.url, pool_pre_ping=True)
         meta.create_all(self.moteur)
