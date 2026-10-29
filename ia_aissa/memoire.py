@@ -109,6 +109,13 @@ digestions = Table(
     Column("confiance", Float, nullable=False),
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
+# Réglages de l'application (administration) : empreintes des mots de passe, clés API de l'application…
+reglages = Table(
+    "reglages", meta,
+    Column("cle", String(120), primary_key=True),
+    Column("valeur", Text, nullable=False),
+    Column("modifie_le", DateTime(timezone=True), nullable=False),
+)
 # Visages des personnes autorisées (empreintes de 128 nombres, jamais la photo elle-même)
 visages = Table(
     "visages", meta,
@@ -324,6 +331,25 @@ class Memoire:
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(select(digestions).order_by(digestions.c.id.desc())
                                                         .limit(limite))]
+
+    # ---------- Réglages (administration) ----------
+    def reglage(self, cle):
+        with self.moteur.connect() as c:
+            l = c.execute(select(reglages.c.valeur).where(reglages.c.cle == cle)).first()
+            return l[0] if l else None
+
+    def reglages(self, prefixe=""):
+        with self.moteur.connect() as c:
+            return {l.cle: l.valeur for l in c.execute(select(reglages).where(reglages.c.cle.startswith(prefixe)))}
+
+    def definir_reglage(self, cle, valeur):
+        with self.moteur.begin() as c:
+            c.execute(delete(reglages).where(reglages.c.cle == cle))
+            c.execute(insert(reglages).values(cle=cle, valeur=valeur, modifie_le=maintenant()))
+
+    def supprimer_reglage(self, cle):
+        with self.moteur.begin() as c:
+            c.execute(delete(reglages).where(reglages.c.cle == cle))
 
     # ---------- Visages ----------
     def ajouter_visage(self, utilisateur, empreinte):

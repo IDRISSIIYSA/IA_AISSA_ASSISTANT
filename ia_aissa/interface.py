@@ -152,15 +152,112 @@ def lire_cle_cookie(nom):
 
 
 def ecrire_cookie(nom, valeur):
-    """Écrit (ou efface si valeur est None) un cookie d'un an, réservé à ce site, depuis le navigateur."""
+    """Met en file l'écriture (ou l'effacement si valeur est None) d'un cookie d'un an, réservé à ce site.
+    Il est écrit au prochain affichage de la page (voir ecrire_cookies_en_attente), même après un rechargement."""
+    st.session_state.setdefault("cookies_en_attente", []).append((nom, valeur))
+
+
+def ecrire_cookies_en_attente():
     import base64
-    contenu = base64.urlsafe_b64encode(valeur.encode()).decode() if valeur else ""
-    duree = 31_536_000 if valeur else 0
-    st.iframe(f"""<script>
-      let securise = "";
-      try {{ securise = window.parent.location.protocol === "https:" ? "; Secure" : ""; }} catch (e) {{}}
-      document.cookie = "{nom}={contenu}; Max-Age={duree}; Path=/; SameSite=Strict" + securise;
-    </script>""", height=1)
+    for nom, valeur in st.session_state.pop("cookies_en_attente", []):
+        contenu = base64.urlsafe_b64encode(valeur.encode()).decode() if valeur else ""
+        st.iframe(f"""<script>
+          let securise = "";
+          try {{ securise = window.parent.location.protocol === "https:" ? "; Secure" : ""; }} catch (e) {{}}
+          document.cookie = "{nom}={contenu}; Max-Age={31_536_000 if valeur else 0}; Path=/; SameSite=Strict" + securise;
+        </script>""", height=1)
+
+
+# ==========================================
+# L'espace administrateur
+# ==========================================
+COOKIE_ADMIN = "ia_aissa_admin"
+
+
+def est_admin():
+    from . import admin
+    if st.session_state.get("admin"):
+        return True
+    if st.session_state.get("cookie_oublie") != COOKIE_ADMIN and admin.jeton_valide(memoire(), lire_cle_cookie(COOKIE_ADMIN)):
+        st.session_state["admin"] = True
+    return bool(st.session_state.get("admin"))
+
+
+def administration():
+    from . import admin
+    mem = memoire()
+    st.markdown("**🛡️ Administration**")
+    if not est_admin():
+        if not admin.admin_existe(mem):
+            st.caption("Aucun administrateur : créez le mot de passe administrateur de l'application.")
+            mdp = st.text_input("Nouveau mot de passe admin (8 caractères au moins)", type="password", key="adm_new")
+            mdp2 = st.text_input("Confirmer", type="password", key="adm_new2")
+            if st.button("Créer l'administrateur") and mdp:
+                if mdp != mdp2:
+                    st.error("Les deux mots de passe diffèrent.")
+                else:
+                    try:
+                        ecrire_cookie(COOKIE_ADMIN, admin.creer_admin(mem, mdp))
+                        st.session_state["admin"] = True
+                        st.rerun()
+                    except (ValueError, PermissionError) as e:
+                        st.error(str(e))
+        else:
+            mdp = st.text_input("Mot de passe admin", type="password", key="adm_mdp")
+            if mdp:
+                jeton = admin.connexion_admin(mem, mdp)
+                if jeton:
+                    ecrire_cookie(COOKIE_ADMIN, jeton)
+                    st.session_state["admin"] = True
+                    st.session_state.pop("cookie_oublie", None)
+                    st.rerun()
+                st.error("Mot de passe incorrect.")
+        return
+    st.success("Vous êtes administrateur.")
+    if not mem.persistante:
+        st.caption("⚠️ Mémoire temporaire : ces réglages seront effacés au prochain redémarrage (ajoutez MEMOIRE_URL).")
+    st.caption("Clés API de l'application (tous les appareils et le broutage autonome) :")
+    for nom, libelle in (("ANTHROPIC_API_KEY", "Claude"), ("OPENAI_API_KEY", "GPT-4o"), ("MINIMAX_API_KEY", "MiniMax")):
+        actuelle = admin.valeur_app(mem, nom)
+        c1, c2 = st.columns([3, 1])
+        nouvelle = c1.text_input(f"{libelle} ({admin.masquer(actuelle) if actuelle else 'aucune'})", type="password",
+                                 key=f"adm_{nom}")
+        if c2.button("Enregistrer", key=f"adm_ok_{nom}") and nouvelle:
+            admin.definir_valeur_app(mem, nom, nouvelle)
+            st.rerun()
+        if actuelle and c2.button("Retirer", key=f"adm_del_{nom}"):
+            admin.definir_valeur_app(mem, nom, None)
+            st.rerun()
+    actif = (admin.valeur_app(mem, "BROUTAGE_AUTONOME") or "oui") != "non"
+    if st.toggle("Broutage autonome", value=actif, key="adm_brout") != actif:
+        admin.definir_valeur_app(mem, "BROUTAGE_AUTONOME", "oui" if not actif else "non")
+        st.rerun()
+    par_jour = int(admin.valeur_app(mem, "BROUTAGE_PAR_JOUR") or 6)
+    nouveau = st.number_input("Repas par jour", 1, 48, par_jour, key="adm_repas")
+    if nouveau != par_jour:
+        admin.definir_valeur_app(mem, "BROUTAGE_PAR_JOUR", nouveau)
+    st.caption("Personnes autorisées (si la liste est vide, l'accès est libre) :")
+    for prenom in admin.utilisateurs(mem):
+        c1, c2 = st.columns([3, 1])
+        c1.write(prenom)
+        if c2.button("Retirer", key=f"adm_u_{prenom}"):
+            admin.retirer_utilisateur(mem, prenom)
+            st.rerun()
+    c1, c2, c3 = st.columns([2, 2, 1])
+    prenom = c1.text_input("Prénom", key="adm_u_nom")
+    mdp_u = c2.text_input("Mot de passe", type="password", key="adm_u_mdp")
+    if c3.button("Ajouter") and prenom and mdp_u:
+        try:
+            admin.ajouter_utilisateur(mem, prenom, mdp_u)
+            st.rerun()
+        except ValueError as e:
+            st.error(str(e))
+    if st.button("Se déconnecter de l'administration"):
+        admin.deconnexion(mem)
+        st.session_state["admin"] = False
+        st.session_state["cookie_oublie"] = COOKIE_ADMIN
+        ecrire_cookie(COOKIE_ADMIN, None)
+        st.rerun()
 
 
 # ==========================================
@@ -177,7 +274,7 @@ def reglages(utilisateur):
         cookie = nom_cookie(config["secret"])
         cle_api = secret(config["secret"]) or st.session_state.get(cle_visite) or lire_cle_cookie(cookie)
         if secret(config["secret"]):
-            st.caption("🔑 Clé enregistrée dans les secrets de l'application.")
+            st.caption("🔑 Clé de l'application (secrets ou administration).")
         elif not cle_api:
             saisie = st.text_input(f"Clé API ({moteur.split(' (')[0]})", type="password",
                                    help=f"Créez une clé sur {config['console']}.")
@@ -241,6 +338,7 @@ def reglages(utilisateur):
                 else:
                     mem.ajouter_visage(utilisateur, empreinte)
                     st.success(f"Visage mémorisé : je te reconnaîtrai, {utilisateur}.")
+        administration()
         image = st.file_uploader("🖼️ Mon visage d'alien (image)", type=["png", "jpg", "jpeg", "webp"])
         if image is not None and st.button("Utiliser cette image"):
             mem.sauver_media("avatar", image.getvalue(), image.type or "image/png")
@@ -473,6 +571,7 @@ def espace_unique():
     if "affichage" not in st.session_state:
         ouvrir_conversation(utilisateur, None)
 
+    ecrire_cookies_en_attente()
     zone_alien = st.container()
     haut = st.columns([5, 1.4])
     with haut[1]:
@@ -531,3 +630,4 @@ def espace_unique():
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),
                          indicateur=parole.get("meta")), height=380)
     parole["nouveau"] = False
+    ecrire_cookies_en_attente()

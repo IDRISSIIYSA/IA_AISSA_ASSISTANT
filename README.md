@@ -199,6 +199,21 @@ Les pages 👋 et 💬 indiquent l'état : 🟢 mémoire durable connectée, �
 ⚠️ mémoire temporaire (avec la marche à suivre). Testé sur PostgreSQL 16 : tout revient après un
 redémarrage, y compris les cerveaux révisés. Sans ce secret, la mémoire est un fichier SQLite local.
 
+## Administration dans l'application (`ia_aissa/admin.py`)
+
+Dans ⚙️ Réglages → 🛡️ Administration, sans passer par Streamlit Cloud :
+
+1. **Créer l'administrateur** : le premier mot de passe créé (8 caractères au moins) devient celui de
+   l'application ; l'appareil reste connecté (jeton dans un cookie d'un an) jusqu'à la déconnexion.
+2. **Clés API de l'application** (Claude, GPT-4o, MiniMax) : valables sur tous les appareils et pour le
+   broutage autonome ; affichées masquées.
+3. **Personnes autorisées** : prénom + mot de passe ; dès qu'une personne est ajoutée, l'accès est réservé
+   (ajoutez-vous vous-même en premier).
+4. **Broutage autonome** : marche/arrêt et nombre de repas par jour.
+
+Les mots de passe ne sont jamais gardés en clair (empreintes PBKDF2). Les réglages sont dans la base de mémoire :
+durables avec `MEMOIRE_URL`, effacés au redémarrage sinon. Les secrets de Streamlit Cloud restent prioritaires.
+
 ## Accès réservé et secrets
 
 Sur Streamlit Cloud : *Settings → Secrets* (en local : `.streamlit/secrets.toml`, jamais commité) :

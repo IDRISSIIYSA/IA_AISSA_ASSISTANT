@@ -32,9 +32,12 @@ def utilisateurs_autorises(st):
 def verifier_acces(st):
     """Bloque la page tant que la personne n'est pas identifiée ; renvoie son prénom."""
     comptes = utilisateurs_autorises(st)
-    if not comptes:
+    from .admin import utilisateurs as utilisateurs_admin, verifier_utilisateur
+    from .partage import memoire
+    comptes_admin = utilisateurs_admin(memoire())
+    if not comptes and not comptes_admin:
         return st.session_state.get("utilisateur", PROPRIETAIRE)
-    if st.session_state.get("utilisateur") in comptes:
+    if st.session_state.get("utilisateur") in comptes or st.session_state.get("utilisateur") in comptes_admin:
         return st.session_state["utilisateur"]
     st.title("🔒 IA AISSA")
     st.write("IA AISSA ne parle qu'aux personnes autorisées par son propriétaire.")
@@ -45,6 +48,10 @@ def verifier_acces(st):
     if valide:
         compte = next((n for n in comptes if n.lower() == nom.strip().lower()), None)
         if compte and hmac.compare_digest(saisi, str(comptes[compte])):
+            st.session_state["utilisateur"] = compte
+            st.rerun()
+        compte = verifier_utilisateur(memoire(), nom, saisi)
+        if compte:
             st.session_state["utilisateur"] = compte
             st.rerun()
         st.error("Prénom ou mot de passe incorrect.")

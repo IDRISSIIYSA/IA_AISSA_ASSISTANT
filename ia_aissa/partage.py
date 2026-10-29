@@ -17,10 +17,18 @@ AIDE_MEMOIRE = (
 
 
 def secret(nom):
+    """Secrets de Streamlit Cloud, puis variables d'environnement, puis réglages enregistrés par l'administrateur."""
     try:
-        return st.secrets.get(nom) or os.environ.get(nom)
+        valeur = st.secrets.get(nom) or os.environ.get(nom)
     except Exception:
-        return os.environ.get(nom)
+        valeur = os.environ.get(nom)
+    if valeur or nom == "MEMOIRE_URL":
+        return valeur
+    from .admin import valeur_app
+    try:
+        return valeur_app(memoire(), nom)
+    except Exception:
+        return None
 
 
 @st.cache_resource(show_spinner="IA AISSA se connecte à sa mémoire…")
@@ -50,9 +58,9 @@ def etat_memoire(st_):
                     f"à chaque redémarrage de l'application.\n\n{AIDE_MEMOIRE}")
 
 
-@st.cache_resource(show_spinner=False)
 def broutage_autonome():
-    """Démarre le broutage autonome d'IA AISSA (un travailleur par serveur) si une clé API est dans les secrets.
+    """Démarre le broutage autonome d'IA AISSA (un travailleur par serveur) dès qu'une clé API de l'application
+    existe (secrets ou administration) ; appelé régulièrement, il ne démarre qu'une fois.
     Secrets facultatifs : BROUTAGE_AUTONOME = "non" pour l'arrêter, BROUTAGE_PAR_JOUR = 6 (repas par jour)."""
     from .assistant import MOTEURS, client_moteur
     from .broutage import ETAT, demarrer
