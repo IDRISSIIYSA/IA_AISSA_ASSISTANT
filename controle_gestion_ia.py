@@ -9,13 +9,14 @@ Lancement :
     pip install -r requirements.txt
     streamlit run controle_gestion_ia.py
 
-Format attendu du fichier (CSV ou Excel), une ligne par centre et par période :
-    periode, centre, budget, reel, revenus
+Données brutes acceptées quelle que soit leur structure (voir montage.py) : journal comptable,
+tableau mensuel avec les mois en colonnes, classeur Budget / Réalisé, tableau par indicateurs…
+Elles sont ramenées au format standard : periode, centre, budget, reel, revenus.
 """
 
 import io
 import random
-import unicodedata
+from pathlib import Path
 from collections import deque
 
 import numpy as np
@@ -23,6 +24,8 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+from montage import FORMATS, ROLES_AFFICHES, analyser, monter
 
 # ==========================================
 # 1. Règles du métier (la "loi du monde" que l'agent doit découvrir)
@@ -39,39 +42,6 @@ RECOMPENSES = {
     "normale": {1: 5.0, 2: -1.0, 0: -3.0},
 }
 DECISION_IDEALE = {"grave": 0, "moderee": 2, "normale": 1}
-
-ALIAS_COLONNES = {
-    "periode": ["periode", "période", "mois", "date", "period"],
-    "centre": ["centre", "centre_cout", "departement", "département", "service", "section"],
-    "budget": ["budget", "budget_prevu", "prevu", "prévu", "budgete", "budgété"],
-    "reel": ["reel", "réel", "realise", "réalisé", "cout_reel", "coût_réel", "actual", "cout"],
-    "revenus": ["revenus", "revenu", "ca", "chiffre_affaires", "chiffre_d_affaires", "revenue", "ventes"],
-}
-
-
-def sans_accents(texte):
-    return "".join(c for c in unicodedata.normalize("NFD", texte) if unicodedata.category(c) != "Mn")
-
-
-def normaliser_colonnes(df):
-    """Renomme les colonnes du fichier utilisateur vers le format interne."""
-    correspondance = {}
-    for col in df.columns:
-        cle = sans_accents(str(col).strip().lower().replace(" ", "_").replace("'", "_"))
-        for cible, alias in ALIAS_COLONNES.items():
-            if cle in map(sans_accents, alias) and cible not in correspondance.values():
-                correspondance[col] = cible
-                break
-    df = df.rename(columns=correspondance)
-    manquantes = [c for c in ("budget", "reel", "revenus") if c not in df.columns]
-    if manquantes:
-        raise ValueError(f"Colonnes manquantes : {', '.join(manquantes)}")
-    if "centre" not in df.columns:
-        df["centre"] = "Global"
-    if "periode" not in df.columns:
-        df["periode"] = df.groupby("centre").cumcount() + 1
-    return df[["periode", "centre", "budget", "reel", "revenus"]]
-
 
 def generer_donnees_exemple(n_mois=36, seed=42):
     """Données réalistes : saisonnalité, dérives progressives et pics ponctuels."""
@@ -97,13 +67,16 @@ def preparer(df):
     df = df.copy()
     for col in ("budget", "reel", "revenus"):
         df[col] = pd.to_numeric(df[col], errors="coerce")
-    df = df.dropna(subset=["budget", "reel", "revenus"])
+    df = df.dropna(subset=["budget", "reel"])
     df = df[df["budget"] > 0].sort_values(["centre", "periode"]).reset_index(drop=True)
 
     df["ecart"] = df["reel"] - df["budget"]
     df["ecart_pct"] = df["ecart"] / df["budget"]
-    df["marge_pct"] = np.where(df["revenus"] > 0, (df["revenus"] - df["reel"]) / df["revenus"], -1.0)
-    df["ratio_cout_revenus"] = np.where(df["revenus"] > 0, df["reel"] / df["revenus"], 2.0)
+    # Sans revenus connus, les indicateurs de marge restent neutres
+    df["marge_pct"] = np.where(df["revenus"].isna(), 0.0,
+                               np.where(df["revenus"] > 0, (df["revenus"] - df["reel"]) / df["revenus"], -1.0))
+    df["ratio_cout_revenus"] = np.where(df["revenus"].isna(), 1.0,
+                                        np.where(df["revenus"] > 0, df["reel"] / df["revenus"], 2.0))
     # Tendance : évolution de l'écart sur les 3 dernières périodes du même centre
     moyenne_glissante = df.groupby("centre")["ecart_pct"].transform(lambda s: s.rolling(3, min_periods=1).mean())
     df["tendance"] = moyenne_glissante.groupby(df["centre"]).diff().fillna(0.0)
@@ -236,6 +209,45 @@ def decider(cerveau, df):
 # ==========================================
 # 4. Le tableau de bord (Streamlit)
 # ==========================================
+DOSSIER_EXEMPLES = Path(__file__).resolve().parent / "exemples"
+
+
+def monter_interface(st, nom, contenu):
+    """Affiche la structure détectée, permet de la corriger et renvoie le tableau standard."""
+    analyses = analyser(contenu, nom)
+    if not analyses:
+        raise ValueError("le fichier est vide.")
+    with st.expander("🔧 Montage du contrôle de gestion à partir des données brutes", expanded=True):
+        st.caption("La structure et le rôle de chaque colonne sont détectés automatiquement. "
+                   "Corrigez-les ici si besoin.")
+        for a in analyses:
+            cle_widget = f"{nom}|{a['feuille']}"
+            st.markdown(f"**Feuille « {a['feuille']} »** — {len(a['df'])} lignes, {a['df'].shape[1]} colonnes")
+            formats = list(FORMATS)
+            a["format"] = st.selectbox("Structure", formats, index=formats.index(a["format"]),
+                                       format_func=FORMATS.get, key=f"format|{cle_widget}")
+            if a["format"] != "ignorer":
+                options = ["(aucune)"] + list(a["df"].columns)
+                colonnes = st.columns(4)
+                for i, (role, libelle) in enumerate(ROLES_AFFICHES.items()):
+                    actuelle = a["roles"].get(role, "(aucune)")
+                    choix = colonnes[i % 4].selectbox(libelle, options, index=options.index(actuelle),
+                                                      key=f"role|{role}|{cle_widget}")
+                    if choix == "(aucune)":
+                        a["roles"].pop(role, None)
+                    else:
+                        a["roles"][role] = choix
+            with st.popover("Aperçu des données brutes"):
+                st.dataframe(a["df"].head(15), hide_index=True)
+        standard, rapport = monter(analyses)
+        st.markdown("**Rapport de montage**")
+        st.markdown("\n".join(f"- {ligne}" for ligne in rapport))
+        st.dataframe(standard.head(10), hide_index=True)
+        st.download_button("Télécharger le tableau monté (CSV)", standard.to_csv(index=False).encode("utf-8"),
+                           "controle_gestion_monte.csv", "text/csv")
+    return standard
+
+
 def main():
     import streamlit as st
 
@@ -243,28 +255,33 @@ def main():
     st.title("📊 Contrôle de Gestion IA")
     st.caption("Un agent né vide qui apprend seul à détecter les écarts et à rééquilibrer le budget.")
 
+    exemples = {f.name: f for f in sorted(DOSSIER_EXEMPLES.glob("*")) if f.is_file()}
     with st.sidebar:
-        st.header("1. Données")
-        fichier = st.file_uploader("Fichier CSV ou Excel", type=["csv", "xlsx", "xls"])
-        st.download_button("Télécharger un modèle de fichier",
-                           generer_donnees_exemple(6).to_csv(index=False).encode("utf-8"),
-                           "modele_controle_gestion.csv", "text/csv")
+        st.header("1. Données brutes")
+        fichier = st.file_uploader("Fichier CSV ou Excel, quelle que soit sa structure",
+                                   type=["csv", "txt", "xlsx", "xlsm", "xls"])
+        exemple = st.selectbox("…ou un exemple de données brutes", ["Données simulées"] + list(exemples),
+                               disabled=fichier is not None)
         st.header("2. Apprentissage")
         n_episodes = st.slider("Nombre de générations (épisodes)", 5, 100, 30)
         lancer = st.button("🧬 Faire naître et entraîner l'agent", type="primary", width="stretch")
 
+    if fichier is not None:
+        nom, contenu = fichier.name, fichier.getvalue()
+    elif exemple in exemples:
+        nom, contenu = exemple, exemples[exemple].read_bytes()
+    else:
+        nom = contenu = None
+        st.info("Aucun fichier importé : utilisation de données simulées (4 centres × 36 mois).")
+
     try:
-        if fichier is None:
-            brut = generer_donnees_exemple()
-            st.info("Aucun fichier importé : utilisation de données d'exemple (4 centres × 36 mois).")
-        elif fichier.name.endswith(".csv"):
-            contenu = fichier.getvalue()
-            brut = pd.read_csv(io.BytesIO(contenu), sep=None, engine="python")
+        if contenu is None:
+            standard = generer_donnees_exemple()
         else:
-            brut = pd.read_excel(fichier)
-        df = preparer(normaliser_colonnes(brut))
+            standard = monter_interface(st, nom, contenu)
+        df = preparer(standard)
     except Exception as e:
-        st.error(f"Impossible de lire le fichier : {e}")
+        st.error(f"Impossible de monter le contrôle de gestion : {e}")
         st.stop()
 
     if df.empty:
@@ -277,7 +294,8 @@ def main():
     c1.metric("Budget total", f"{budget:,.0f}".replace(",", " "))
     c2.metric("Réalisé total", f"{reel:,.0f}".replace(",", " "),
               f"{(reel - budget) / budget:+.1%}", delta_color="inverse")
-    c3.metric("Marge moyenne", f"{df['marge_pct'].mean():.1%}")
+    avec_ca = df["revenus"].notna()
+    c3.metric("Marge moyenne", f"{df.loc[avec_ca, 'marge_pct'].mean():.1%}" if avec_ca.any() else "—")
     c4.metric("Lignes en dérive grave", int((df["situation"] == "grave").sum()))
 
     st.subheader("Écarts budgétaires par centre")

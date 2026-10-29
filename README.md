@@ -30,14 +30,31 @@ streamlit run controle_gestion_ia.py
 
 Sans fichier importé, l'application utilise des données d'exemple (4 centres × 36 mois).
 
-## Format du fichier
+## Montage à partir de données brutes, quelle que soit leur structure
 
-| periode | centre | budget | reel | revenus |
-|---------|--------|--------|------|---------|
-| 2024-01 | Production | 120000 | 125400 | 168000 |
+Le module `montage.py` construit le contrôle de gestion à partir du fichier tel qu'il sort
+de votre comptabilité ou de votre tableur :
 
-Les noms de colonnes courants sont reconnus automatiquement (ex. `Mois`, `Service`,
-`Budget prévu`, `Réalisé`, `CA`). Séparateur `,` ou `;`. Voir `exemple_donnees.csv`.
+| Structure reconnue | Exemple fourni |
+|---|---|
+| **Journal / grand livre** : date, compte, libellé, section analytique, débit/crédit ou montant | `exemples/journal_comptable.csv` |
+| **Tableau mensuel** : mois en colonnes (Janv, Févr… / 2024-01… / M01…), une ligne par centre | `exemples/suivi_budgetaire_2024.xlsx` |
+| **Tableau par indicateurs** : colonnes budget, réel, CA | `exemples/tableau_indicateurs.csv` |
+
+Ce que le montage gère automatiquement :
+- **lignes de titre** au-dessus du tableau, **lignes de total** (exclues), plusieurs **feuilles** Excel ;
+- **noms de colonnes** variés, avec ou sans accents (`Budget prévu`, `Réalisé`, `CA`, `Section analytique`…) ;
+- **montants** au format français (`1 234,56 €`, `(500)`), CSV séparés par `;` ou `,`, encodage Windows ;
+- **scénario budget / réel** déduit d'une colonne « Type », du libellé des lignes, de l'en-tête des mois
+  ou du **nom de la feuille** (« Budget 2024 », « Réalisé 2024 ») ;
+- **plan comptable** : classe 6 = charges, classe 7 = produits, comptes de bilan ignorés ;
+- **revenus sans centre** (ligne « Chiffre d'affaires ») répartis au prorata des charges ;
+- **budget absent** : budget de référence reconstruit (même mois N-1, sinon moyenne des 3 mois précédents).
+
+Dans l'application, un panneau **« Montage »** affiche la structure détectée, le rôle de chaque
+colonne (modifiable), un rapport de montage et le tableau obtenu, téléchargeable en CSV.
+
+Tests : `pip install pytest && pytest tests`
 
 ## Limites à connaître
 
