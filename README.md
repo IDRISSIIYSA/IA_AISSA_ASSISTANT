@@ -74,6 +74,24 @@ Ajouter une matière = ajouter un générateur d'exercices dans `MATIERES`.
 **Limite honnête :** un petit cerveau ne reconnaît que ce qui ressemble à ce qu'il a étudié.
 Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et corrige alors sa réponse.
 
+## Apprentissage par les corrections (`ia_aissa/corrections.py`)
+
+IA AISSA progresse d'elle-même au fil des conversations :
+
+1. **Corrections** : quand l'assistante vérifie qu'un cerveau d'école s'est trompé, elle enregistre la bonne
+   réponse (outil `corriger_ia_aissa`). Sur la page 🎓, vous pouvez aussi valider (✅) ou corriger (❌) chaque
+   réponse. Si la matière avait été mal devinée, l'aiguilleur est corrigé lui aussi.
+2. **Révision** : le cerveau repart de son état actuel (rien n'est oublié) et s'entraîne, toujours par essais
+   et récompenses, sur ses exercices habituels mêlés à ses corrections reformulées.
+3. **Règle de Dalio** : après révision, IA AISSA repasse son examen habituel. Si elle a régressé (plus de
+   2 points depuis la dernière révision, ou plus de 3 points sous sa note d'école), elle garde l'ancien cerveau.
+4. **Persistance** : corrections, cerveaux révisés et journal des révisions sont gardés dans la mémoire
+   durable (`MEMOIRE_URL`), donc conservés après un redémarrage de l'application.
+
+Exemple mesuré : après 5 corrections successives (facture Maroc Telecom, Koutoubia, ordinateurs, prêt
+immobilier, licenciement), les 5 questions sont justes, l'aiguilleur reste à 91 % à son examen et les
+autres matières ne bougent pas.
+
 ## Méta-intelligence : Sutton × Dalio × Hofstadter (contrôle de gestion)
 
 L'agent de contrôle de gestion ne se contente plus de décider : il sait quand il sait.
@@ -196,7 +214,7 @@ Ce que le montage gère automatiquement :
 Dans l'application, un panneau **« Montage »** affiche la structure détectée, le rôle de chaque
 colonne (modifiable), un rapport de montage et le tableau obtenu, téléchargeable en CSV.
 
-Tests : `pip install pytest && pytest tests` (montage, connaissances, école, voix).
+Tests : `pip install pytest && pytest tests` (montage, connaissances, école, voix, mémoire, corrections).
 
 ## Limites à connaître
 

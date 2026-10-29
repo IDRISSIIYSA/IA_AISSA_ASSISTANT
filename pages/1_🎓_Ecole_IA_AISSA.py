@@ -3,12 +3,14 @@ import pandas as pd
 import streamlit as st
 
 from ia_aissa.acces import verifier_acces
-
+from ia_aissa.corrections import ORIENTATION, corriger, reviser_tout
 from ia_aissa.ecole import (MATIERES, PAR_CLE, SEUIL_CONFIANCE, charger, entrainer, repondre,
                             repondre_automatiquement, sauvegarder)
+from ia_aissa.partage import memoire
 
 st.set_page_config(page_title="École d'IA AISSA", page_icon="🎓", layout="wide")
 utilisateur = verifier_acces(st)
+memoire()      # branche la mémoire durable : les cerveaux révisés y sont lus et écrits
 st.title("🎓 L'école d'IA AISSA")
 st.caption("IA AISSA est née vide. Dans chaque matière, elle reçoit des exercices, répond, gagne +1 ou perd 1, "
            "et retient ses expériences dans sa mémoire. Personne ne lui donne les règles : elle les découvre.")
@@ -30,6 +32,51 @@ if question_libre:
     with st.expander("Mes autres pistes"):
         for p in propositions[1:]:
             st.write(f"- {p['matiere']} : {p['reponse']} ({p['confiance']:.0%})")
+
+    def apprendre(cle, reponse):
+        corriger(memoire(), utilisateur, cle, question_libre, reponse, source="utilisateur")
+        with st.spinner("📚 IA AISSA révise…"):
+            for b in reviser_tout(memoire()):
+                (st.success if b["adoptee"] else st.warning)(
+                    f"{PAR_CLE[b['matiere']].nom} : révision {'adoptée' if b['adoptee'] else 'refusée (elle régressait)'}"
+                    f" — corrections retenues {b['corrections_apres']:.0%}, examen {b['examen_avant']:.1%} → "
+                    f"{b['examen_apres']:.1%}")
+
+    j, c = st.columns([1, 3])
+    if j.button("✅ C'est juste"):
+        apprendre(meilleure["cle"], meilleure["reponse"])
+    with c.popover("❌ Corriger IA AISSA"):
+        textuelles = [m.cle for m in MATIERES if m.texte and m.cle not in (ORIENTATION, "langues")]
+        cle_juste = st.selectbox("La bonne matière", textuelles, index=textuelles.index(meilleure["cle"])
+                                 if meilleure["cle"] in textuelles else 0, format_func=lambda k: PAR_CLE[k].nom)
+        reponse_juste = st.selectbox("La bonne réponse", PAR_CLE[cle_juste].actions)
+        if st.button("Apprendre cette correction"):
+            apprendre(cle_juste, reponse_juste)
+
+# Apprentissage par les corrections
+st.subheader("📚 Ce qu'IA AISSA apprend de ses corrections")
+toutes = memoire().corrections_de()
+en_attente = [x for x in toutes if not x["apprise"]]
+k1, k2 = st.columns(2)
+k1.metric("Corrections reçues", len(toutes))
+k2.metric("En attente de révision", len(en_attente))
+if en_attente and st.button("🌙 Réviser maintenant"):
+    with st.spinner("📚 IA AISSA révise…"):
+        reviser_tout(memoire())
+    st.rerun()
+revisions = memoire().revisions()
+if revisions:
+    st.dataframe(pd.DataFrame(revisions)[["cree_le", "matiere", "nb_corrections", "examen_avant", "examen_apres",
+                                          "corrections_avant", "corrections_apres", "adoptee"]],
+                 hide_index=True, width="stretch", column_config={
+                     "cree_le": st.column_config.DatetimeColumn("Date", format="DD/MM/YYYY HH:mm"),
+                     "examen_avant": st.column_config.NumberColumn("Examen avant", format="percent"),
+                     "examen_apres": st.column_config.NumberColumn("Examen après", format="percent"),
+                     "corrections_avant": st.column_config.NumberColumn("Corrections avant", format="percent"),
+                     "corrections_apres": st.column_config.NumberColumn("Corrections après", format="percent"),
+                     "adoptee": st.column_config.CheckboxColumn("Adoptée")})
+st.caption("Chaque correction (de l'assistante ou de vous) devient un exercice. IA AISSA révise à partir de son "
+           "cerveau actuel, puis repasse son examen habituel : si elle a régressé, elle garde l'ancien cerveau.")
 
 # Bulletin de notes
 lignes = []
@@ -63,7 +110,8 @@ cerveau, historique = charger(cle)
 if st.session_state.get("reentraine", {}).get(cle):
     cerveau, historique = st.session_state["reentraine"][cle]
 if historique:
-    st.line_chart(pd.DataFrame(historique).set_index("pas")["precision"] * 100, y_label="Bonnes réponses (%)",
+    courbe = pd.DataFrame([h for h in historique if isinstance(h["pas"], int)])
+    st.line_chart(courbe.set_index("pas")["precision"] * 100, y_label="Bonnes réponses (%)",
                   x_label="Exercices effectués")
 
 if st.button("🧬 Faire renaître IA AISSA dans cette matière et la regarder apprendre"):

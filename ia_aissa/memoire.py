@@ -13,8 +13,8 @@ SQLite local, qui sur Streamlit Cloud est effacé à chaque redémarrage de l'ap
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import (Column, DateTime, ForeignKey, Integer, MetaData, String, Table, Text, create_engine,
-                        delete, insert, select, update)
+from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, LargeBinary, MetaData, String, Table,
+                        Text, create_engine, delete, insert, select, update)
 
 FICHIER_LOCAL = Path(__file__).resolve().parent.parent / "memoire_ia_aissa.db"
 
@@ -40,6 +40,37 @@ souvenirs = Table(
     Column("id", Integer, primary_key=True),
     Column("utilisateur", String(80), index=True, nullable=False),
     Column("fait", Text, nullable=False),
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
+
+# Apprentissage par les corrections (partagé : c'est le même cerveau d'IA AISSA pour tous ses utilisateurs)
+corrections = Table(
+    "corrections", meta,
+    Column("id", Integer, primary_key=True),
+    Column("utilisateur", String(80), nullable=False),
+    Column("matiere", String(60), index=True, nullable=False),
+    Column("question", Text, nullable=False),
+    Column("bonne_reponse", String(200), nullable=False),
+    Column("source", String(20), nullable=False),          # « assistante » ou « utilisateur »
+    Column("apprise", Boolean, nullable=False, default=False),
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
+cerveaux = Table(
+    "cerveaux", meta,
+    Column("matiere", String(60), primary_key=True),
+    Column("donnees", LargeBinary, nullable=False),
+    Column("modifie_le", DateTime(timezone=True), nullable=False),
+)
+revisions = Table(
+    "revisions", meta,
+    Column("id", Integer, primary_key=True),
+    Column("matiere", String(60), index=True, nullable=False),
+    Column("nb_corrections", Integer, nullable=False),
+    Column("examen_avant", Float, nullable=False),
+    Column("examen_apres", Float, nullable=False),
+    Column("corrections_avant", Float, nullable=False),
+    Column("corrections_apres", Float, nullable=False),
+    Column("adoptee", Boolean, nullable=False),
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
 
@@ -119,6 +150,51 @@ class Memoire:
     def oublier(self, utilisateur, souvenir_id):
         with self.moteur.begin() as c:
             c.execute(delete(souvenirs).where(souvenirs.c.id == souvenir_id, souvenirs.c.utilisateur == utilisateur))
+
+
+    # ---------- Corrections et cerveaux révisés ----------
+    def ajouter_correction(self, utilisateur, matiere, question, bonne_reponse, source):
+        question = " ".join(str(question).split())[:500]
+        with self.moteur.begin() as c:
+            existe = c.execute(select(corrections.c.id).where(corrections.c.matiere == matiere,
+                                                              corrections.c.question == question,
+                                                              corrections.c.bonne_reponse == bonne_reponse)).first()
+            if existe:
+                return existe[0]
+            return c.execute(insert(corrections).values(
+                utilisateur=utilisateur, matiere=matiere, question=question, bonne_reponse=bonne_reponse,
+                source=source, apprise=False, cree_le=maintenant())).inserted_primary_key[0]
+
+    def corrections_de(self, matiere=None, seulement_nouvelles=False):
+        requete = select(corrections).order_by(corrections.c.id)
+        if matiere:
+            requete = requete.where(corrections.c.matiere == matiere)
+        if seulement_nouvelles:
+            requete = requete.where(corrections.c.apprise.is_(False))
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(requete)]
+
+    def marquer_apprises(self, matiere):
+        with self.moteur.begin() as c:
+            c.execute(update(corrections).where(corrections.c.matiere == matiere).values(apprise=True))
+
+    def sauver_cerveau(self, matiere, donnees):
+        with self.moteur.begin() as c:
+            c.execute(delete(cerveaux).where(cerveaux.c.matiere == matiere))
+            c.execute(insert(cerveaux).values(matiere=matiere, donnees=donnees, modifie_le=maintenant()))
+
+    def cerveau(self, matiere):
+        with self.moteur.connect() as c:
+            ligne = c.execute(select(cerveaux.c.donnees).where(cerveaux.c.matiere == matiere)).first()
+            return ligne[0] if ligne else None
+
+    def noter_revision(self, **valeurs):
+        with self.moteur.begin() as c:
+            c.execute(insert(revisions).values(cree_le=maintenant(), **valeurs))
+
+    def revisions(self, limite=50):
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(select(revisions).order_by(revisions.c.id.desc()).limit(limite))]
 
 
 def historique_api(lignes):

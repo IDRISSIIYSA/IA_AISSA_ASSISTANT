@@ -1,14 +1,14 @@
-import os
-
 import anthropic
 import openai
 import streamlit as st
 
 from ia_aissa.acces import verifier_acces
 from ia_aissa.assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, profil_conversation
+from ia_aissa.corrections import corriger, reviser_tout
 from ia_aissa.ecole import repondre
 from ia_aissa.langues import LANGUES
-from ia_aissa.memoire import Memoire, historique_api
+from ia_aissa.memoire import historique_api
+from ia_aissa.partage import memoire, secret
 from ia_aissa.parole import charger_oreille, synthetiser, transcrire
 from ia_aissa.voix import bouton_ecouter
 
@@ -18,18 +18,6 @@ st.title("💬 Parler avec IA AISSA")
 st.caption(f"Bonjour {utilisateur} ! Écrivez ou parlez (🎙️ dans la barre de message), en arabe, darija, français, "
            "anglais ou espagnol. IA AISSA vous répond par écrit, à voix haute, ou les deux.")
 
-
-
-def secret(nom):
-    try:
-        return st.secrets.get(nom) or os.environ.get(nom)
-    except Exception:
-        return os.environ.get(nom)
-
-
-@st.cache_resource(show_spinner=False)
-def memoire():
-    return Memoire(secret("MEMOIRE_URL"))
 
 
 def ouvrir_conversation(conversation_id):
@@ -148,7 +136,8 @@ if saisie:
             texte = converser_moteur(moteur, client_moteur(moteur, cle_api), st.session_state["messages_api"],
                                      journal=journal,
                                      profil=profil_conversation(utilisateur, niveau, vocal and not ecrit, souvenirs),
-                                     memoriser=lambda fait: memoire().memoriser(utilisateur, fait))
+                                     memoriser=lambda fait: memoire().memoriser(utilisateur, fait),
+                                     corriger=lambda cle, q, rep: corriger(memoire(), utilisateur, cle, q, rep))
         except (anthropic.AuthenticationError, openai.AuthenticationError):
             st.session_state["messages_api"].pop()
             st.error("Clé API invalide.")
@@ -162,6 +151,13 @@ if saisie:
         st.session_state["conversation_id"] = memoire().nouvelle_conversation(utilisateur, question)
     memoire().ajouter_message(utilisateur, st.session_state["conversation_id"], "user", question)
     memoire().ajouter_message(utilisateur, st.session_state["conversation_id"], "assistant", texte)
+
+    if any(o["outil"] == "corriger_ia_aissa" for o in journal):
+        with st.spinner("📚 IA AISSA révise à partir de sa correction…"):
+            bilans = reviser_tout(memoire())
+        for b in bilans:
+            st.toast(("✅ Révision adoptée" if b["adoptee"] else "↩️ Révision refusée (régression)")
+                     + f" : {b['matiere']} — corrections retenues {b['corrections_apres']:.0%}")
 
     langue = repondre("langues", texte[:300])[0]["reponse"]
     reponse = {"role": "assistant", "texte": texte, "outils": journal, "langue": langue}

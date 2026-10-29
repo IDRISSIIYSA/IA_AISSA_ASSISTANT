@@ -6,6 +6,7 @@ Les bonnes réponses viennent des règles de connaissances.py : IA AISSA ne lit 
 elle les découvre en se trompant puis en se corrigeant.
 """
 
+import io
 import random
 import re
 import unicodedata
@@ -568,22 +569,29 @@ def entrainer(matiere, pas=None, batch=64, lr=2e-3, seed=0, callback=None):
 
 
 _CACHE = {}
+STOCKAGE = None     # mémoire durable (base de données) où sont gardés les cerveaux révisés, si branchée
 
 
 def sauvegarder(matiere, cerveau, historique):
     _CACHE.pop(matiere.cle, None)
     DOSSIER_CERVEAUX.mkdir(exist_ok=True)
-    torch.save({"etat": cerveau.state_dict(), "historique": historique}, DOSSIER_CERVEAUX / f"{matiere.cle}.pt")
+    donnees = {"etat": cerveau.state_dict(), "historique": historique}
+    torch.save(donnees, DOSSIER_CERVEAUX / f"{matiere.cle}.pt")
+    if STOCKAGE is not None:
+        tampon = io.BytesIO()
+        torch.save(donnees, tampon)
+        STOCKAGE.sauver_cerveau(matiere.cle, tampon.getvalue())
 
 
 def charger(cle):
     if cle in _CACHE:
         return _CACHE[cle]
     chemin = DOSSIER_CERVEAUX / f"{cle}.pt"
-    if not chemin.exists():
+    revise = STOCKAGE.cerveau(cle) if STOCKAGE is not None else None
+    if revise is None and not chemin.exists():
         return None, None
     m = PAR_CLE[cle]
-    donnees = torch.load(chemin, weights_only=True)
+    donnees = torch.load(io.BytesIO(revise) if revise is not None else chemin, weights_only=True)
     cerveau = Cerveau(m.dim, len(m.actions))
     cerveau.load_state_dict(donnees["etat"])
     cerveau.eval()
