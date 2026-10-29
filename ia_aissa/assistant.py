@@ -128,10 +128,33 @@ def executer_outil(nom, entree, memoriser=None, corriger=None, bibliotheque=None
     raise ValueError(f"Outil inconnu : {nom}")
 
 
+OUTIL_EXECUTION = {"type": "code_execution_20260521", "name": "code_execution"}   # bac à sable sécurisé d'Anthropic
+
+
+def _journal_execution(bloc, journal):
+    """Garde la trace du code exécuté dans le bac à sable et de son résultat réel."""
+    if journal is None:
+        return
+    if bloc.type == "server_tool_use":
+        journal.append({"outil": "exécution de code", "entree": dict(bloc.input or {}), "resultat": ""})
+    elif bloc.type.endswith("code_execution_tool_result"):
+        r = bloc.content
+        sortie = getattr(r, "stdout", "") or ""
+        erreur = getattr(r, "stderr", "") or getattr(r, "error_code", "") or ""
+        texte = (sortie + ("\n[stderr]\n" + erreur if erreur else "")).strip() or "(aucune sortie)"
+        if journal and journal[-1]["outil"] == "exécution de code" and not journal[-1]["resultat"]:
+            journal[-1]["resultat"] = texte
+        else:
+            journal.append({"outil": "exécution de code", "entree": {}, "resultat": texte})
+
+
 def converser(client, messages, max_tours=8, journal=None, profil=None, memoriser=None, corriger=None,
-              bibliotheque=None):
+              bibliotheque=None, execution_code=False):
     """Envoie la conversation à Claude, exécute les outils demandés, renvoie le texte final.
-    `messages` est complété sur place (blocs de réflexion compris, à renvoyer tels quels)."""
+    `messages` est complété sur place (blocs de réflexion compris, à renvoyer tels quels).
+    execution_code : ajoute le bac à sable d'exécution de code d'Anthropic (programmeur senior)."""
+    outils = OUTILS + ([OUTIL_EXECUTION] if execution_code else [])
+    textes = []
     for _ in range(max_tours):
         reponse = client.beta.messages.create(
             model=MODELE,
@@ -142,14 +165,20 @@ def converser(client, messages, max_tours=8, journal=None, profil=None, memorise
             output_config={"effort": "medium"},
             system=[{"type": "text", "text": SYSTEME, "cache_control": {"type": "ephemeral"}}]
                    + ([{"type": "text", "text": profil}] if profil else []),
-            tools=OUTILS,
+            tools=outils,
             messages=messages,
         )
         messages.append({"role": "assistant", "content": reponse.content})
+        for bloc in reponse.content:
+            if bloc.type == "server_tool_use" or bloc.type.endswith("code_execution_tool_result"):
+                _journal_execution(bloc, journal)
+        textes += [b.text for b in reponse.content if b.type == "text"]
         if reponse.stop_reason == "refusal":
             return "Je ne peux pas répondre à cette demande."
+        if reponse.stop_reason == "pause_turn":          # le bac à sable travaille encore : on le laisse reprendre
+            continue
         if reponse.stop_reason != "tool_use":
-            return "".join(b.text for b in reponse.content if b.type == "text")
+            return "".join(textes) if execution_code else "".join(b.text for b in reponse.content if b.type == "text")
         resultats = []
         for bloc in reponse.content:
             if bloc.type != "tool_use":
@@ -164,7 +193,6 @@ def converser(client, messages, max_tours=8, journal=None, profil=None, memorise
             resultats.append({"type": "tool_result", "tool_use_id": bloc.id, "content": contenu, "is_error": erreur})
         messages.append({"role": "user", "content": resultats})
     return "Je n'ai pas pu terminer : trop d'étapes de calcul."
-
 
 NIVEAUX = {
     "Accompagnement professionnel": "",
@@ -238,7 +266,8 @@ def client_moteur(moteur, cle_api):
 
 
 def converser_openai(client, moteur, messages, max_tours=8, journal=None, profil=None, memoriser=None,
-                     corriger=None, bibliotheque=None):
+                     corriger=None, bibliotheque=None, execution_code=False):
+    """execution_code est ignoré : le bac à sable d'exécution n'existe qu'avec Claude."""
     """Même boucle d'outils pour les API au format OpenAI (GPT-4o, MiniMax).
     `messages` (sans message système) est complété sur place, raisonnement compris."""
     import re

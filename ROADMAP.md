@@ -22,8 +22,11 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [ ] Bibliothèque : bouton « Nourrir IA AISSA chaque jour » qui digère un article Wikipédia tiré de ses lacunes à chaque visite, dans la limite d'un appel au moteur
 
+- [ ] Espace unique : afficher les graphiques et tableaux du contrôleur de gestion dans des onglets repliables pour garder la conversation compacte sur téléphone
+
 ## Fait
 
+- [x] Espace unique : l'alien et une ligne de conversation (texte, voix, fichiers), rôles dynamiques (programmeur avec exécution de code, prof/savant, contrôleur de gestion, inventeur, lecteur, compagnon)
 - [x] Lycée : génétique (croisements A/a), probabilités (urne), loi d'Ohm (ordre de grandeur de I)
 - [x] Bibliothèque reliée à l'invention (inspirations), aux lacunes (comblement) et à l'étude autonome (exploration du hors-programme)
 - [x] Formulations du quotidien (français, darija en lettres latines et arabes) et lecture mots + lettres pour toutes les matières textuelles ; banc d'essai de 20 questions libres

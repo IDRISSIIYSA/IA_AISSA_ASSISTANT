@@ -5,7 +5,7 @@ L'agent naît sans aucune connaissance en contrôle de gestion. Il observe chaqu
 (centre de coûts × période), choisit une décision, reçoit une récompense ou une pénalité,
 et range chaque expérience dans sa mémoire profonde (replay memory) pour la réapprendre.
 
-Lancement :
+Lancement (l'espace unique d'IA AISSA) :
     pip install -r requirements.txt
     streamlit run controle_gestion_ia.py
 
@@ -14,9 +14,7 @@ tableau mensuel avec les mois en colonnes, classeur Budget / Réalisé, tableau 
 Elles sont ramenées au format standard : periode, centre, budget, reel, revenus.
 """
 
-import io
 import random
-from pathlib import Path
 from collections import deque
 
 import numpy as np
@@ -25,10 +23,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from ia_aissa.acces import verifier_acces
-from ia_aissa.croissance import afficher as afficher_croissance
-from ia_aissa.partage import memoire
-from montage import FORMATS, ROLES_AFFICHES, analyser, monter
 
 # ==========================================
 # 1. Règles du métier (la "loi du monde" que l'agent doit découvrir)
@@ -317,204 +311,11 @@ def curiosites(df, n=8):
 # ==========================================
 # 4. Le tableau de bord (Streamlit)
 # ==========================================
-DOSSIER_EXEMPLES = Path(__file__).resolve().parent / "exemples"
-
-
-def monter_interface(st, nom, contenu):
-    """Affiche la structure détectée, permet de la corriger et renvoie le tableau standard."""
-    analyses = analyser(contenu, nom)
-    if not analyses:
-        raise ValueError("le fichier est vide.")
-    with st.expander("🔧 Montage du contrôle de gestion à partir des données brutes", expanded=True):
-        st.caption("La structure et le rôle de chaque colonne sont détectés automatiquement. "
-                   "Corrigez-les ici si besoin.")
-        for a in analyses:
-            cle_widget = f"{nom}|{a['feuille']}"
-            st.markdown(f"**Feuille « {a['feuille']} »** — {len(a['df'])} lignes, {a['df'].shape[1]} colonnes")
-            formats = list(FORMATS)
-            a["format"] = st.selectbox("Structure", formats, index=formats.index(a["format"]),
-                                       format_func=FORMATS.get, key=f"format|{cle_widget}")
-            if a["format"] != "ignorer":
-                options = ["(aucune)"] + list(a["df"].columns)
-                colonnes = st.columns(4)
-                for i, (role, libelle) in enumerate(ROLES_AFFICHES.items()):
-                    actuelle = a["roles"].get(role, "(aucune)")
-                    choix = colonnes[i % 4].selectbox(libelle, options, index=options.index(actuelle),
-                                                      key=f"role|{role}|{cle_widget}")
-                    if choix == "(aucune)":
-                        a["roles"].pop(role, None)
-                    else:
-                        a["roles"][role] = choix
-            with st.popover("Aperçu des données brutes"):
-                st.dataframe(a["df"].head(15), hide_index=True)
-        standard, rapport = monter(analyses)
-        st.markdown("**Rapport de montage**")
-        st.markdown("\n".join(f"- {ligne}" for ligne in rapport))
-        st.dataframe(standard.head(10), hide_index=True)
-        st.download_button("Télécharger le tableau monté (CSV)", standard.to_csv(index=False).encode("utf-8"),
-                           "controle_gestion_monte.csv", "text/csv")
-    return standard
-
-
 def main():
-    import streamlit as st
-
-    st.set_page_config(page_title="IA AISSA — Contrôle de gestion", page_icon="📊", layout="wide")
-    verifier_acces(st)
-    st.title("📊 IA AISSA — Contrôle de gestion")
-    with st.expander("🚀 Croissance d'IA AISSA (concepts maîtrisés par famille de sciences)"):
-        afficher_croissance(st, memoire())
-    st.caption("Un agent né vide qui apprend seul à détecter les écarts et à rééquilibrer le budget.")
-
-    exemples = {f.name: f for f in sorted(DOSSIER_EXEMPLES.glob("*")) if f.is_file()}
-    with st.sidebar:
-        st.header("1. Données brutes")
-        fichier = st.file_uploader("Fichier CSV ou Excel, quelle que soit sa structure",
-                                   type=["csv", "txt", "xlsx", "xlsm", "xls"])
-        exemple = st.selectbox("…ou un exemple de données brutes", ["Données simulées"] + list(exemples),
-                               disabled=fichier is not None)
-        st.header("2. Apprentissage")
-        n_episodes = st.slider("Nombre de générations (épisodes)", 5, 100, 30)
-        lancer = st.button("🧬 Faire naître et entraîner l'agent", type="primary", width="stretch")
-
-    if fichier is not None:
-        nom, contenu = fichier.name, fichier.getvalue()
-    elif exemple in exemples:
-        nom, contenu = exemple, exemples[exemple].read_bytes()
-    else:
-        nom = contenu = None
-        st.info("Aucun fichier importé : utilisation de données simulées (4 centres × 36 mois).")
-
-    try:
-        if contenu is None:
-            standard = generer_donnees_exemple()
-        else:
-            standard = monter_interface(st, nom, contenu)
-        df = preparer(standard)
-    except Exception as e:
-        st.error(f"Impossible de monter le contrôle de gestion : {e}")
-        st.stop()
-
-    if df.empty:
-        st.error("Aucune ligne exploitable dans le fichier.")
-        st.stop()
-
-    # Indicateurs globaux
-    c1, c2, c3, c4 = st.columns(4)
-    budget, reel = df["budget"].sum(), df["reel"].sum()
-    c1.metric("Budget total", f"{budget:,.0f}".replace(",", " "))
-    c2.metric("Réalisé total", f"{reel:,.0f}".replace(",", " "),
-              f"{(reel - budget) / budget:+.1%}", delta_color="inverse")
-    avec_ca = df["revenus"].notna()
-    c3.metric("Marge moyenne", f"{df.loc[avec_ca, 'marge_pct'].mean():.1%}" if avec_ca.any() else "—")
-    c4.metric("Lignes en dérive grave", int((df["situation"] == "grave").sum()))
-
-    st.subheader("Écarts budgétaires par centre")
-    pivot = df.pivot_table(index="periode", columns="centre", values="ecart_pct", aggfunc="mean")
-    st.line_chart(pivot * 100, y_label="Écart (%)")
-
-    if lancer:
-        barre = st.progress(0.0, text="L'agent ouvre les yeux…")
-
-        def suivi(ep, total, h):
-            barre.progress(ep / total, text=f"Génération {ep}/{total} — précision {h['precision']:.0%}")
-
-        conseil, historique, journal = entrainer(df, n_episodes=n_episodes, callback=suivi)
-        st.session_state["cerveau"] = conseil
-        st.session_state["historique"] = historique
-        st.session_state["journal"] = journal
-        st.session_state["cle_donnees"] = len(df), float(df["reel"].sum())
-        barre.empty()
-
-    if "cerveau" not in st.session_state:
-        st.warning("Cliquez sur « Faire naître et entraîner l'agent » pour lancer l'apprentissage.")
-        return
-    if st.session_state.get("cle_donnees") != (len(df), float(df["reel"].sum())):
-        st.warning("Les données ont changé : relancez l'entraînement.")
-        return
-
-    historique = st.session_state["historique"]
-    conseil = st.session_state["cerveau"]
-    actions, confiance = decider(conseil, df)
-    df["decision_ia"] = [ACTIONS[a] for a in actions]
-    df["confiance"] = confiance
-    df["statut"] = [statut(p) for p in confiance]
-    df["decision_reference"] = df["situation"].map(DECISION_IDEALE).map(ACTIONS)
-
-    st.subheader("🧠 Croissance de l'intelligence")
-    g1, g2 = st.columns(2)
-    g1.line_chart(historique.set_index("episode")["precision"] * 100, y_label="Précision (%)")
-    g2.line_chart(historique.set_index("episode")[["recompense", "curiosite"]],
-                  y_label="Récompense / bonus de curiosité")
-    st.caption(f"Précision finale par rapport aux règles métier : {historique['precision'].iloc[-1]:.1%}. "
-               "Le bonus de curiosité récompense l'exploration de ce que les cerveaux du conseil ignorent : "
-               "il s'éteint à mesure qu'ils s'accordent.")
-
-    st.subheader("🪞 Méta-intelligence : IA AISSA juge sa propre pensée")
-    parts = df["statut"].value_counts(normalize=True)
-    m1, m2, m3 = st.columns(3)
-    m1.metric(STATUTS["sur"], f"{parts.get(STATUTS['sur'], 0):.0%}")
-    m2.metric(STATUTS["confirmer"], f"{parts.get(STATUTS['confirmer'], 0):.0%}")
-    m3.metric(STATUTS["doute"], f"{parts.get(STATUTS['doute'], 0):.0%}")
-    if parts.get(STATUTS["doute"], 0) > 0.10:
-        st.warning("🤔 Je doute de plus de 10 % de mes décisions sur ces données : je dois réapprendre "
-                   "(augmentez le nombre de générations et relancez l'entraînement).")
-    else:
-        st.success("Je connais mes limites : les décisions marquées « À confirmer » ou « Je ne sais pas » "
-                   "méritent l'œil du contrôleur de gestion.")
-    st.caption(f"{N_CERVEAUX} cerveaux délibèrent ; chaque vote pèse selon la crédibilité gagnée par ses résultats "
-               "(Dalio). Un méta-cerveau, formé sur les erreurs passées du conseil, estime la probabilité que "
-               "chaque décision soit juste (boucle étrange de Hofstadter).")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**📜 Principes découverts et énoncés par IA AISSA**")
-        for principe in principes_decouverts(conseil, df):
-            st.markdown(f"- {principe}")
-        st.caption("Personne ne lui a donné ces seuils : elle les a trouvés par essais et erreurs.")
-    with c2:
-        st.markdown("**📓 Journal des erreurs (douleur + réflexion = progrès)**")
-        journal = pd.DataFrame(st.session_state.get("journal", []))
-        if not journal.empty:
-            st.line_chart(journal.set_index("episode")["erreurs"], y_label="Erreurs", height=180)
-            confusions = journal["confusions"].iloc[-1]
-            st.caption("Confusions restantes : " + (", ".join(f"{k} ({v})" for k, v in confusions.items())
-                                                     if confusions else "aucune."))
-
-    st.subheader("🔍 Ce qui intrigue IA AISSA")
-    intrigues = curiosites(df)
-    if intrigues.empty:
-        st.caption("Rien d'inhabituel : chaque centre se comporte comme d'habitude.")
-    else:
-        st.caption("Des écarts sous les seuils d'alerte, mais inhabituels pour leur centre : la curiosité "
-                   "d'IA AISSA les signale pour enquête.")
-        st.dataframe(intrigues[["periode", "centre", "budget", "reel", "ecart_pct", "singularite"]], hide_index=True,
-                     width="stretch", column_config={
-                         "ecart_pct": st.column_config.NumberColumn("Écart %", format="percent"),
-                         "singularite": st.column_config.NumberColumn("Singularité (écarts-types)", format="%.1f")})
-
-    st.subheader("📋 Décisions de l'agent")
-    f1, f2 = st.columns(2)
-    filtre = f1.multiselect("Filtrer par décision", list(ACTIONS.values()), default=[ACTIONS[0], ACTIONS[2]])
-    filtre_statut = f2.multiselect("Filtrer par certitude", list(STATUTS.values()))
-    vue = df[df["decision_ia"].isin(filtre)] if filtre else df
-    vue = vue[vue["statut"].isin(filtre_statut)] if filtre_statut else vue
-    st.dataframe(
-        vue[["periode", "centre", "budget", "reel", "ecart", "ecart_pct", "tendance",
-             "decision_ia", "statut", "confiance", "decision_reference"]],
-        width="stretch", hide_index=True,
-        column_config={
-            "ecart_pct": st.column_config.NumberColumn("Écart %", format="percent"),
-            "tendance": st.column_config.NumberColumn("Tendance", format="%.3f"),
-            "confiance": st.column_config.ProgressColumn("Confiance (méta)", min_value=0, max_value=1),
-        },
-    )
-    st.download_button("Exporter les décisions (CSV)", df.to_csv(index=False).encode("utf-8"),
-                       "decisions_ia.csv", "text/csv")
-
-    buffer = io.BytesIO()
-    torch.save(conseil.state_dict(), buffer)
-    st.download_button("Sauvegarder le cerveau de l'agent (.pt)", buffer.getvalue(), "cerveau_controle_gestion.pt")
+    """L'application tient désormais dans un seul espace : l'alien IA AISSA et une ligne de conversation.
+    Le contrôle de gestion s'y fait en déposant un fichier de chiffres dans la conversation."""
+    from ia_aissa.interface import espace_unique
+    espace_unique()
 
 
 if __name__ == "__main__":

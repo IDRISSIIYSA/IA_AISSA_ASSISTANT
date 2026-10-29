@@ -5,17 +5,27 @@ par essais, récompenses et pénalités, les métiers de l'entreprise marocaine.
 par une **assistante conversationnelle** (API Claude) qui parle arabe, darija, français, anglais
 et espagnol, à l'écrit comme à l'oral.
 
-## Les pages de l'application
+## Un seul espace : l'alien et une ligne de conversation
 
-| Page | Rôle |
-|---|---|
-| 📊 **Contrôle de gestion** | Montage à partir de données brutes + agent méta-intelligent qui pilote les écarts et sait quand il doute |
-| 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
-| 🎓 **École d'IA AISSA** | 67 matières apprises seule, question libre sans choisir de matière, bulletin de notes, courbes d'apprentissage, exercices surprise |
-| 💬 **Parler avec IA AISSA** | Moteur au choix (Claude, GPT-4o, MiniMax) ; questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
-| 💡 **Laboratoire d'invention** | Auto-simulation : évolution génétique des idées, débat Créateur × Critique, score de confiance et de faisabilité, galerie des inventions |
-| 📚 **Bibliothèque** | IA AISSA broute une page web, mange un livre (PDF, texte) ou explore Wikipédia seule sur ses lacunes, rumine en concepts, nourrit son école |
-| 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
+Toute l'application tient dans un seul écran (`ia_aissa/interface.py`) : IA AISSA, l'alien en 3D dans son
+portail cosmique, et une seule ligne de conversation qui accepte le texte, la voix (🎙️) et les fichiers (📎).
+Les réglages (moteur, clé API, réponses écrites/vocales, niveau, conversations, souvenirs, reconnaissance du
+visage, image de l'alien) tiennent dans un seul panneau ⚙️.
+
+Selon la demande, IA AISSA change seule de rôle (`ia_aissa/espace.py`) :
+
+| Ce que vous lui donnez | Son rôle | Ce qu'elle fait |
+|---|---|---|
+| Une demande de code | 💻 Programmeur senior | Écrit le code et, avec Claude, l'exécute dans le bac à sable sécurisé d'Anthropic (jamais sur votre serveur) |
+| Une question de science ou d'école | 🎓 Prof / Savant | Explique pas à pas, au niveau choisi, du primaire au doctorat |
+| Un fichier CSV/Excel ou une question de budget | 📊 Contrôleur de gestion | Monte les données brutes, entraîne l'agent méta-intelligent, diagnostique écarts et erreurs (graphiques, alertes, doutes, export) |
+| « Invente… », « une idée pour… » | 💡 Inventeur | Évolution génétique des idées + débat Créateur × Critique, portail en « QUANTUM FUSION », annonce en darija |
+| Un lien ou un document (PDF, texte) | 📚 Lecteur | Broute, rumine, comble ses lacunes, nourrit son école |
+| « Ton bulletin », « qu'as-tu lu ? », « apprends-moi à prononcer » | — | Sa croissance, sa bibliothèque, l'atelier de prononciation |
+| Tout le reste | 👽 Compagnon | Converse, se souvient de vous |
+
+Sans clé API, l'alien répond quand même avec ses propres cerveaux d'école et analyse les fichiers de contrôle
+de gestion. Chaque échange nourrit sa boucle d'auto-évolution : lacunes, corrections, étude autonome, lectures.
 
 ## L'école d'IA AISSA (`ia_aissa/ecole.py`)
 
