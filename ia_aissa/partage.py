@@ -48,3 +48,19 @@ def etat_memoire(st_):
     else:
         st_.warning("⚠️ La mémoire d'IA AISSA est temporaire : visages, conversations et apprentissages sont effacés "
                     f"à chaque redémarrage de l'application.\n\n{AIDE_MEMOIRE}")
+
+
+@st.cache_resource(show_spinner=False)
+def broutage_autonome():
+    """Démarre le broutage autonome d'IA AISSA (un travailleur par serveur) si une clé API est dans les secrets.
+    Secrets facultatifs : BROUTAGE_AUTONOME = "non" pour l'arrêter, BROUTAGE_PAR_JOUR = 6 (repas par jour)."""
+    from .assistant import MOTEURS, client_moteur
+    from .broutage import ETAT, demarrer
+    if str(secret("BROUTAGE_AUTONOME") or "oui").lower() in ("non", "false", "0"):
+        return ETAT
+    moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"])), None)
+    if moteur is None:
+        return ETAT
+    cle = secret(MOTEURS[moteur]["secret"])
+    par_jour = int(secret("BROUTAGE_PAR_JOUR") or 6)
+    return demarrer(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle), par_jour)

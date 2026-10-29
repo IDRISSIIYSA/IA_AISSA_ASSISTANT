@@ -23,13 +23,14 @@ from .avatar import avatar
 from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer
 from .corrections import corriger, reviser_tout
 from .croissance import afficher as afficher_croissance
+from .croissance import serie as serie_croissance
 from .ecole import MATIERES, charger, repondre
 from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_controle, detecter_role, intention, \
     reponse_locale, urls
 from .invention import annonce_darija, debattre, evoluer
 from .langues import LANGUES
 from .memoire import historique_api
-from .partage import etat_memoire, memoire, secret
+from .partage import broutage_autonome, etat_memoire, memoire, secret
 from .parole import charger_oreille, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
@@ -338,6 +339,22 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
             pass          # l'étude autonome reprendra à la prochaine occasion
 
 
+@st.fragment(run_every="60s")
+def pouls_d_ia_aissa():
+    """La croissance en direct : concepts maîtrisés et dernier repas du broutage autonome (rafraîchi chaque minute)."""
+    etat = broutage_autonome()
+    total = int(serie_croissance(memoire()).iloc[-1].sum())
+    repas = etat.get("dernier_repas")
+    if not etat.get("actif"):
+        broutage = "broutage autonome en attente d'une clé API dans les secrets"
+    elif repas:
+        broutage = (f"dernier repas : « {repas['sujet']} » ({repas['source']}), {repas['concepts']} concept(s), "
+                    f"{repas['injections']} analogie(s) injectée(s) dans l'atelier d'invention")
+    else:
+        broutage = "broutage autonome actif, premier repas en cours"
+    st.caption(f"🌱 {total} concepts maîtrisés · {broutage}")
+
+
 # ==========================================
 # L'espace unique
 # ==========================================
@@ -354,7 +371,9 @@ def espace_unique():
     with haut[1]:
         r = reglages(utilisateur)
     role_courant = st.session_state.get("role_ia", "compagnon")
-    haut[0].markdown(f'<span class="role">{ROLES[role_courant][0]}</span>', unsafe_allow_html=True)
+    with haut[0]:
+        st.markdown(f'<span class="role">{ROLES[role_courant][0]}</span>', unsafe_allow_html=True)
+        pouls_d_ia_aissa()
 
     if "parole" not in st.session_state:          # première visite : l'alien salue, en darija et en français
         salut = SALUTATIONS["Darija"][moment_de_la_journee()].format(nom=utilisateur)

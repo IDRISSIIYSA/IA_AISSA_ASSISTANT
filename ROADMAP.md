@@ -24,8 +24,11 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [ ] Espace unique : afficher les graphiques et tableaux du contrôleur de gestion dans des onglets repliables pour garder la conversation compacte sur téléphone
 
+- [ ] Broutage : ajouter des sources ouvertes marocaines et financières via leurs API ou flux publics (ex. publications statistiques), en vérifiant leurs conditions d'utilisation
+
 ## Fait
 
+- [x] Broutage autonome poli (robots.txt, délais, repos sur 429, identité honnête) sur Wikipédia et arXiv, rumination, injection des analogies dans l'atelier d'invention, croissance en direct
 - [x] Espace unique : l'alien et une ligne de conversation (texte, voix, fichiers), rôles dynamiques (programmeur avec exécution de code, prof/savant, contrôleur de gestion, inventeur, lecteur, compagnon)
 - [x] Lycée : génétique (croisements A/a), probabilités (urne), loi d'Ohm (ordre de grandeur de I)
 - [x] Bibliothèque reliée à l'invention (inspirations), aux lacunes (comblement) et à l'étude autonome (exploration du hors-programme)

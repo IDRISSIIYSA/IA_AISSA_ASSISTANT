@@ -24,6 +24,15 @@ Selon la demande, IA AISSA change seule de rôle (`ia_aissa/espace.py`) :
 | « Ton bulletin », « qu'as-tu lu ? », « apprends-moi à prononcer » | — | Sa croissance, sa bibliothèque, l'atelier de prononciation |
 | Tout le reste | 👽 Compagnon | Converse, se souvient de vous |
 
+**Broutage autonome** (`ia_aissa/broutage.py`) : dès qu'une clé API est dans les secrets, un travailleur
+d'arrière-plan part seul se nourrir (6 repas par jour par défaut, secret `BROUTAGE_PAR_JOUR` ; `BROUTAGE_AUTONOME =
+"non"` pour l'arrêter). Il choisit d'abord ses lacunes, sinon un sujet des quatre familles de sciences ou du
+contrôle de gestion, le cherche sur des sources ouvertes (API Wikipédia, API arXiv), le rumine en concepts denses
+et injecte chaque analogie avec le contrôle de gestion dans la galerie d'inventions. Le compteur « 🌱 concepts
+maîtrisés » se met à jour chaque minute sous l'alien. Brouteur poli et honnête : il s'annonce
+(`IA-AISSA/1.0`), respecte robots.txt, attend 2 à 5 s entre deux visites d'un site, se met au repos sur un 429
+et ne garde que le texte utile (10 000 caractères au plus) ; il ne se déguise jamais en navigateur humain.
+
 Sans clé API, l'alien répond quand même avec ses propres cerveaux d'école et analyse les fichiers de contrôle
 de gestion. Chaque échange nourrit sa boucle d'auto-évolution : lacunes, corrections, étude autonome, lectures.
 
