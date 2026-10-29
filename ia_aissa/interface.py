@@ -18,7 +18,7 @@ import streamlit as st
 
 from .acces import verifier_acces
 from .assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, meta_conscience, profil_conversation
-from .autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
+from .autonomie import DELAI_BROUTAGE, SEUIL_ETUDE, brouter_si_lacune, etudier_seule, noter_si_lacune
 from .avatar import avatar
 from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer
 from .corrections import corriger, reviser_tout
@@ -336,6 +336,16 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
                      "connaissance(s).")
         except Exception:
             pass          # l'étude autonome reprendra à la prochaine occasion
+    if r["cle_api"] and question and time.time() - st.session_state.get("dernier_broutage", 0) >= DELAI_BROUTAGE:
+        try:
+            b = brouter_si_lacune(mem, r["config"], client_moteur(r["moteur"], r["cle_api"]), question)
+            if b is not None:
+                st.session_state["dernier_broutage"] = time.time()
+                if not b.get("erreur"):
+                    st.toast(f"🌿 Pas assez sûre ({b['confiance_avant']:.0%}) : j'ai brouté « {b['source']} » "
+                             f"et digéré {b['concepts']} concept(s).")
+        except Exception:
+            pass          # le broutage reprendra à la prochaine lacune
 
 
 # ==========================================

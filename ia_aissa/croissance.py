@@ -70,6 +70,23 @@ def indicateurs(memoire):
             "recentes": recentes, "acceleration": recentes - avant}
 
 
+def broutage(memoire):
+    """Ce qu'IA AISSA a brouté, par jour : concepts digérés seule (Wikipédia) ou lus avec l'utilisateur,
+    et confiance moyenne de digestion. DataFrame vide si elle n'a encore rien lu."""
+    colonnes = ["Concepts broutés seule", "Concepts lus avec toi", "Confiance de digestion"]
+    lignes = [{"date": d["cree_le"], "n": len(json.loads(d["concepts"])), "confiance": d["confiance"],
+               "seule": d["utilisateur"] == "IA AISSA"} for d in memoire.digestions()]
+    if not lignes:
+        return pd.DataFrame(columns=colonnes)
+    df = pd.DataFrame(lignes)
+    df["date"] = pd.to_datetime(df["date"], utc=True).dt.floor("D")
+    df["origine"] = df["seule"].map({True: colonnes[0], False: colonnes[1]})
+    par_jour = df.pivot_table(index="date", columns="origine", values="n", aggfunc="sum")
+    par_jour = par_jour.reindex(columns=colonnes[:2]).fillna(0).astype(int)
+    par_jour[colonnes[2]] = df.groupby("date")["confiance"].mean()
+    return par_jour
+
+
 def afficher(st, memoire):
     s = serie(memoire)
     i = indicateurs(memoire)
@@ -88,3 +105,14 @@ def afficher(st, memoire):
         st.bar_chart(s.iloc[-1], y_label="Concepts maîtrisés", horizontal=True)
     st.caption("Chaque famille part de ce qu'IA AISSA a appris à l'école, puis grandit à chaque correction apprise. "
                "Plus on lui parle, plus elle repère de lacunes et plus elle apprend vite.")
+    b = broutage(memoire)
+    if not b.empty:
+        from .autonomie import SEUIL_BROUTAGE
+        d1, d2 = st.columns(2)
+        d1.metric("Concepts broutés seule", int(b["Concepts broutés seule"].sum()),
+                  help=f"Lus sur Wikipédia de sa propre initiative, dès que sa confiance passe sous "
+                       f"{SEUIL_BROUTAGE:.0%}.")
+        d2.metric("Confiance moyenne de digestion", f"{b['Confiance de digestion'].mean():.0%}",
+                  help="Ce que le moteur estime avoir bien compris de chaque lecture (texte clair et fiable = élevé).")
+        st.bar_chart(b[["Concepts broutés seule", "Concepts lus avec toi"]], y_label="Concepts digérés par jour")
+        st.line_chart(b[["Confiance de digestion"]].assign(Seuil=SEUIL_BROUTAGE), y_label="Confiance")

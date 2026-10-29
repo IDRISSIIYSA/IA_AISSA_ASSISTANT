@@ -113,3 +113,30 @@ def test_inspirations_de_la_bibliotheque_dans_l_invention():
     I.generer_population({"type": "anthropic", "modele": "x"}, client, "problème", 2, random.Random(1),
                          [{"concept": "Photosynthèse", "source": "Livre", "explication": "lumière en énergie"}])
     assert "Photosynthèse (Livre)" in vus[0]
+
+
+def test_broutage_autonome_sous_le_seuil(labo, monkeypatch):
+    from ia_aissa import autonomie as A
+    mem = labo
+    explores = []
+    monkeypatch.setattr(B, "brouter_wikipedia", lambda sujet: (explores.append(sujet) or "Wikipédia — Photosynthèse", LIVRE))
+    sure = [{"confiance": 0.95, "cle": "sciences"}]
+    hesitante = [{"confiance": 0.42, "cle": "sciences"}]
+    config = {"type": "anthropic", "modele": "x"}
+    assert A.brouter_si_lacune(mem, config, moteur(), "comment fonctionne la photosynthèse", sure) is None
+    assert A.brouter_si_lacune(mem, config, moteur(), "salut", hesitante) is None      # trop vague
+    assert explores == []
+    bilan = A.brouter_si_lacune(mem, config, moteur(), "comment fonctionne la photosynthèse", hesitante)
+    assert explores == ["comment fonctionne la photosynthèse"]
+    assert bilan["confiance_avant"] == 0.42 and bilan["concepts"] > 0
+
+
+def test_broutage_trace_sur_le_tableau_de_croissance(labo):
+    mem = labo
+    assert croissance.broutage(mem).empty
+    mem.garder_digestion("IA AISSA", "Wikipédia — Photosynthèse", "Sciences naturelles",
+                         json.dumps([{"nom": "a"}, {"nom": "b"}]), "", 0.8)
+    mem.garder_digestion("Aissa", "Livre", "Sciences humaines et gestion", json.dumps([{"nom": "c"}]), "", 0.6)
+    b = croissance.broutage(mem)
+    assert int(b["Concepts broutés seule"].sum()) == 2 and int(b["Concepts lus avec toi"].sum()) == 1
+    assert abs(b["Confiance de digestion"].iloc[-1] - 0.7) < 1e-9

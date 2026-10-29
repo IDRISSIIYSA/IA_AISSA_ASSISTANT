@@ -15,6 +15,8 @@ from .corrections import ORIENTATION, corriger, reviser_tout
 from .ecole import PAR_CLE, SEUIL_CONFIANCE, repondre_automatiquement
 
 SEUIL_ETUDE = 3                 # nombre de lacunes à partir duquel IA AISSA étudie d'elle-même
+SEUIL_BROUTAGE = 0.90           # sous cette confiance, IA AISSA part brouter le web d'elle-même sur la question
+DELAI_BROUTAGE = 120            # secondes minimum entre deux broutages spontanés (Wikipédia limite les visites)
 MATIERES_ETUDIABLES = [m for m in PAR_CLE.values() if m.texte and m.cle not in (ORIENTATION, "langues")]
 
 
@@ -29,6 +31,23 @@ def noter_si_lacune(memoire, question, propositions=None):
         return False
     memoire.ajouter_lacune(question, meilleure["cle"], meilleure["confiance"])
     return True
+
+
+def brouter_si_lacune(memoire, moteur_config, client, question, propositions=None, seuil=SEUIL_BROUTAGE):
+    """Broutage autonome : dès que sa confiance sur une question tombe sous le seuil, IA AISSA va lire
+    Wikipédia sur ce sujet et le digère, sans attendre que les lacunes s'accumulent.
+    Renvoie le bilan de digestion (avec « confiance_avant »), ou None si elle était assez sûre d'elle."""
+    question = " ".join(str(question).split())
+    if not 12 <= len(question) <= 300:          # « bonjour » ne se cherche pas sur Wikipédia
+        return None
+    propositions = propositions or repondre_automatiquement(question)
+    confiance = propositions[0]["confiance"]
+    if confiance >= seuil:
+        return None
+    from .bibliotheque import explorer_lacunes
+    bilan = explorer_lacunes(memoire, moteur_config, client, sujets=[question])[0]
+    bilan["confiance_avant"] = confiance
+    return bilan
 
 
 def consigne_etude(lacunes):
