@@ -104,5 +104,7 @@ def test_etude_autonome_des_lacunes(labo):
     bilan = A.etudier_seule(mem, {"type": "anthropic", "modele": "claude-opus-5-5"}, NS(messages=NS(create=moteur)))
     assert (bilan["etudiees"], bilan["apprises"], bilan["hors_programme"]) == (3, 2, 1)
     assert mem.lacunes_ouvertes() == []
-    assert ecole.repondre_automatiquement("paiement de la facture maroc telecom")[0]["reponse"].startswith("6145")
+    revisions = {b["matiere"]: b["adoptee"] for b in bilan["revisions"]}
+    assert revisions["comptabilite"] and "orientation" in revisions   # l'aiguilleur révise aussi (adopté ou refusé)
+    assert ecole.repondre("comptabilite", "paiement de la facture maroc telecom")[0]["reponse"].startswith("6145")
     assert {c["source"] for c in mem.croissance()} == {"étude autonome"}

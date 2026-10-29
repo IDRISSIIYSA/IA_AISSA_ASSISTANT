@@ -1,6 +1,7 @@
 """
 Le visage d'IA AISSA : un petit alien gentil, avec son harnais tech et ses hologrammes
-(« AI COMPANION · ONLINE · SYNC 100 % »). Il respire, cligne des yeux, et sa bouche bouge quand il parle.
+(« AI COMPANION · ONLINE · SYNC 100 % »). Il vit dans son univers (le portail cosmique derrière lui),
+mais se penche vers nous : présent à nos côtés. Il respire, cligne des yeux, et sa bouche bouge quand il parle.
 On peut aussi le remplacer par une image (ex. un rendu réaliste de l'alien) : elle s'anime en parlant.
 """
 
@@ -24,7 +25,31 @@ ALIEN_SVG = """
     </radialGradient>
     <linearGradient id="metal" x1="0" x2="1"><stop offset="0" stop-color="#6b7480"/><stop offset=".5" stop-color="#e5e9ee"/>
       <stop offset="1" stop-color="#6b7480"/></linearGradient>
+    <radialGradient id="cosmos" cx="45%" cy="40%" r="65%">
+      <stop offset="0" stop-color="#312e81"/><stop offset=".55" stop-color="#1e1b4b"/><stop offset="1" stop-color="#0b1026"/>
+    </radialGradient>
+    <radialGradient id="nebuleuse" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#c084fc" stop-opacity=".55"/><stop offset="1" stop-color="#c084fc" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="portail"><circle cx="200" cy="200" r="178"/></clipPath>
   </defs>
+  <g class="univers">
+    <circle cx="200" cy="200" r="186" fill="none" stroke="#38bdf8" stroke-width="5" opacity=".55" class="anneau"/>
+    <circle cx="200" cy="200" r="178" fill="url(#cosmos)"/>
+    <g clip-path="url(#portail)">
+      <ellipse cx="300" cy="120" rx="120" ry="70" fill="url(#nebuleuse)"/>
+      <ellipse cx="90" cy="260" rx="90" ry="55" fill="url(#nebuleuse)" opacity=".6"/>
+      <g fill="#fff">
+        <circle class="etoile" cx="60" cy="110" r="1.6"/><circle class="etoile e2" cx="95" cy="60" r="1.2"/>
+        <circle class="etoile e3" cx="330" cy="70" r="1.8"/><circle class="etoile" cx="352" cy="190" r="1.3"/>
+        <circle class="etoile e2" cx="40" cy="200" r="1.1"/><circle class="etoile e3" cx="300" cy="250" r="1.5"/>
+        <circle class="etoile" cx="150" cy="40" r="1.2"/><circle class="etoile e2" cx="250" cy="35" r="1.4"/>
+        <circle class="etoile e3" cx="75" cy="300" r="1.3"/><circle class="etoile" cx="340" cy="300" r="1.1"/>
+      </g>
+      <g class="planete"><circle cx="335" cy="135" r="20" fill="#f59e0b"/><circle cx="329" cy="129" r="20" fill="#fbbf24"/>
+        <ellipse cx="335" cy="137" rx="34" ry="8" fill="none" stroke="#fde68a" stroke-width="3" transform="rotate(-18 335 137)"/></g>
+    </g>
+  </g>
   <ellipse cx="200" cy="215" rx="190" ry="200" fill="url(#halo)"/>
   <g class="holo flotte">
     <rect x="40" y="18" width="150" height="46" rx="10" fill="#38bdf8" fill-opacity=".12" stroke="#7dd3fc" stroke-width="2"/>
@@ -102,6 +127,12 @@ _STYLE = """
   .photo.parle .onde { display:flex; }
   .onde i { width:5px; height:10px; background:#38bdf8; border-radius:3px; animation: onde .5s ease-in-out infinite alternate; }
   .onde i:nth-child(2){animation-delay:.1s} .onde i:nth-child(3){animation-delay:.2s} .onde i:nth-child(4){animation-delay:.3s}
+  .etoile { animation: brille 2.6s ease-in-out infinite; } .e2 { animation-delay: .9s; } .e3 { animation-delay: 1.7s; }
+  .planete { animation: orbite 14s ease-in-out infinite; transform-origin: 200px 200px; }
+  .anneau { animation: anneau 4s ease-in-out infinite; }
+  @keyframes brille { 50% { opacity: .2 } }
+  @keyframes orbite { 50% { transform: rotate(-6deg); } }
+  @keyframes anneau { 50% { opacity: .2; } }
   @keyframes respire { 50% { transform: translateY(-4px) scale(1.01); } }
   @keyframes flotte { 50% { transform: translateY(-8px); } }
   @keyframes scintille { 0%,100% { opacity:.95 } 47% { opacity:.6 } 49% { opacity:.95 } 83% { opacity:.75 } }
