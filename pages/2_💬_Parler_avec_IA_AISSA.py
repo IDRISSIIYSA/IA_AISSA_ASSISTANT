@@ -1,10 +1,11 @@
 import os
 
 import anthropic
+import openai
 import streamlit as st
 
 from ia_aissa.acces import verifier_acces
-from ia_aissa.assistant import NIVEAUX, client_anthropic, converser, profil_conversation
+from ia_aissa.assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, profil_conversation
 from ia_aissa.ecole import repondre
 from ia_aissa.langues import LANGUES
 from ia_aissa.memoire import Memoire, historique_api
@@ -36,12 +37,16 @@ def ouvrir_conversation(conversation_id):
     st.session_state["conversation_id"] = conversation_id
     st.session_state["affichage"] = [{"role": l["role"], "texte": l["texte"], "langue": "Français"} for l in lignes]
     st.session_state["messages_api"] = historique_api(lignes)
+    st.session_state["moteur_historique"] = None
 
 
 with st.sidebar:
-    cle_api = secret("ANTHROPIC_API_KEY") or st.text_input(
-        "Clé API Anthropic", type="password", help="Créez une clé sur console.anthropic.com. "
-        "Elle reste dans votre session et n'est pas enregistrée.")
+    moteur = st.selectbox("🧠 Moteur de conversation", list(MOTEURS),
+                          help="IA AISSA garde ses connaissances, ses outils et sa mémoire quel que soit le moteur.")
+    config = MOTEURS[moteur]
+    cle_api = secret(config["secret"]) or st.text_input(
+        f"Clé API ({moteur.split(' (')[0]})", type="password", key=f"cle_{config['secret']}",
+        help=f"Créez une clé sur {config['console']}. Elle reste dans votre session et n'est pas enregistrée.")
     mode = st.radio("Je veux mes réponses", ["✍️ Écrites", "🔊 Vocales", "✍️🔊 Écrites et vocales"], index=2)
     niveau = st.selectbox("Accompagnement", list(NIVEAUX),
                           help="Choisissez un niveau scolaire pour qu'IA AISSA devienne votre professeur.")
@@ -78,8 +83,8 @@ with st.sidebar:
             st.rerun()
 
 if not cle_api:
-    st.info("Ajoutez une clé API Anthropic dans la barre latérale (ou dans les *Secrets* de Streamlit Cloud "
-            "sous le nom `ANTHROPIC_API_KEY`) pour parler avec IA AISSA.")
+    st.info(f"Ajoutez une clé API pour {moteur} dans la barre latérale (ou dans les *Secrets* de Streamlit Cloud "
+            f"sous le nom `{config['secret']}`) pour parler avec IA AISSA.")
     st.stop()
 
 ecrit, vocal = "Écrites" in mode, "Vocales" in mode or "vocales" in mode
@@ -130,19 +135,25 @@ if saisie:
 
     st.session_state["affichage"].append({"role": "user", "texte": question_affichee})
     afficher(st.session_state["affichage"][-1])
+    if st.session_state.get("moteur_historique") not in (None, moteur):
+        # changement de moteur en cours de conversation : on repart de l'historique écrit, compris par tous
+        st.session_state["messages_api"] = historique_api(
+            [{"role": m["role"], "texte": m["texte"].removeprefix("🎙️ ")} for m in st.session_state["affichage"][:-1]])
+    st.session_state["moteur_historique"] = moteur
     st.session_state["messages_api"].append({"role": "user", "content": question})
     journal = []
     with st.spinner("IA AISSA réfléchit…"):
         try:
             souvenirs = [x["fait"] for x in memoire().souvenirs_de(utilisateur)]
-            texte = converser(client_anthropic(cle_api), st.session_state["messages_api"], journal=journal,
-                              profil=profil_conversation(utilisateur, niveau, vocal and not ecrit, souvenirs),
-                              memoriser=lambda fait: memoire().memoriser(utilisateur, fait))
-        except anthropic.AuthenticationError:
+            texte = converser_moteur(moteur, client_moteur(moteur, cle_api), st.session_state["messages_api"],
+                                     journal=journal,
+                                     profil=profil_conversation(utilisateur, niveau, vocal and not ecrit, souvenirs),
+                                     memoriser=lambda fait: memoire().memoriser(utilisateur, fait))
+        except (anthropic.AuthenticationError, openai.AuthenticationError):
             st.session_state["messages_api"].pop()
             st.error("Clé API invalide.")
             st.stop()
-        except anthropic.APIError as e:
+        except (anthropic.APIError, openai.APIError) as e:
             st.session_state["messages_api"].pop()
             st.error(f"Erreur de l'API : {e}")
             st.stop()

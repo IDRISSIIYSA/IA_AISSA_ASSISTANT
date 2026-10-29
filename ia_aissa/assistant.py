@@ -1,5 +1,5 @@
 """
-IA AISSA, l'assistante : un grand modèle de langage (Claude) qui répond en arabe, darija, français,
+IA AISSA, l'assistante : un grand modèle de langage (Claude par défaut, ou GPT-4o, ou MiniMax) qui répond en arabe, darija, français,
 anglais ou espagnol, en s'appuyant sur la base de connaissances marocaine, sur les calculateurs
 exacts et sur les cerveaux qu'IA AISSA a formés elle-même à l'école.
 """
@@ -175,3 +175,69 @@ def profil_conversation(utilisateur, niveau, reponse_vocale, souvenirs=()):
 
 def client_anthropic(cle_api=None):
     return anthropic.Anthropic(api_key=cle_api) if cle_api else anthropic.Anthropic()
+
+
+# ==========================================
+# Autres moteurs : GPT-4o (OpenAI) et MiniMax (API compatible OpenAI)
+# ==========================================
+MOTEURS = {
+    "Claude Opus 5.5 (Anthropic)": {"type": "anthropic", "modele": MODELE, "secret": "ANTHROPIC_API_KEY",
+                                    "console": "console.anthropic.com"},
+    "GPT-4o (OpenAI)": {"type": "openai", "modele": "gpt-4o", "secret": "OPENAI_API_KEY",
+                        "console": "platform.openai.com"},
+    "MiniMax-M3 (MiniMax)": {"type": "openai", "modele": "MiniMax-M3", "secret": "MINIMAX_API_KEY",
+                             "base_url": "https://api.minimax.io/v1", "console": "platform.minimax.io",
+                             "extra_body": {"reasoning_split": True}},
+}
+
+OUTILS_OPENAI = [{"type": "function", "function": {"name": o["name"], "description": o["description"],
+                                                   "parameters": o["input_schema"]}} for o in OUTILS]
+
+
+def client_moteur(moteur, cle_api):
+    config = MOTEURS[moteur]
+    if config["type"] == "anthropic":
+        return client_anthropic(cle_api)
+    import openai
+    return openai.OpenAI(api_key=cle_api, base_url=config.get("base_url"))
+
+
+def converser_openai(client, moteur, messages, max_tours=8, journal=None, profil=None, memoriser=None):
+    """Même boucle d'outils pour les API au format OpenAI (GPT-4o, MiniMax).
+    `messages` (sans message système) est complété sur place, raisonnement compris."""
+    import re
+    config = MOTEURS[moteur]
+    systeme = [{"role": "system", "content": SYSTEME + ("\n\n" + profil if profil else "")}]
+    for _ in range(max_tours):
+        reponse = client.chat.completions.create(model=config["modele"], messages=systeme + messages,
+                                                 tools=OUTILS_OPENAI, extra_body=config.get("extra_body"))
+        choix = reponse.choices[0]
+        message = choix.message
+        historique = {"role": "assistant", "content": message.content or ""}
+        if getattr(message, "reasoning_content", None):
+            historique["reasoning_content"] = message.reasoning_content   # à renvoyer tel quel (MiniMax)
+        if message.tool_calls:
+            historique["tool_calls"] = [{"id": t.id, "type": "function",
+                                         "function": {"name": t.function.name, "arguments": t.function.arguments}}
+                                        for t in message.tool_calls]
+        messages.append(historique)
+        if choix.finish_reason == "content_filter":
+            return "Je ne peux pas répondre à cette demande."
+        if not message.tool_calls:
+            return re.sub(r"<think>.*?</think>", "", message.content or "", flags=re.S).strip()
+        for appel in message.tool_calls:
+            try:
+                entree = json.loads(appel.function.arguments or "{}")
+                contenu = json.dumps(executer_outil(appel.function.name, entree, memoriser), ensure_ascii=False)
+            except Exception as e:  # l'erreur est renvoyée au modèle pour qu'il corrige sa demande
+                entree, contenu = appel.function.arguments, f"Erreur : {e}"
+            if journal is not None:
+                journal.append({"outil": appel.function.name, "entree": entree, "resultat": contenu})
+            messages.append({"role": "tool", "tool_call_id": appel.id, "content": contenu})
+    return "Je n'ai pas pu terminer : trop d'étapes de calcul."
+
+
+def converser_moteur(moteur, client, messages, **options):
+    if MOTEURS[moteur]["type"] == "anthropic":
+        return converser(client, messages, **options)
+    return converser_openai(client, moteur, messages, **options)

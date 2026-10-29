@@ -67,15 +67,16 @@ BRUIT = ["", "", " pour 3 500 dh", " le 12 mars", " facture n° 245", " exercice
 PREFIXES = ["", "", "opération : ", "enregistrement de ", "comptabiliser ", "question : ", "cas : "]
 
 
-def exercice_texte(rng, categories):
+def exercice_texte(rng, categories, perception=None):
     """Tire une formulation au hasard, ajoute du bruit et retire parfois un mot."""
+    perception = perception or vectoriser
     y = int(rng.integers(len(categories)))
     phrase = categories[y][int(rng.integers(len(categories[y])))]
     m = phrase.split()
     if len(m) > 3 and rng.random() < 0.3:
         del m[int(rng.integers(len(m)))]
     texte = PREFIXES[int(rng.integers(len(PREFIXES)))] + " ".join(m) + BRUIT[int(rng.integers(len(BRUIT)))]
-    return vectoriser(texte), y, texte
+    return perception(texte), y, texte
 
 
 # ==========================================
@@ -261,6 +262,30 @@ def _credit(rng):
         f"Revenu {revenu:,.0f} DH/mois, crédit {capital:,.0f} DH à {taux:.1%} sur {duree} mois, autres charges {autres:,.0f} DH"
 
 
+def _fractions(rng):
+    a, b, c, d = (int(v) for v in rng.integers(1, 13, 4))
+    if rng.random() < 0.15:
+        k = int(rng.integers(2, 4))
+        c, d = a * k, b * k                                           # fractions égales
+    diff = a / b - c / d
+    y = 1 if abs(diff) < 1e-9 else (0 if diff > 0 else 2)
+    return np.array([a / 12, b / 12, c / 12, d / 12, np.log(a / b), np.log(c / d)], np.float32), y, \
+        f"Comparer {a}/{b} et {c}/{d}"
+
+
+def _discriminant(rng):
+    a = int(rng.choice([v for v in range(-6, 7) if v]))
+    if rng.random() < 0.25:
+        r = int(rng.integers(-5, 6))
+        b, c = -2 * a * r, a * r * r                                  # racine double
+    else:
+        b, c = int(rng.integers(-12, 13)), int(rng.integers(-12, 13))
+    delta = b * b - 4 * a * c
+    y = 2 if delta > 0 else (1 if delta == 0 else 0)
+    return np.array([a / 6, b / 12, c / 12, b * b / 144, a * c / 72, np.sign(delta) * np.log1p(abs(delta)) / 6],
+                    np.float32), y, f"Équation {a}x² {b:+d}x {c:+d} = 0"
+
+
 MATIERES = [
     _matiere_texte("comptabilite", "Imputation au Plan Comptable Marocain", "Comptabilité", K.PCM,
                    "Trouver le compte du CGNC correspondant à une opération.", lambda k, v: f"{k} {v[0]}"),
@@ -341,6 +366,30 @@ MATIERES = [
                    "Reconnaître le phénomène économique ou social décrit."),
     _matiere_texte("visa", "Dossier de visa", "Visa et voyage", K.DOSSIER_VISA,
                    "Classer une pièce dans la bonne rubrique du dossier de visa."),
+    Matiere("fractions", "Comparer des fractions", "École — primaire",
+            ["La première est plus grande", "Elles sont égales", "La seconde est plus grande"], 6, _fractions,
+            note="Mathématiques, primaire."),
+    _matiere_texte("regions", "Régions du Maroc", "École — primaire", K.REGIONS_MAROC,
+                   "Géographie : retrouver la région d'une ville (découpage en 12 régions)."),
+    Matiere("discriminant", "Équation du second degré", "École — collège et lycée",
+            ["Aucune solution réelle", "Une solution double", "Deux solutions"], 6, _discriminant,
+            note="Mathématiques : signe du discriminant Δ = b² − 4ac."),
+    _matiere_texte("corps_humain", "Le corps humain", "École — collège", K.SYSTEMES_CORPS,
+                   "SVT : rattacher un organe à son système."),
+    _matiere_texte("unites", "Grandeurs et unités", "École — collège", K.UNITES_SI,
+                   "Physique-chimie : l'unité du système international d'une grandeur."),
+    Matiere("grammaire_fr", "Nature des mots", "École — collège", list(K.NATURE_MOTS), DIM_TEXTE,
+            lambda rng: exercice_texte(rng, list(K.NATURE_MOTS.values()), vectoriser_caracteres), True,
+            "Français : nom, verbe, adjectif, adverbe, préposition, pronom.", vectoriser_caracteres),
+    Matiere("nahw", "النحو : اسم، فعل، حرف", "École — collège", list(K.NAHW_ARABE), DIM_TEXTE,
+            lambda rng: exercice_texte(rng, list(K.NAHW_ARABE.values()), vectoriser_caracteres), True,
+            "Arabe : reconnaître الاسم والفعل والحرف.", vectoriser_caracteres),
+    _matiere_texte("anglais", "English tenses", "École — collège et lycée", K.TEMPS_ANGLAIS,
+                   "Anglais : reconnaître le temps d'une phrase."),
+    _matiere_texte("philosophie", "Philosophes", "École — lycée", K.PHILOSOPHES,
+                   "Philosophie (baccalauréat) : retrouver le philosophe d'une idée."),
+    _matiere_texte("matiere_scolaire", "Quelle matière ?", "École — orientation", K.MATIERES_SCOLAIRES,
+                   "Reconnaître la matière scolaire d'un exercice (pour l'aide aux devoirs)."),
     _matiere_texte("ia", "Types d'intelligence artificielle", "Intelligence artificielle", K.TYPES_IA,
                    "Reconnaître le type d'apprentissage adapté à un problème (dont le sien : le renforcement)."),
 ]

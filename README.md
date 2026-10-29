@@ -11,8 +11,8 @@ et espagnol, à l'écrit comme à l'oral.
 |---|---|
 | 📊 **Contrôle de gestion** | Montage à partir de données brutes + agent méta-intelligent qui pilote les écarts et sait quand il doute |
 | 👋 **Bonjour** | IA AISSA reconnaît les personnes autorisées à la caméra et les salue selon le moment de la journée |
-| 🎓 **École d'IA AISSA** | 37 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
-| 💬 **Parler avec IA AISSA** | Questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
+| 🎓 **École d'IA AISSA** | 47 matières apprises seule, bulletin de notes, courbes d'apprentissage, exercices surprise |
+| 💬 **Parler avec IA AISSA** | Moteur au choix (Claude, GPT-4o, MiniMax) ; questions écrites ou vocales ; réponses écrites, vocales ou les deux ; mode professeur du primaire au doctorat |
 | 🗣️ **Langues et prononciation** | Reconnaissance de la langue, lecture à voix haute, atelier de prononciation noté sur 100 |
 
 ## L'école d'IA AISSA (`ia_aissa/ecole.py`)
@@ -51,6 +51,8 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 | Statistiques | Notions (moyenne, médiane, écart-type, corrélation, régression, tests…) |
 | Économie (suite) | Faits économiques et sociaux |
 | Visa et voyage | Pièces du dossier de visa |
+| École — primaire | Comparer des fractions ; régions du Maroc (12 régions) |
+| École — collège et lycée | Équation du second degré (discriminant) ; corps humain (SVT) ; grandeurs et unités (physique-chimie) ; nature des mots (français) ; النحو : اسم، فعل، حرف (arabe) ; English tenses ; philosophes (bac) ; quelle matière pour un exercice |
 | Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
 
 Les cerveaux entraînés sont fournis dans `ia_aissa/cerveaux/`. Pour les réentraîner :
@@ -77,8 +79,11 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
 
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
-- Modèle Claude Opus 5.5 avec réflexion adaptative et repli automatique (`fallbacks: "default"`)
-  si une demande est refusée par les filtres de sécurité.
+- Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :
+  **Claude Opus 5.5** (par défaut ; réflexion adaptative et repli automatique `fallbacks: "default"`
+  si une demande est refusée), **GPT-4o** (OpenAI) et **MiniMax-M3** (API compatible OpenAI,
+  `https://api.minimax.io/v1`, raisonnement conservé d'un tour à l'autre). On peut changer de moteur
+  en pleine conversation.
 - Outils : calculs exacts (IR, IS, TVA, paie, VAN, seuil de rentabilité, droits de douane, quantité
   de Wilson, crédit, statistiques, BCG) et consultation des cerveaux d'école d'IA AISSA, qu'elle vérifie avant de répondre.
 - Voix : la parole est transcrite par Whisper sur le serveur ; les réponses sont dites par des voix
@@ -103,7 +108,9 @@ un fichier SQLite local.
 Sur Streamlit Cloud : *Settings → Secrets* (en local : `.streamlit/secrets.toml`, jamais commité) :
 
 ```toml
-ANTHROPIC_API_KEY = "sk-ant-..."
+ANTHROPIC_API_KEY = "sk-ant-..."     # Claude
+OPENAI_API_KEY = "sk-..."            # GPT-4o (facultatif)
+MINIMAX_API_KEY = "..."              # MiniMax (facultatif)
 MEMOIRE_URL = "postgresql+psycopg://utilisateur:motdepasse@hote/base?sslmode=require"
 
 [utilisateurs]          # seules ces personnes peuvent parler avec IA AISSA

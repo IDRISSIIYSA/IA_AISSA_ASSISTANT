@@ -520,6 +520,94 @@ DOSSIER_VISA = {
 TYPES_VISA = "Visa Schengen de court séjour (type C : 90 jours au plus sur 180), visa national de long séjour (type D), visa de transit aéroportuaire (type A)."
 
 
+# ==========================================
+# Matières scolaires marocaines (primaire, collège, lycée)
+# ==========================================
+REGIONS_MAROC = {
+    "Tanger-Tétouan-Al Hoceïma": ["tanger", "tétouan", "al hoceïma", "larache", "chefchaouen", "ksar el kébir"],
+    "Oriental": ["oujda", "nador", "berkane", "taourirt", "jerada", "figuig"],
+    "Fès-Meknès": ["fès", "meknès", "taza", "ifrane", "sefrou", "taounate"],
+    "Rabat-Salé-Kénitra": ["rabat", "salé", "kénitra", "témara", "khémisset", "sidi kacem"],
+    "Béni Mellal-Khénifra": ["béni mellal", "khénifra", "khouribga", "azilal", "fquih ben salah"],
+    "Casablanca-Settat": ["casablanca", "mohammedia", "settat", "el jadida", "berrechid", "benslimane"],
+    "Marrakech-Safi": ["marrakech", "safi", "essaouira", "el kelâa des sraghna", "youssoufia", "chichaoua"],
+    "Drâa-Tafilalet": ["errachidia", "ouarzazate", "zagora", "tinghir", "midelt"],
+    "Souss-Massa": ["agadir", "taroudant", "tiznit", "inezgane", "chtouka aït baha"],
+    "Guelmim-Oued Noun": ["guelmim", "tan-tan", "sidi ifni", "assa"],
+    "Laâyoune-Sakia El Hamra": ["laâyoune", "boujdour", "tarfaya", "es-semara"],
+    "Dakhla-Oued Ed-Dahab": ["dakhla", "aousserd"],
+}
+SYSTEMES_CORPS = {
+    "Système digestif": ["estomac", "intestin grêle", "foie", "œsophage", "pancréas", "côlon"],
+    "Système respiratoire": ["poumons", "trachée", "bronches", "alvéoles pulmonaires", "diaphragme"],
+    "Système circulatoire": ["cœur", "artères", "veines", "capillaires sanguins", "globules rouges"],
+    "Système nerveux": ["cerveau", "moelle épinière", "neurones", "nerfs", "cervelet"],
+    "Appareil urinaire": ["reins", "vessie", "uretères", "néphrons"],
+    "Système locomoteur": ["os", "muscles", "articulations", "tendons", "squelette"],
+}
+UNITES_SI = {
+    "Newton (N)": ["force", "poids d'un corps", "force de frottement"],
+    "Joule (J)": ["énergie", "travail d'une force", "énergie cinétique", "quantité de chaleur"],
+    "Watt (W)": ["puissance", "puissance électrique d'un appareil"],
+    "Volt (V)": ["tension électrique", "différence de potentiel"],
+    "Ampère (A)": ["intensité du courant électrique", "courant dans un circuit"],
+    "Ohm (Ω)": ["résistance électrique", "résistance d'un conducteur ohmique"],
+    "Pascal (Pa)": ["pression", "pression atmosphérique", "pression d'un gaz"],
+    "Mole (mol)": ["quantité de matière", "nombre de moles d'un réactif"],
+    "Mètre par seconde (m/s)": ["vitesse", "vitesse moyenne d'un mobile"],
+    "Kilogramme (kg)": ["masse", "masse d'un objet"],
+}
+NATURE_MOTS = {
+    "Nom": ["la maison", "un enfant", "le cahier", "la liberté", "une ville", "le soleil", "les élèves", "un professeur"],
+    "Verbe": ["manger", "il court", "nous chantons", "elles finissaient", "tu écriras", "aller", "vous parlez", "je suis venu"],
+    "Adjectif": ["grand", "magnifique", "rapide", "heureuse", "verte", "intelligents", "difficile", "petite"],
+    "Adverbe": ["rapidement", "souvent", "très", "hier", "lentement", "toujours", "jamais", "doucement"],
+    "Préposition": ["dans", "avec", "pour", "sans", "sous", "chez", "entre", "vers"],
+    "Pronom": ["je", "nous", "celui-ci", "lequel", "eux", "le mien", "quelqu'un", "personne"],
+}
+NAHW_ARABE = {
+    "اسم": ["المدرسة", "الكتاب", "التلميذ", "مدينة", "القلم", "المعلمون", "الشمس", "بيت", "الحرية", "مكتبة"],
+    "فعل": ["كتب", "يكتب", "اكتب", "ذهب", "يذهبون", "سافرت", "يدرس", "قرأ", "سيلعب", "تعلمنا"],
+    "حرف": ["في", "من", "إلى", "على", "عن", "لم", "لن", "هل", "ثم", "لكن"],
+}
+TEMPS_ANGLAIS = {
+    "Present simple": ["she works every day", "they play football on sundays", "he likes coffee", "i live in rabat"],
+    "Present continuous": ["she is working now", "they are playing outside", "i am reading a book", "we are studying"],
+    "Past simple": ["she worked yesterday", "they played last week", "i visited fes in 2020", "he went home"],
+    "Present perfect": ["she has worked here since 2019", "i have never seen snow", "they have finished", "he has just arrived"],
+    "Future (will)": ["she will work tomorrow", "i will call you later", "they will travel next year", "it will rain"],
+}
+PHILOSOPHES = {
+    "Socrate": ["connais-toi toi-même", "maïeutique", "je sais que je ne sais rien"],
+    "Platon": ["allégorie de la caverne", "monde des idées", "la république et le philosophe roi"],
+    "Aristote": ["juste milieu", "syllogisme et logique", "l'homme est un animal politique"],
+    "Al-Farabi": ["la cité vertueuse", "le second maître après aristote"],
+    "Ibn Sina (Avicenne)": ["argument de l'homme volant", "canon de la médecine", "distinction entre essence et existence"],
+    "Ibn Rochd (Averroès)": ["discours décisif sur l'accord entre religion et philosophie", "commentateur d'aristote"],
+    "Descartes": ["cogito ergo sum", "dualisme de l'âme et du corps", "doute méthodique"],
+    "Kant": ["impératif catégorique", "critique de la raison pure", "agis selon la maxime universelle"],
+    "Nietzsche": ["dieu est mort", "le surhomme", "volonté de puissance"],
+    "Sartre": ["l'existence précède l'essence", "l'homme est condamné à être libre", "l'enfer c'est les autres"],
+}
+MATIERES_SCOLAIRES = {
+    "Mathématiques": ["résoudre une équation", "calculer l'aire d'un triangle", "simplifier une fraction",
+                      "étudier les variations d'une fonction", "calculer une probabilité"],
+    "Physique-chimie": ["mesurer la tension dans un circuit", "équilibrer une équation chimique",
+                        "calculer la vitesse d'un mobile", "étudier la réfraction de la lumière"],
+    "SVT": ["décrire la digestion", "observer une cellule au microscope", "expliquer la photosynthèse",
+            "étudier la transmission des caractères héréditaires"],
+    "Français": ["conjuguer un verbe au passé simple", "analyser un poème", "rédiger un texte argumentatif",
+                 "accorder le participe passé"],
+    "Arabe": ["إعراب الجملة", "تحليل قصيدة", "كتابة إنشاء", "تصريف الفعل"],
+    "Anglais": ["write an email in english", "use the present perfect", "english vocabulary about travel"],
+    "Histoire-géographie": ["étudier la dynastie des almohades", "lire une carte du relief du maroc",
+                            "analyser la seconde guerre mondiale", "étudier le climat et les régions"],
+    "Éducation islamique": ["التربية الإسلامية", "étudier les piliers de l'islam", "sourate et tafsir"],
+    "Philosophie": ["disserter sur la liberté", "la notion de vérité", "analyser un texte philosophique sur l'état"],
+    "Informatique": ["écrire un algorithme", "programmer en python", "utiliser un tableur", "structure d'un ordinateur"],
+}
+
+
 def mensualite_credit(capital, taux_annuel, duree_mois):
     t = taux_annuel / 12
     m = capital / duree_mois if t == 0 else capital * t / (1 - (1 + t) ** -duree_mois)

@@ -7,6 +7,8 @@ numpy>=1.26
 openpyxl>=3.1
 # Assistante conversationnelle (API Claude)
 anthropic>=2.3
+# Moteurs alternatifs : GPT-4o (OpenAI) et MiniMax (API compatible OpenAI)
+openai>=1.60
 # Voix : écoute (Whisper) et parole (voix neuronales, dont marocaines)
 faster-whisper>=1.2
 av>=11,<17
