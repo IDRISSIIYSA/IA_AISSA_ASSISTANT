@@ -82,8 +82,11 @@ Face à une formulation nouvelle, sa confiance baisse : l'assistante vérifie et
 
 ## IA AISSA, compagnon alien qui grandit seul
 
-- **Visage** : un petit alien virtuel (harnais tech, hologrammes « AI COMPANION · SYNC 100 % ») qui respire,
-  cligne des yeux et parle en bougeant la bouche ; remplaçable par votre propre image (page 👋).
+- **Visage en 3D** (`ia_aissa/alien3d.py`, three.js) : sculpté d'après le rendu de référence d'Aissa — peau
+  gris-bleu satinée, grands yeux ambrés brillants, oreilles pointues, bandeau argenté à LED, harnais tech,
+  panneau « AI COMPANION · ONLINE · SYNC 100% », icônes holographiques, bureau chaleureux. Il respire, cligne
+  des yeux, suit la souris du regard et bouge la bouche quand il parle ; en invention, décor cosmique et
+  « QUANTUM FUSION ». Sans WebGL, l'alien dessiné en 2D s'affiche ; remplaçable par votre image (page 👋).
 - **Reconnaissance** : il reconnaît les personnes autorisées à la caméra (OpenCV YuNet + SFace, sur le serveur ;
   seules les empreintes sont gardées, dans la mémoire) et les salue selon l'heure du Maroc.
 - **Mémoire** : en ouvrant une conversation, il rappelle la précédente et ce qu'il sait de vous.

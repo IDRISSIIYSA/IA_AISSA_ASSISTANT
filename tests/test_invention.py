@@ -66,3 +66,11 @@ def test_meta_conscience():
                {"outil": "calculer_is", "resultat": "Erreur : x"}]
     m = meta_conscience(journal, 2.0)
     assert m["confiance"] == round((0.85 + 0.95 + 0.5 + 0.4) / 4, 3) and m["details"] == "3 outil(s) · 2.0 s"
+
+
+def test_alien_3d_avec_repli_2d():
+    h = avatar("Bonjour")
+    assert 'id="alien3d"' in h and 'id="alien2d"' in h and "three@0.160.0" in h      # 3D + alien dessiné en secours
+    assert "window.alienParle = oui" in h                                             # la bouche 3D suit la parole
+    assert 'id="alien3d"' not in avatar("Bonjour", en_3d=False)
+    assert 'data-hyper="1"' in avatar("Bonjour", etat="hyper")

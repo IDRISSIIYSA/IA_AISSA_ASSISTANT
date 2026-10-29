@@ -8,6 +8,7 @@ On peut aussi le remplacer par une image (ex. un rendu réaliste de l'alien) : e
 import base64
 import html
 
+from .alien3d import scene_3d
 from .voix import _SCRIPT_COMMUN, js
 
 ALIEN_SVG = """
@@ -114,6 +115,9 @@ _STYLE = """
 <style>
   .scene { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
   .alien { width: 260px; max-width: 46vw; flex: none; position: relative; }
+  .alien:not(.photo) { aspect-ratio: 400 / 430; }
+  #alien3d { position: absolute; inset: 0; height: 100% !important; }
+  #alien3d canvas { width: 100% !important; height: 100% !important; display: block; border-radius: 18px; }
   .alien svg, .alien img { width: 100%; display: block; }
   .alien img { border-radius: 18px; }
   .bulle { flex: 1; min-width: 220px; font-size: 16px; line-height: 1.45; padding: 14px 16px; border-radius: 14px;
@@ -164,15 +168,18 @@ _STYLE = """
 
 
 def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
-           bulle=True, etat="normal", indicateur=None):
+           bulle=True, etat="normal", indicateur=None, en_3d=True):
     """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur.
     etat = "hyper" : portail en hyper-propulsion (« QUANTUM FUSION ») pendant l'invention.
-    indicateur = {"confiance": 0-1, "details": "…"} : indicateur de méta-conscience affiché avant qu'il parle."""
+    indicateur = {"confiance": 0-1, "details": "…"} : indicateur de méta-conscience affiché avant qu'il parle.
+    en_3d : l'alien en 3D (three.js) remplace l'alien dessiné dès que le navigateur l'a chargé."""
     if image:
         visage = (f'<div class="alien photo" id="alien"><img alt="IA AISSA" src="data:{html.escape(type_image)};base64,'
                   f'{base64.b64encode(image).decode()}"><div class="onde"><i></i><i></i><i></i><i></i></div></div>')
     else:
-        visage = f'<div class="alien{" hyper" if etat == "hyper" else ""}" id="alien">{ALIEN_SVG}</div>'
+        visage = (f'<div class="alien{" hyper" if etat == "hyper" else ""}" id="alien">'
+                  f'<div id="alien2d">{ALIEN_SVG}</div>'
+                  + (scene_3d(etat == "hyper") if en_3d else "") + '</div>')
     son = f"data:audio/mpeg;base64,{base64.b64encode(audio).decode()}" if audio else ""
     texte_bulle = f'<div class="bulle" dir="auto">{html.escape(texte)}</div>' if texte and bulle else ""
     meta = ""
@@ -187,7 +194,7 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
 <script>
 const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};
 const alien = document.getElementById('alien'), bouton = document.getElementById('ecouter');
-const parle = oui => alien.classList.toggle('parle', oui);
+const parle = oui => {{ alien.classList.toggle('parle', oui); window.alienParle = oui; }};
 function dire() {{
   if (SON) {{
     const a = new Audio(SON);
