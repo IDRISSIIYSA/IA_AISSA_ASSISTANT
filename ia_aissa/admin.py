@@ -38,13 +38,48 @@ def admin_existe(memoire):
     return memoire.reglage("admin:empreinte") is not None
 
 
-def creer_admin(memoire, mot_de_passe):
+def creer_admin(memoire, mot_de_passe, prenom="Aissa"):
+    """Crée le compte administrateur : c'est aussi le compte de connexion de son propriétaire (même prénom,
+    même mot de passe). Dès lors, l'accès à IA AISSA est réservé aux personnes autorisées."""
     if admin_existe(memoire):
         raise PermissionError("Un administrateur existe déjà.")
     if len(mot_de_passe) < 8:
         raise ValueError("Le mot de passe doit faire au moins 8 caractères.")
+    prenom = (prenom or "Aissa").strip()
     memoire.definir_reglage("admin:empreinte", empreinte(mot_de_passe))
+    memoire.definir_reglage("admin:utilisateur", prenom)
+    ajouter_utilisateur(memoire, prenom, mot_de_passe)
     return nouveau_jeton(memoire)
+
+
+def lier_proprietaire(memoire, prenom, mot_de_passe):
+    """Pour un administrateur créé avant que le compte admin soit aussi un compte de connexion."""
+    prenom = (prenom or "Aissa").strip()
+    memoire.definir_reglage("admin:utilisateur", prenom)
+    if prenom not in utilisateurs(memoire):
+        ajouter_utilisateur(memoire, prenom, mot_de_passe)
+
+
+def proprietaire(memoire):
+    """Le prénom du compte administrateur (None s'il n'y a pas encore d'administrateur)."""
+    return memoire.reglage("admin:utilisateur")
+
+
+# ---------- Connexion retenue sur l'appareil ----------
+def ouvrir_session(memoire, prenom):
+    """Jeton de connexion pour cet appareil (gardé dans son coffre) ; seule son empreinte est stockée."""
+    jeton = aleatoire.token_urlsafe(32)
+    memoire.definir_reglage(f"session:{hashlib.sha256(jeton.encode()).hexdigest()}", prenom)
+    return jeton
+
+
+def session(memoire, jeton):
+    return memoire.reglage(f"session:{hashlib.sha256(jeton.encode()).hexdigest()}") if jeton else None
+
+
+def fermer_session(memoire, jeton):
+    if jeton:
+        memoire.supprimer_reglage(f"session:{hashlib.sha256(jeton.encode()).hexdigest()}")
 
 
 def connexion_admin(memoire, mot_de_passe):

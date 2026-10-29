@@ -16,6 +16,7 @@ import openai
 import pandas as pd
 import streamlit as st
 
+from . import coffre
 from .acces import verifier_acces
 from .assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, meta_conscience, profil_conversation
 from .autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
@@ -140,6 +141,29 @@ STYLE = """<style>
   [data-testid="stChatInputCancelButton"] {
     background: radial-gradient(circle at 32% 28%, #fecaca 0%, #f87171 35%, #b91c1c 75%, #7f1d1d 100%) !important; }
 
+  /* ---------- Icônes redessinées, nettes et pleines (le dessin d'origine est masqué) ---------- */
+  [data-testid="stChatInputMicButton"] svg, [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInputApproveButton"] svg, [data-testid="stChatInputCancelButton"] svg, [data-testid="stChatInputFileUploadButton"] button svg { opacity: 0 !important; }
+  [data-testid="stChatInputMicButton"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 23px; height: 23px;
+    background: #fff; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%279%27 y=%272.5%27 width=%276%27 height=%2712%27 rx=%273%27 fill=%27black%27/%3E%3Cpath d=%27M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21.5M8.5 21.5h7%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%279%27 y=%272.5%27 width=%276%27 height=%2712%27 rx=%273%27 fill=%27black%27/%3E%3Cpath d=%27M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21.5M8.5 21.5h7%27/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.45)); pointer-events: none; }
+  [data-testid="stChatInputSubmitButton"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 23px; height: 23px;
+    background: #fff; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M4 12 20 4l-4.5 16-3.5-6.5L4 12z%27 fill=%27black%27/%3E%3Cpath d=%27M12 13.5 20 4%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M4 12 20 4l-4.5 16-3.5-6.5L4 12z%27 fill=%27black%27/%3E%3Cpath d=%27M12 13.5 20 4%27/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.45)); pointer-events: none; }
+  [data-testid="stChatInputApproveButton"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 26px; height: 26px;
+    background: #fff; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M4.5 12.5 9.5 17.5 19.5 6.5%27 stroke-width=%273%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M4.5 12.5 9.5 17.5 19.5 6.5%27 stroke-width=%273%27/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.45)); pointer-events: none; }
+  [data-testid="stChatInputCancelButton"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 23px; height: 23px;
+    background: #fff; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 6 18 18M18 6 6 18%27 stroke-width=%273%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 6 18 18M18 6 6 18%27 stroke-width=%273%27/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.45)); pointer-events: none; }
+  [data-testid="stChatInputFileUploadButton"] button::after { content: ""; position: absolute; inset: 0; margin: auto; width: 23px; height: 23px;
+    background: #fff; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l8.1-8.1a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l8.1-8.1a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3%27/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.45)); pointer-events: none; }
+  [data-testid="stChatInputMicButton"]::before, [data-testid="stChatInputSubmitButton"]::before, [data-testid="stChatInputCancelButton"]::before, [data-testid="stChatInputFileUploadButton"] button::before { content: ""; position: absolute; left: 18%; top: 7%; width: 64%; height: 38%;
+    border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+    pointer-events: none; }
+  [data-testid="stChatInputFileUploadButton"] button::after { background: #1f2937; filter: none; }
+  [data-testid="stChatInputMicButton"]:focus-visible, [data-testid="stChatInputSubmitButton"]:focus-visible { outline: 3px solid #fde68a !important; outline-offset: 2px; }
+
   .astuce { font-size: 13px; color: #9fb3d9; text-align: center; margin-top: -4px; }
   @media (max-width: 640px) { .block-container { padding-left: 12px; padding-right: 12px; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
@@ -182,31 +206,13 @@ def nom_cookie(nom_secret):
 
 
 def lire_cle_cookie(nom):
-    import base64
-    if st.session_state.get("cookie_oublie") == nom:
-        return None
-    try:
-        valeur = st.context.cookies.get(nom)
-        return base64.urlsafe_b64decode(valeur.encode()).decode() if valeur else None
-    except Exception:
-        return None
+    """Valeur gardée sur cet appareil (stockage local du navigateur, via le coffre)."""
+    return coffre.lire(nom)
 
 
 def ecrire_cookie(nom, valeur):
-    """Met en file l'écriture (ou l'effacement si valeur est None) d'un cookie d'un an, réservé à ce site.
-    Il est écrit au prochain affichage de la page (voir ecrire_cookies_en_attente), même après un rechargement."""
-    st.session_state.setdefault("cookies_en_attente", []).append((nom, valeur))
-
-
-def ecrire_cookies_en_attente():
-    import base64
-    for nom, valeur in st.session_state.pop("cookies_en_attente", []):
-        contenu = base64.urlsafe_b64encode(valeur.encode()).decode() if valeur else ""
-        st.iframe(f"""<script>
-          let securise = "";
-          try {{ securise = window.parent.location.protocol === "https:" ? "; Secure" : ""; }} catch (e) {{}}
-          document.cookie = "{nom}={contenu}; Max-Age={31_536_000 if valeur else 0}; Path=/; SameSite=Strict" + securise;
-        </script>""", height=1)
+    """Garde (ou efface si valeur est None) une valeur sur cet appareil ; appliqué au prochain affichage."""
+    coffre.ecrire(nom, valeur)
 
 
 # ==========================================
@@ -219,6 +225,10 @@ def est_admin():
     from . import admin
     if st.session_state.get("admin"):
         return True
+    authentifie = st.session_state.get("authentifie")          # le compte d'Aissa est le compte administrateur
+    if authentifie and authentifie == admin.proprietaire(memoire()):
+        st.session_state["admin"] = True
+        return True
     if st.session_state.get("cookie_oublie") != COOKIE_ADMIN and admin.jeton_valide(memoire(), lire_cle_cookie(COOKIE_ADMIN)):
         st.session_state["admin"] = True
     return bool(st.session_state.get("admin"))
@@ -230,7 +240,9 @@ def administration():
     st.markdown("**🛡️ Administration**")
     if not est_admin():
         if not admin.admin_existe(mem):
-            st.caption("Aucun administrateur : créez le mot de passe administrateur de l'application.")
+            st.caption("Aucun administrateur : créez votre compte, il sera le compte administrateur de l'application.")
+            prenom_admin = st.text_input("Votre prénom", value=st.session_state.get("utilisateur") or "Aissa",
+                                         key="adm_prenom")
             mdp = st.text_input("Nouveau mot de passe admin (8 caractères au moins)", type="password", key="adm_new")
             mdp2 = st.text_input("Confirmer", type="password", key="adm_new2")
             if st.button("Créer l'administrateur") and mdp:
@@ -238,8 +250,10 @@ def administration():
                     st.error("Les deux mots de passe diffèrent.")
                 else:
                     try:
-                        ecrire_cookie(COOKIE_ADMIN, admin.creer_admin(mem, mdp))
-                        st.session_state["admin"] = True
+                        ecrire_cookie(COOKIE_ADMIN, admin.creer_admin(mem, mdp, prenom_admin))
+                        prenom_admin = prenom_admin.strip()
+                        coffre.ecrire("ia_aissa_session", admin.ouvrir_session(mem, prenom_admin))
+                        st.session_state.update(admin=True, utilisateur=prenom_admin, authentifie=prenom_admin)
                         st.rerun()
                     except (ValueError, PermissionError) as e:
                         st.error(str(e))
@@ -248,13 +262,15 @@ def administration():
             if mdp:
                 jeton = admin.connexion_admin(mem, mdp)
                 if jeton:
+                    if not admin.proprietaire(mem):              # ce compte administrateur devient le vôtre
+                        admin.lier_proprietaire(mem, st.session_state.get("utilisateur"), mdp)
                     ecrire_cookie(COOKIE_ADMIN, jeton)
                     st.session_state["admin"] = True
                     st.session_state.pop("cookie_oublie", None)
                     st.rerun()
                 st.error("Mot de passe incorrect.")
         return
-    st.success("Vous êtes administrateur.")
+    st.success(f"Compte administrateur : {admin.proprietaire(mem) or st.session_state.get('utilisateur')}")
     if not mem.persistante:
         st.caption("⚠️ Mémoire temporaire : ces réglages seront effacés au prochain redémarrage (ajoutez MEMOIRE_URL).")
     st.caption("Clés API de l'application (tous les appareils et le broutage autonome) :")
@@ -293,11 +309,14 @@ def administration():
             st.rerun()
         except ValueError as e:
             st.error(str(e))
-    if st.button("Se déconnecter de l'administration"):
+    if st.button("Se déconnecter"):
         admin.deconnexion(mem)
-        st.session_state["admin"] = False
+        admin.fermer_session(mem, coffre.lire("ia_aissa_session"))
         st.session_state["cookie_oublie"] = COOKIE_ADMIN
         ecrire_cookie(COOKIE_ADMIN, None)
+        coffre.ecrire("ia_aissa_session", None)
+        for nom in ("admin", "utilisateur", "authentifie"):
+            st.session_state.pop(nom, None)
         st.rerun()
 
 
@@ -326,6 +345,7 @@ def reglages(utilisateur):
                 st.session_state[cle_visite] = cle_api = saisie.strip()
                 if souvenir:
                     ecrire_cookie(cookie, cle_api)
+                    st.rerun()                  # l'appareil la retient tout de suite
         else:
             st.session_state[cle_visite] = cle_api
             st.caption("🔑 Clé gardée sur cet appareil." if lire_cle_cookie(cookie) else "🔑 Clé gardée pour cette visite.")
@@ -607,12 +627,12 @@ def pouls_d_ia_aissa():
 def espace_unique():
     st.set_page_config(page_title="IA AISSA", page_icon="👽", layout="centered", initial_sidebar_state="collapsed")
     st.markdown(STYLE, unsafe_allow_html=True)
+    coffre.ouvrir()                     # ce que cet appareil retient : clé API, jeton admin, connexion
     utilisateur = verifier_acces(st)
     mem = memoire()
     if "affichage" not in st.session_state:
         ouvrir_conversation(utilisateur, None)
 
-    ecrire_cookies_en_attente()
     zone_alien = st.container()
     haut = st.columns([5, 1.4])
     with haut[1]:
@@ -669,6 +689,5 @@ def espace_unique():
         st.iframe(avatar(parole["texte"][:400] + ("…" if len(parole["texte"]) > 400 else ""), parole.get("audio"),
                          parole.get("voix", "fr-FR"), image, type_image or "image/png",
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),
-                         indicateur=parole.get("meta")), height=650)
+                         indicateur=parole.get("meta")), height=590)
     parole["nouveau"] = False
-    ecrire_cookies_en_attente()

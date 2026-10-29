@@ -8,7 +8,18 @@ On peut aussi le remplacer par une image (ex. un rendu réaliste de l'alien) : e
 import base64
 import html
 
+from functools import lru_cache
+from pathlib import Path
+
 from .alien3d import scene_3d
+
+IMAGE_REFERENCE = Path(__file__).resolve().parent / "assets" / "alien.jpg"
+
+
+@lru_cache(maxsize=1)
+def image_reference():
+    """Le visage d'IA AISSA : l'image de référence fournie par Aissa (encodée une seule fois)."""
+    return base64.b64encode(IMAGE_REFERENCE.read_bytes()).decode()
 from .voix import _SCRIPT_COMMUN, js
 
 ALIEN_SVG = """
@@ -152,6 +163,29 @@ _STYLE = """
           border-radius:999px; border:1px solid rgba(56,189,248,.5); background: rgba(56,189,248,.08); }
   .meta b { font-weight:700; } .jauge { width:60px; height:6px; border-radius:3px; background: rgba(127,127,127,.25); overflow:hidden; }
   .jauge i { display:block; height:100%; background: linear-gradient(90deg,#38bdf8,#a78bfa); }
+  .alien.reference { width: 560px; max-width: 96vw; animation: flotte-doux 7s ease-in-out infinite;
+                     transition: transform .25s ease-out; transform-style: preserve-3d; }
+  .alien.reference img { border-radius: 22px; box-shadow: 0 0 0 1px rgba(56,189,248,.35), 0 0 42px rgba(56,189,248,.32),
+                         0 18px 40px rgba(0,0,0,.55); transition: box-shadow .3s; }
+  @keyframes flotte-doux { 50% { translate: 0 -5px; } }
+  .paupiere { position: absolute; width: 9.4%; height: 15.2%; border-radius: 50% 50% 46% 46%; pointer-events: none;
+              background: radial-gradient(ellipse at 50% 30%, #a9bcc6 0%, #91a6b2 55%, #73899a 100%);
+              box-shadow: inset 0 -5px 4px -1px rgba(25,33,40,.85), 0 2px 3px rgba(0,0,0,.25);
+              transform-origin: 50% 0; transform: scaleY(0);
+              animation: clin-photo 5.2s infinite; }
+  .paupiere.g { left: 32.6%; top: 28.1%; } .paupiere.d { left: 51.3%; top: 27.4%; }
+  @keyframes clin-photo { 0%, 91%, 100% { transform: scaleY(0); } 94.5% { transform: scaleY(1); } }
+  .reference.parle { animation: parle-bob .32s ease-in-out infinite alternate; }
+  .reference.parle img { box-shadow: 0 0 0 2px #38bdf8, 0 0 60px rgba(56,189,248,.7), 0 18px 40px rgba(0,0,0,.55); }
+  .reference .onde { bottom: 12px; } .reference.parle .onde { display: flex; }
+  @keyframes parle-bob { from { translate: 0 0; } to { translate: 0 -3px; } }
+  .fusion { display: none; position: absolute; top: 12px; right: 14px; padding: 4px 12px; border-radius: 999px;
+            font: 700 12px/1.4 'Orbitron', sans-serif; letter-spacing: .08em; color: #fdf4ff;
+            background: rgba(192,38,211,.35); border: 1px solid #f0abfc; box-shadow: 0 0 16px rgba(232,121,249,.6); }
+  .reference.hyper .fusion { display: block; animation: rec-clignote 1.2s steps(1) infinite; }
+  .reference.hyper img { box-shadow: 0 0 0 2px #e879f9, 0 0 60px rgba(232,121,249,.65), 0 18px 40px rgba(0,0,0,.55);
+                         filter: saturate(1.15) hue-rotate(-8deg); }
+  @keyframes rec-clignote { 50% { opacity: .55; } }
   .etoile { animation: brille 2.6s ease-in-out infinite; } .e2 { animation-delay: .9s; } .e3 { animation-delay: 1.7s; }
   .planete { animation: orbite 14s ease-in-out infinite; transform-origin: 200px 200px; }
   .anneau { animation: anneau 4s ease-in-out infinite; }
@@ -170,14 +204,19 @@ _STYLE = """
 
 
 def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
-           bulle=True, etat="normal", indicateur=None, en_3d=True):
+           bulle=True, etat="normal", indicateur=None, en_3d=True, rendu="photo"):
     """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur.
     etat = "hyper" : portail en hyper-propulsion (« QUANTUM FUSION ») pendant l'invention.
     indicateur = {"confiance": 0-1, "details": "…"} : indicateur de méta-conscience affiché avant qu'il parle.
     en_3d : l'alien en 3D (three.js) remplace l'alien dessiné dès que le navigateur l'a chargé."""
+    hyper = " hyper" if etat == "hyper" else ""
     if image:
-        visage = (f'<div class="alien photo" id="alien"><img alt="IA AISSA" src="data:{html.escape(type_image)};base64,'
+        visage = (f'<div class="alien photo{hyper}" id="alien"><img alt="IA AISSA" src="data:{html.escape(type_image)};base64,'
                   f'{base64.b64encode(image).decode()}"><div class="onde"><i></i><i></i><i></i><i></i></div></div>')
+    elif rendu == "photo":
+        visage = (f'<div class="alien photo reference{hyper}" id="alien"><img alt="IA AISSA, ton compagnon alien" '
+                  f'src="data:image/jpeg;base64,{image_reference()}"><i class="paupiere g"></i><i class="paupiere d"></i>'
+                  '<div class="onde"><i></i><i></i><i></i><i></i></div><div class="fusion">QUANTUM FUSION</div></div>')
     else:
         visage = (f'<div class="alien{" hyper" if etat == "hyper" else ""}" id="alien">'
                   f'<div id="alien2d">{ALIEN_SVG}</div>'
@@ -211,6 +250,11 @@ function dire() {{
   speechSynthesis.speak(u);
   return Promise.resolve();
 }}
+const ref = document.querySelector('.alien.reference');
+if (ref) window.addEventListener('pointermove', e => {{
+  const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
+  ref.style.transform = `perspective(900px) rotateY(${{x * 6}}deg) rotateX(${{-y * 4}}deg)`;
+}});
 if (TEXTE || SON) {{
   bouton.style.display = 'inline-block';
   bouton.onclick = () => dire();

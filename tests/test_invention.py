@@ -56,8 +56,9 @@ def test_annonce_darija_avec_proverbe_et_salutation():
 
 def test_hyper_propulsion_et_indicateur():
     h = avatar("Bonjour", etat="hyper", indicateur={"confiance": 0.83, "details": "2 outil(s) · 1.2 s"})
-    assert 'class="alien hyper"' in h and "QUANTUM FUSION" in h and "confiance 83%" in h
-    assert 'class="alien"' in avatar("Bonjour")
+    assert 'class="alien photo reference hyper"' in h and "QUANTUM FUSION" in h and "confiance 83%" in h
+    assert 'class="alien photo reference"' in avatar("Bonjour")
+    assert 'class="alien hyper"' in avatar("Bonjour", etat="hyper", rendu="3d")
 
 
 def test_meta_conscience():
@@ -68,9 +69,14 @@ def test_meta_conscience():
     assert m["confiance"] == round((0.85 + 0.95 + 0.5 + 0.4) / 4, 3) and m["details"] == "3 outil(s) · 2.0 s"
 
 
-def test_alien_3d_avec_repli_2d():
+def test_alien_photo_par_defaut_aux_yeux_qui_clignent():
     h = avatar("Bonjour")
+    assert "data:image/jpeg;base64," in h and 'class="paupiere g"' in h and 'class="paupiere d"' in h
+
+
+def test_alien_3d_avec_repli_2d():
+    h = avatar("Bonjour", rendu="3d")
     assert 'id="alien3d"' in h and 'id="alien2d"' in h and "three@0.160.0" in h      # 3D + alien dessiné en secours
     assert "window.alienParle = oui" in h                                             # la bouche 3D suit la parole
-    assert 'id="alien3d"' not in avatar("Bonjour", en_3d=False)
-    assert 'data-hyper="1"' in avatar("Bonjour", etat="hyper")
+    assert 'id="alien3d"' not in avatar("Bonjour", en_3d=False, rendu="3d")
+    assert 'data-hyper="1"' in avatar("Bonjour", etat="hyper", rendu="3d")

@@ -39,6 +39,12 @@ def verifier_acces(st):
         return st.session_state.get("utilisateur", PROPRIETAIRE)
     if st.session_state.get("utilisateur") in comptes or st.session_state.get("utilisateur") in comptes_admin:
         return st.session_state["utilisateur"]
+    from . import coffre
+    from .admin import ouvrir_session, session
+    retenu = session(memoire(), coffre.lire("ia_aissa_session"))     # connexion retenue sur cet appareil
+    if retenu and (retenu in comptes or retenu in comptes_admin):
+        st.session_state["utilisateur"] = st.session_state["authentifie"] = retenu
+        return retenu
     st.title("🔒 IA AISSA")
     st.write("IA AISSA ne parle qu'aux personnes autorisées par son propriétaire.")
     with st.form("connexion"):
@@ -47,12 +53,11 @@ def verifier_acces(st):
         valide = st.form_submit_button("Entrer")
     if valide:
         compte = next((n for n in comptes if n.lower() == nom.strip().lower()), None)
-        if compte and hmac.compare_digest(saisi, str(comptes[compte])):
-            st.session_state["utilisateur"] = compte
-            st.rerun()
-        compte = verifier_utilisateur(memoire(), nom, saisi)
+        if not (compte and hmac.compare_digest(saisi, str(comptes[compte]))):
+            compte = verifier_utilisateur(memoire(), nom, saisi)
         if compte:
-            st.session_state["utilisateur"] = compte
+            st.session_state["utilisateur"] = st.session_state["authentifie"] = compte
+            coffre.ecrire("ia_aissa_session", ouvrir_session(memoire(), compte))   # retenu sur cet appareil
             st.rerun()
         st.error("Prénom ou mot de passe incorrect.")
     st.stop()

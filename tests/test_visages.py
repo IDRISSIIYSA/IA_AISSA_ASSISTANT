@@ -41,5 +41,5 @@ def test_photo_sans_visage():
 
 def test_avatar_echappe_le_texte_et_porte_l_audio():
     h = avatar("<script>alert(1)</script> Bonjour", audio=b"ID3abc", code_voix="ar-MA")
-    assert "<script>alert(1)</script>" not in h and "data:audio/mpeg;base64," in h and "AI COMPANION" in h
+    assert "<script>alert(1)</script>" not in h and "data:audio/mpeg;base64," in h and "Bonjour" in h
     assert 'src="data:image/png;base64,' in avatar("Salut", image=b"\x89PNG")

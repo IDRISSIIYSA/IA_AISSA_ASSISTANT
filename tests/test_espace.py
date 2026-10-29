@@ -99,14 +99,26 @@ def test_barre_de_conversation_ergonomique():
         assert regle in STYLE
 
 
-def test_cle_api_gardee_dans_un_cookie_du_navigateur(monkeypatch):
-    import base64
+def test_cle_api_gardee_dans_le_coffre_de_l_appareil(monkeypatch):
     import ia_aissa.interface as I
+    from ia_aissa import coffre
     nom = I.nom_cookie("ANTHROPIC_API_KEY")
     assert nom == "ia_aissa_anthropic_api_key"
-    valeur = base64.urlsafe_b64encode(b"sk-ant-test").decode()
-    monkeypatch.setattr(I.st, "context", type("C", (), {"cookies": {nom: valeur}})())
-    monkeypatch.setattr(I.st, "session_state", {})
-    assert I.lire_cle_cookie(nom) == "sk-ant-test"
-    I.st.session_state["cookie_oublie"] = nom                          # « oublier » prime sur le cookie encore envoyé
+    monkeypatch.setattr(coffre.st, "session_state", {"coffre_valeurs": {nom: "sk-ant-test"}})
+    assert I.lire_cle_cookie(nom) == "sk-ant-test"                    # relue depuis le stockage local
+    I.ecrire_cookie(nom, None)                                        # « oublier »
     assert I.lire_cle_cookie(nom) is None
+    assert coffre.st.session_state["coffre_ecritures"] == [(nom, None)]   # effacée du navigateur au prochain affichage
+
+
+def test_le_compte_administrateur_est_le_compte_du_proprietaire(tmp_path):
+    from ia_aissa import admin
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    admin.creer_admin(mem, "motdepasse-solide", "Aissa")
+    assert admin.proprietaire(mem) == "Aissa"
+    assert admin.verifier_utilisateur(mem, "aissa", "motdepasse-solide") == "Aissa"   # même compte pour entrer
+    jeton = admin.ouvrir_session(mem, "Aissa")
+    assert admin.session(mem, jeton) == "Aissa"                        # connexion retenue sur l'appareil
+    admin.fermer_session(mem, jeton)
+    assert admin.session(mem, jeton) is None
