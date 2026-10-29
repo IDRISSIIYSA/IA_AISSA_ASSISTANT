@@ -140,3 +140,45 @@ def test_broutage_trace_sur_le_tableau_de_croissance(labo):
     b = croissance.broutage(mem)
     assert int(b["Concepts broutés seule"].sum()) == 2 and int(b["Concepts lus avec toi"].sum()) == 1
     assert abs(b["Confiance de digestion"].iloc[-1] - 0.7) < 1e-9
+
+
+def test_curiosite_cible_les_matieres_faibles(labo):
+    from ia_aissa import curiosite as Q
+    mem = labo
+    classement = Q.matieres_faibles(mem, n=50)
+    assert [x["faiblesse"] for x in classement] == sorted((x["faiblesse"] for x in classement), reverse=True)
+    derniere = classement[-1]
+    for _ in range(30):                                   # beaucoup de lacunes : elle remonte en tête
+        mem.ajouter_lacune(f"question {_} sur {derniere['nom']}", derniere["cle"], 0.1)
+    assert Q.matieres_faibles(mem, n=1)[0]["cle"] == derniere["cle"]
+
+
+def test_cycle_de_curiosite_sans_humain(labo):
+    from ia_aissa import curiosite as Q
+    mem = labo
+    lus = []
+
+    def source(sujet):
+        lus.append(sujet)
+        return "Wikipédia — Photosynthèse", LIVRE
+
+    def bloquee(sujet):
+        raise B.ErreurBroutage("limite les visites (429)")
+    bilan = Q.cycle_curiosite(mem, {"type": "anthropic", "modele": "x"}, moteur(), nb_matieres=1,
+                              sources=[source, bloquee])
+    cible = bilan["matieres"][0]
+    assert lus == [cible["nom"]] and bilan["concepts"] > 0 and bilan["erreurs"]
+    assert bilan["recompense"] == 1.0                     # bibliothèque vide : tout est nouveau
+    assert any(d["source"].startswith(f"Curiosité ({cible['nom']})") for d in mem.digestions())
+    again = Q.cycle_curiosite(mem, {"type": "anthropic", "modele": "x"}, moteur(), nb_matieres=1, sources=[source])
+    assert again["recompense"] < 0.5                      # relire la même chose ne rapporte presque rien
+
+
+def test_resumes_openalex_reconstitues(monkeypatch):
+    import requests
+    reponse = NS(status_code=200, headers={}, raise_for_status=lambda: None, json=lambda: {"results": [
+        {"display_name": "Budget", "publication_year": 2020,
+         "abstract_inverted_index": {"budget": [1], "Le": [0], "pilote": [2]}}]})
+    monkeypatch.setattr(requests, "get", lambda *a, **k: reponse)
+    titre, texte = B.brouter_openalex("contrôle de gestion")
+    assert titre == "OpenAlex — contrôle de gestion" and texte == "Budget (2020) : Le budget pilote"

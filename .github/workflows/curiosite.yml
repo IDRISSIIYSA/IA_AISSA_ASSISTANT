@@ -1,0 +1,47 @@
+# Tests à chaque modification du code, et cycle de curiosité d'IA AISSA toutes les 6 heures.
+# Le cycle ne démarre que si tous les tests réussissent. Il n'écrit que dans la mémoire durable (MEMOIRE_URL),
+# jamais dans le code : aucun commit automatique.
+# Secrets à créer (GitHub → Settings → Secrets and variables → Actions) : MEMOIRE_URL et ANTHROPIC_API_KEY.
+name: Tests et curiosité
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: curiosite-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest -q
+
+  curiosite:
+    needs: tests
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Un cycle de curiosité
+        env:
+          MEMOIRE_URL: ${{ secrets.MEMOIRE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python curiosite_autonome.py

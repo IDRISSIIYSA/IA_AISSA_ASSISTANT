@@ -133,6 +133,34 @@ def brouter_wikipedia(sujet, langue="fr"):
     raise ErreurBroutage("Wikipédia injoignable.")
 
 
+def brouter_openalex(sujet, nb=5):
+    """Les articles scientifiques en libre accès les plus cités sur un sujet (OpenAlex) : seuls les résumés
+    sont lus, ce qui donne beaucoup de concepts pour peu de texte. Renvoie (titre, texte)."""
+    import requests
+    for essai in range(2):
+        r = requests.get("https://api.openalex.org/works",
+                         params={"search": sujet, "filter": "is_oa:true,has_abstract:true", "per_page": nb,
+                                 "sort": "cited_by_count:desc"},
+                         headers={"User-Agent": AGENT}, timeout=20)
+        if r.status_code == 429 and essai == 0:
+            time.sleep(min(30, int(r.headers.get("Retry-After", "5") or 5)))
+            continue
+        if r.status_code == 429:
+            raise ErreurBroutage("OpenAlex limite les visites (429) : IA AISSA réessaiera plus tard.")
+        r.raise_for_status()
+        resumes = []
+        for w in r.json().get("results", []):
+            index = w.get("abstract_inverted_index") or {}
+            mots = sorted((p, m) for m, positions in index.items() for p in positions)
+            if mots:
+                resumes.append(f"{w.get('display_name', '')} ({w.get('publication_year', '')}) : "
+                               + " ".join(m for _, m in mots))
+        if not resumes:
+            raise ErreurBroutage(f"Aucun article en libre accès trouvé pour « {sujet} ».")
+        return f"OpenAlex — {sujet}", "\n\n".join(resumes)
+    raise ErreurBroutage("OpenAlex injoignable.")
+
+
 def bouchees(texte, nb_max):
     """Découpe le texte en morceaux réguliers répartis sur tout le livre (début, milieu, fin)."""
     texte = " ".join(texte.split())

@@ -286,3 +286,12 @@ seuils, les actions et les récompenses.
 2. **Create app** → *Deploy a public app from GitHub*.
 3. Dépôt `IDRISSIIYSA/ia_aissa_assistant`, branche `main`, fichier `controle_gestion_ia.py`.
 4. **Deploy**. Le fichier `requirements.txt` installe la version CPU (légère) de PyTorch.
+
+## Curiosité autonome
+
+Toutes les 6 heures, GitHub Actions lance d'abord tous les tests, puis, s'ils réussissent, un cycle de curiosité
+(`curiosite_autonome.py`) : IA AISSA repère ses matières les plus faibles (notes d'examen et lacunes ouvertes),
+lit l'article Wikipédia et les résumés des articles en libre accès les plus cités (OpenAlex), les rumine, et mesure
+sa récompense intrinsèque (la nouveauté de ce qu'elle a appris). Ce qu'elle apprend va dans sa mémoire durable,
+jamais dans le code. À configurer une fois : GitHub → Settings → Secrets and variables → Actions → `MEMOIRE_URL`
+et `ANTHROPIC_API_KEY`. Lancement manuel : onglet Actions → « Tests et curiosité » → Run workflow.
