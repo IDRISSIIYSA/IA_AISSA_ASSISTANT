@@ -43,50 +43,46 @@ STYLE = """<style>
   .block-container { padding-top: 1rem; max-width: 860px; }
   html, body, [data-testid="stAppViewContainer"], .stMarkdown, textarea, input, button { font-family: 'Exo 2', sans-serif; }
 
-  /* ---------- Le cosmos : nuit profonde, nébuleuses et étoiles qui scintillent ---------- */
+  /* ---------- Thème clair : ciel d'aube, voiles pastel et poussière d'étoiles discrète ---------- */
   [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
     background:
-      radial-gradient(1100px 620px at 15% -8%, rgba(124,58,237,.38), transparent 62%),
-      radial-gradient(900px 520px at 92% 6%, rgba(14,165,233,.26), transparent 60%),
-      radial-gradient(800px 480px at 50% 112%, rgba(219,39,119,.20), transparent 62%),
-      #050816 !important; }
+      radial-gradient(1100px 620px at 12% -10%, rgba(167,139,250,.22), transparent 62%),
+      radial-gradient(900px 520px at 95% 4%, rgba(56,189,248,.20), transparent 60%),
+      radial-gradient(800px 480px at 50% 115%, rgba(244,114,182,.12), transparent 62%),
+      #f7f9ff !important; color: #0f172a; }
   [data-testid="stAppViewContainer"]::before {
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .85;
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .7;
     background-image:
-      radial-gradient(1.2px 1.2px at 6% 12%, #fff, transparent), radial-gradient(1px 1px at 18% 38%, #cfe8ff, transparent),
-      radial-gradient(1.4px 1.4px at 27% 8%, #fff, transparent), radial-gradient(1px 1px at 33% 63%, #fff, transparent),
-      radial-gradient(1.6px 1.6px at 44% 22%, #e9d5ff, transparent), radial-gradient(1px 1px at 52% 81%, #fff, transparent),
-      radial-gradient(1.2px 1.2px at 61% 44%, #fff, transparent), radial-gradient(1px 1px at 69% 15%, #cfe8ff, transparent),
-      radial-gradient(1.5px 1.5px at 77% 58%, #fff, transparent), radial-gradient(1px 1px at 84% 32%, #fff, transparent),
-      radial-gradient(1.3px 1.3px at 91% 74%, #e9d5ff, transparent), radial-gradient(1px 1px at 96% 9%, #fff, transparent),
-      radial-gradient(1px 1px at 11% 88%, #fff, transparent), radial-gradient(1.2px 1.2px at 39% 92%, #cfe8ff, transparent),
-      radial-gradient(1px 1px at 57% 5%, #fff, transparent), radial-gradient(1.3px 1.3px at 73% 90%, #fff, transparent);
+      radial-gradient(1.6px 1.6px at 8% 14%, #93c5fd, transparent), radial-gradient(1.4px 1.4px at 27% 9%, #c4b5fd, transparent),
+      radial-gradient(1.6px 1.6px at 46% 24%, #93c5fd, transparent), radial-gradient(1.4px 1.4px at 68% 13%, #c4b5fd, transparent),
+      radial-gradient(1.6px 1.6px at 86% 31%, #93c5fd, transparent), radial-gradient(1.4px 1.4px at 93% 72%, #f9a8d4, transparent),
+      radial-gradient(1.4px 1.4px at 12% 86%, #c4b5fd, transparent), radial-gradient(1.6px 1.6px at 58% 84%, #93c5fd, transparent);
     background-size: 100% 100%; animation: cosmos-scintille 6s ease-in-out infinite; }
-  @keyframes cosmos-scintille { 50% { opacity: .45; } }
+  @keyframes cosmos-scintille { 50% { opacity: .3; } }
   [data-testid="stHeader"], [data-testid="stBottom"], [data-testid="stBottom"] > div { background: transparent !important; }
-  [data-testid="stBottomBlockContainer"] { background: linear-gradient(to top, rgba(5,8,22,.95), rgba(5,8,22,0)) !important; }
+  [data-testid="stBottomBlockContainer"] { background: linear-gradient(to top, rgba(247,249,255,.97), rgba(247,249,255,0)) !important; }
 
-  /* ---------- Messages en verre dépoli lumineux ---------- */
-  [data-testid="stChatMessage"] { background: rgba(17,23,58,.55) !important; backdrop-filter: blur(12px);
-    border: 1px solid rgba(56,189,248,.22); border-radius: 18px; padding: 14px 16px;
-    box-shadow: 0 0 22px rgba(56,189,248,.07), inset 0 1px 0 rgba(255,255,255,.06); }
+  /* ---------- Messages en verre dépoli clair ---------- */
+  [data-testid="stChatMessage"] { background: rgba(255,255,255,.78) !important; backdrop-filter: blur(12px);
+    border: 1px solid rgba(56,189,248,.28); border-radius: 18px; padding: 14px 16px;
+    box-shadow: 0 6px 22px rgba(30,64,175,.08), inset 0 1px 0 rgba(255,255,255,.9); }
   [data-testid="stChatMessage"]:has([aria-label="Chat message from user"]),
   [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-    border-color: rgba(167,139,250,.30); background: rgba(46,26,92,.45) !important; }
+    border-color: rgba(167,139,250,.35); background: rgba(245,243,255,.85) !important; }
   .role { display:inline-block; font-family:'Orbitron', sans-serif; font-size:11.5px; letter-spacing:.06em;
-          padding:4px 12px; border-radius:999px; color:#bae6fd; text-transform: uppercase;
-          border:1px solid rgba(56,189,248,.55); background: rgba(56,189,248,.10); box-shadow: 0 0 12px rgba(56,189,248,.25); }
-  [data-testid="stPopover"] button { border-radius: 999px !important; border: 1px solid rgba(56,189,248,.45) !important;
-    background: rgba(17,23,58,.6) !important; box-shadow: 0 0 12px rgba(56,189,248,.18); }
-  [data-testid="stCaptionContainer"] { color: #9fb3d9 !important; }
+          padding:4px 12px; border-radius:999px; color:#0369a1; text-transform: uppercase;
+          border:1px solid rgba(14,165,233,.5); background: rgba(14,165,233,.08); box-shadow: 0 2px 10px rgba(14,165,233,.15); }
+  [data-testid="stPopover"] button { border-radius: 999px !important; border: 1px solid rgba(14,165,233,.45) !important;
+    background: rgba(255,255,255,.85) !important; box-shadow: 0 2px 10px rgba(14,165,233,.15); }
+  [data-testid="stCaptionContainer"] { color: #475569 !important; }
 
   /* ---------- Barre de conversation : boutons en 3D, grands et lisibles ---------- */
-  [data-testid="stChatInput"] { border-radius: 28px !important; background: rgba(13,18,48,.85) !important;
-                                border: 1px solid rgba(56,189,248,.55) !important;
-                                box-shadow: 0 0 0 1px rgba(56,189,248,.15), 0 0 26px rgba(56,189,248,.28) !important;
+  [data-testid="stChatInput"] { border-radius: 28px !important; background: rgba(255,255,255,.95) !important;
+                                border: 1px solid rgba(14,165,233,.5) !important;
+                                box-shadow: 0 0 0 1px rgba(14,165,233,.10), 0 8px 26px rgba(30,64,175,.12) !important;
                                 transition: box-shadow .3s, border-color .3s; }
-  [data-testid="stChatInput"]:focus-within { box-shadow: 0 0 0 2px rgba(56,189,248,.4), 0 0 34px rgba(56,189,248,.45) !important; }
-  [data-testid="stChatInputTextArea"] { color: #e6edf7 !important; }
+  [data-testid="stChatInput"]:focus-within { box-shadow: 0 0 0 3px rgba(14,165,233,.28), 0 8px 30px rgba(14,165,233,.22) !important; }
+  [data-testid="stChatInputTextArea"] { color: #0f172a !important; }
   [data-testid="stChatInputTextArea"] { font-size: 16.5px !important; }
   [data-testid="stChatInputMicButton"], [data-testid="stChatInputSubmitButton"],
   [data-testid="stChatInputApproveButton"], [data-testid="stChatInputCancelButton"],
@@ -164,7 +160,7 @@ STYLE = """<style>
   [data-testid="stChatInputFileUploadButton"] button::after { background: #1f2937; filter: none; }
   [data-testid="stChatInputMicButton"]:focus-visible, [data-testid="stChatInputSubmitButton"]:focus-visible { outline: 3px solid #fde68a !important; outline-offset: 2px; }
 
-  .astuce { font-size: 13px; color: #9fb3d9; text-align: center; margin-top: -4px; }
+  .astuce { font-size: 13px; color: #475569; text-align: center; margin-top: -4px; }
   @media (max-width: 640px) { .block-container { padding-left: 12px; padding-right: 12px; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
       content: "● Enregistrement… ✅ envoyer · ✖ annuler"; } }
@@ -332,26 +328,40 @@ def reglages(utilisateur):
         config = MOTEURS[moteur]
         cle_visite = f"cle_visite_{config['secret']}"
         cookie = nom_cookie(config["secret"])
-        cle_api = secret(config["secret"]) or st.session_state.get(cle_visite) or lire_cle_cookie(cookie)
+        compte = st.session_state.get("authentifie")       # personne connectée : sa clé suit son compte
+        cle_compte = f"cle:{compte}:{config['secret']}" if compte else None
+        gardee_compte = mem.reglage(cle_compte) if cle_compte else None
+        gardee_appareil = lire_cle_cookie(cookie)
+        cle_api = secret(config["secret"]) or st.session_state.get(cle_visite) or gardee_compte or gardee_appareil
+        if cle_compte and cle_api and not secret(config["secret"]) and not gardee_compte:
+            mem.definir_reglage(cle_compte, cle_api)       # une clé connue de l'appareil rejoint le compte
+            gardee_compte = cle_api
         if secret(config["secret"]):
             st.caption("🔑 Clé de l'application (secrets ou administration).")
         elif not cle_api:
             saisie = st.text_input(f"Clé API ({moteur.split(' (')[0]})", type="password",
                                    help=f"Créez une clé sur {config['console']}.")
-            souvenir = st.checkbox("🔐 Se souvenir de ma clé sur cet appareil", value=True,
-                                   help="Gardée dans un cookie de ce navigateur : elle reste après un rechargement de la "
-                                        "page. N'utilisez pas cette option sur un appareil partagé.")
+            souvenir = st.checkbox("🔐 Ne jamais oublier ma clé", value=True,
+                                   help="Gardée avec votre compte (tous vos appareils, même après une nouvelle "
+                                        "session) et sur cet appareil. N'utilisez pas cette option sur un appareil partagé.")
             if saisie:
                 st.session_state[cle_visite] = cle_api = saisie.strip()
                 if souvenir:
+                    if cle_compte:
+                        mem.definir_reglage(cle_compte, cle_api)
                     ecrire_cookie(cookie, cle_api)
-                    st.rerun()                  # l'appareil la retient tout de suite
+                    st.rerun()                  # retenue tout de suite
         else:
             st.session_state[cle_visite] = cle_api
-            st.caption("🔑 Clé gardée sur cet appareil." if lire_cle_cookie(cookie) else "🔑 Clé gardée pour cette visite.")
-            if st.button("🗑️ Oublier ma clé sur cet appareil"):
+            st.caption("🔑 Clé gardée avec votre compte." if gardee_compte else
+                       "🔑 Clé gardée sur cet appareil." if gardee_appareil else "🔑 Clé gardée pour cette visite.")
+            if gardee_compte and not mem.persistante:
+                st.caption("⚠️ Mémoire temporaire : ajoutez MEMOIRE_URL dans les secrets pour qu'elle survive aux redémarrages.")
+            if st.button("🗑️ Oublier ma clé"):
                 st.session_state.pop(cle_visite, None)
                 st.session_state["cookie_oublie"] = cookie
+                if cle_compte:
+                    mem.supprimer_reglage(cle_compte)
                 ecrire_cookie(cookie, None)
                 st.rerun()
         modes = ["✍️🔊 Écrites et vocales", "✍️ Écrites", "🔊 Vocales"]

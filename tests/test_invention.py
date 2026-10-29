@@ -56,9 +56,9 @@ def test_annonce_darija_avec_proverbe_et_salutation():
 
 def test_hyper_propulsion_et_indicateur():
     h = avatar("Bonjour", etat="hyper", indicateur={"confiance": 0.83, "details": "2 outil(s) · 1.2 s"})
-    assert 'class="alien photo reference hyper"' in h and "QUANTUM FUSION" in h and "confiance 83%" in h
-    assert 'class="alien photo reference"' in avatar("Bonjour")
-    assert 'class="alien hyper"' in avatar("Bonjour", etat="hyper", rendu="3d")
+    assert 'class="alien hyper"' in h and "QUANTUM FUSION" in h and "confiance 83%" in h
+    assert 'class="alien"' in avatar("Bonjour")
+    assert 'class="alien photo reference hyper"' in avatar("Bonjour", etat="hyper", rendu="photo")
 
 
 def test_meta_conscience():
@@ -69,8 +69,8 @@ def test_meta_conscience():
     assert m["confiance"] == round((0.85 + 0.95 + 0.5 + 0.4) / 4, 3) and m["details"] == "3 outil(s) · 2.0 s"
 
 
-def test_alien_photo_par_defaut_aux_yeux_qui_clignent():
-    h = avatar("Bonjour")
+def test_alien_photo_aux_yeux_qui_clignent():
+    h = avatar("Bonjour", rendu="photo")
     assert "data:image/jpeg;base64," in h and 'class="paupiere g"' in h and 'class="paupiere d"' in h
 
 

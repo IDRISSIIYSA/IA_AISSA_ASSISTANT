@@ -124,7 +124,7 @@ ALIEN_SVG = """
 
 _STYLE = """
 <style>
-  body { background: transparent; color: #e6edf7; font-family: 'Exo 2', system-ui, sans-serif; }
+  body { background: transparent; color: #0f172a; font-family: 'Exo 2', system-ui, sans-serif; }
   .scene { display:flex; flex-direction: column; gap:10px; align-items:center; }
   .alien { width: 440px; max-width: 94vw; flex: none; position: relative; }
   .alien:not(.photo) { aspect-ratio: 400 / 430; }
@@ -133,8 +133,8 @@ _STYLE = """
   .alien svg, .alien img { width: 100%; display: block; }
   .alien img { border-radius: 18px; }
   .bulle { width: min(640px, 94vw); font-size: 15.5px; line-height: 1.5; padding: 12px 16px; border-radius: 16px;
-           text-align: center; color: #e6edf7; background: rgba(17,23,58,.55); backdrop-filter: blur(10px);
-           border: 1px solid rgba(56,189,248,.35); box-shadow: 0 0 22px rgba(56,189,248,.15); white-space: pre-wrap;
+           text-align: center; color: #0f172a; background: rgba(255,255,255,.82); backdrop-filter: blur(10px);
+           border: 1px solid rgba(14,165,233,.35); box-shadow: 0 6px 22px rgba(30,64,175,.10); white-space: pre-wrap;
            max-height: 120px; overflow:auto; }
   .respire { animation: respire 4s ease-in-out infinite; transform-origin: 200px 430px; }
   .flotte { animation: flotte 5s ease-in-out infinite; }
@@ -199,12 +199,11 @@ _STYLE = """
   @keyframes cligne { 0%,92%,100% { transform: scaleY(0) } 95% { transform: scaleY(1) } }
   @keyframes parle { from { transform: scaleY(.25) } to { transform: scaleY(1.15) } }
   @keyframes onde { from { height:6px } to { height:26px } }
-  @media (prefers-color-scheme: dark) { .bulle { background: rgba(56,189,248,.14); } }
 </style>"""
 
 
 def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
-           bulle=True, etat="normal", indicateur=None, en_3d=True, rendu="photo"):
+           bulle=True, etat="normal", indicateur=None, en_3d=True, rendu="3d"):
     """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur.
     etat = "hyper" : portail en hyper-propulsion (« QUANTUM FUSION ») pendant l'invention.
     indicateur = {"confiance": 0-1, "details": "…"} : indicateur de méta-conscience affiché avant qu'il parle.
@@ -231,7 +230,7 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
                 f'<span>· {html.escape(str(indicateur.get("details", "")))}</span></div>')
     return f"""{_SCRIPT_COMMUN}{_STYLE}
 {meta}<div class="scene">{visage}{texte_bulle}</div>
-<div style="margin-top:8px; text-align:center"><button id="ecouter" class="principal" style="display:none; border-radius:999px; padding:8px 18px; background:rgba(56,189,248,.18); border:1px solid rgba(56,189,248,.6); color:#e0f2fe; box-shadow:0 0 16px rgba(56,189,248,.3)">🔊 Écouter IA AISSA</button></div>
+<div style="margin-top:8px; text-align:center"><button id="ecouter" class="principal" style="display:none; border-radius:999px; padding:8px 18px; background:linear-gradient(180deg,#38bdf8,#0284c7); border:none; color:#fff; font-weight:600; box-shadow:0 4px 0 #075985, 0 8px 18px rgba(2,132,199,.3)">🔊 Écouter IA AISSA</button></div>
 <script>
 const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};
 const alien = document.getElementById('alien'), bouton = document.getElementById('ecouter');
