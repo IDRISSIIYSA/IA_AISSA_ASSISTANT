@@ -1,3 +1,4 @@
+# Toute modification de ce fichier redémarre complètement l'application sur Streamlit Cloud
 # Version CPU de PyTorch : bien plus légère, indispensable pour Streamlit Cloud
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
