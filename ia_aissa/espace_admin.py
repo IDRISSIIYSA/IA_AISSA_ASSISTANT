@@ -111,6 +111,7 @@ def apprentissage(mem, afficher_element):
         if c3.button("Rejeter", key=f"non_{cle}"):
             mem.supprimer_reglage(cle)
             st.rerun()
+    tester_ses_apprentissages(mem)
     st.subheader("📈 Croissance")
     afficher(st, mem)
     afficher_element({"type": "bulletin", "titre": "📒 Bulletin de notes"}, "adm_bulletin")
@@ -131,6 +132,49 @@ def apprentissage(mem, afficher_element):
                      hide_index=True, width="stretch")
 
 
+def tester_ses_apprentissages(mem):
+    """L'examen de lecture (automatique) et les questions de test de l'administrateur, suivis dans le temps."""
+    from .lecture import examen_lecture, historique_examens
+    from .pensee import penser
+    st.subheader("🧪 Tester ses apprentissages")
+    comptes = pd.DataFrame(mem.compter_passages())
+    if comptes.empty:
+        st.warning("Sa mémoire de lecture est vide : déposez des livres dans l'onglet 📚 Livres. (Sans MEMOIRE_URL, elle "
+                   "est effacée à chaque redémarrage du serveur.)")
+    else:
+        st.caption(f"Mémoire de lecture : {int(comptes['passages'].sum())} passages, {len(comptes)} document(s).")
+        st.dataframe(comptes, hide_index=True, width="stretch")
+    c1, c2 = st.columns(2)
+    if c1.button("📝 Examen de lecture (20 phrases à trous)", width="stretch"):
+        b = examen_lecture(mem)
+        st.session_state["dernier_examen"] = b
+    b = st.session_state.get("dernier_examen")
+    if b:
+        c2.metric("Mots cachés retrouvés", f"{b['mot_retrouve']}/{b['questions']}",
+                  help=f"Passage d'origine retrouvé : {b['passage_retrouve']}/{b['questions']}")
+        st.dataframe(pd.DataFrame(b["exemples"]), hide_index=True, width="stretch")
+    historique = pd.DataFrame(historique_examens(mem))
+    if len(historique) > 1:
+        historique["quand"] = pd.to_datetime(historique["quand"], unit="s")
+        st.line_chart(historique.set_index("quand")["score"], y_label="Score de l'examen de lecture")
+    st.markdown("**Votre question de test** (elle répond comme à un visiteur, sans grand moteur)")
+    c1, c2 = st.columns([3, 2])
+    question = c1.text_input("Question", key="test_q", placeholder="Quels sont les taux de TVA en 2026 ?")
+    attendu = c2.text_input("Mot ou chiffre attendu dans la réponse", key="test_a", placeholder="20 %")
+    if st.button("▶️ Lui poser la question") and question:
+        reponse, etapes, confiance = penser(question, mem, utilisateur="Bibliothèque")
+        reussi = bool(attendu) and attendu.lower() in reponse.lower()
+        mem.definir_reglage(f"test_question:{int(datetime.now().timestamp() * 1000)}", json.dumps(
+            {"question": question, "attendu": attendu, "reussi": reussi, "confiance": confiance}, ensure_ascii=False))
+        (st.success if reussi else st.error)(("✅ Réussi" if reussi else "❌ Pas trouvé") + f" — confiance {confiance:.0%}")
+        st.markdown(reponse)
+        st.caption(" → ".join(etapes))
+    tests = [json.loads(v) for _, v in sorted(mem.reglages("test_question:").items())]
+    if tests:
+        st.caption(f"Vos questions de test : {sum(t['reussi'] for t in tests)}/{len(tests)} réussies")
+        st.dataframe(pd.DataFrame(tests[::-1]), hide_index=True, width="stretch")
+
+
 # ==========================================
 # 📚 Livres
 # ==========================================
@@ -139,7 +183,7 @@ def livres(mem, ingestion_de_livres):
     from .broutage import Brouteur
     from .livres_libres import manger_livre, recommander
     from .pensee import confirmation_ingestion
-    ingestion_de_livres(st.session_state.get("utilisateur") or "Aissa")
+    ingestion_de_livres("Bibliothèque")             # les livres de l'administrateur servent à tous les visiteurs
     st.subheader("🔗 Lui faire lire un livre libre en ligne")
     lien = st.text_input("Lien direct vers un PDF ou un EPUB libre (OpenStax, Wikilivres…)", key="adm_lien_livre")
     if st.button("📖 Lire ce livre maintenant") and lien:

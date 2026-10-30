@@ -244,11 +244,12 @@ def combler_lacunes(memoire, concepts):
 
 
 AUTONOME = "IA AISSA"            # ce qu'elle a lu seule sur le web : savoir commun à tous
+BIBLIOTHEQUE = "Bibliothèque"    # les livres déposés par l'administrateur : savoir commun, jamais oublié
 
 
 def visible_par(d, utilisateur):
     """Les documents d'une personne restent les siens : elle ne voit que ses lectures et le savoir commun."""
-    return utilisateur is None or d["utilisateur"] in (utilisateur, AUTONOME)
+    return utilisateur is None or d["utilisateur"] in (utilisateur, AUTONOME, BIBLIOTHEQUE)
 
 
 def chercher(memoire, requete, n=5, utilisateur=None):

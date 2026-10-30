@@ -244,6 +244,20 @@ Avec une clé API, la rumination et l'étude des lacunes passent par le grand mo
 - **Fiscalité locale** : IS dû = max(IS proportionnel, cotisation minimale 0,25 % des produits, au moins
   3 000 DH) ; TVA due = collectée − déductible (ou crédit de TVA).
 
+## Mémoire de lecture : elle répond avec ce qu'elle a lu (`ia_aissa/lecture.py`)
+
+Chaque livre ou document lu (CGI, codes, cours…) est gardé **mot pour mot**, en passages de ~900 caractères, dans la
+base de données. Pour une question, un index BM25 retrouve les passages, elle cite les phrases exactes et le document
+(« D'après mes lectures : **CGI_2026.pdf** … »). Plusieurs éditions (CGI 2021, CGI 2026) : un extrait par document
+pour comparer, filtré sur les années de la question. Ses lectures passent avant les connaissances écrites dans son
+code, qui sont signalées « connaissance intégrée ». Les livres déposés par l'administrateur sont lus en entier
+(jusqu'à 3 000 pages) et deviennent un savoir commun, jamais oublié.
+
+**Tester ses apprentissages** (Administration → 📈 Apprentissage → 🧪) : l'examen de lecture tire 20 phrases de ses
+lectures, cache un mot-clé, et vérifie qu'elle retrouve le passage et le mot (le score est suivi dans le temps ; elle
+s'examine aussi seule chaque jour) ; vos propres questions de test avec la réponse attendue sont notées et gardées.
+⚠️ Sans `MEMOIRE_URL`, la mémoire de lecture est effacée à chaque redémarrage du serveur.
+
 ## Donner des livres à IA AISSA (sans clé API)
 
 Déposez un livre ou un cours **PDF ou EPUB** dans « 🌌 Cosmic Knowledge Ingestion » (ou par 📎 dans la conversation) :

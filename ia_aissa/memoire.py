@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, LargeBinary, MetaData, String, Table,
-                        Text, create_engine, delete, insert, select, update)
+                        Text, create_engine, delete, func, insert, select, update)
 
 FICHIER_LOCAL = Path(__file__).resolve().parent.parent / "memoire_ia_aissa.db"
 
@@ -97,7 +97,17 @@ idees = Table(
     Column("details", Text, nullable=False),               # débat et évolution (JSON)
     Column("cree_le", DateTime(timezone=True), nullable=False),
 )
-# Bibliothèque : concepts digérés à partir de pages web, de livres et de Wikipédia (jamais le texte complet)
+# Mémoire de lecture : les passages des livres et documents lus (pour retrouver la règle exacte, avec sa source)
+passages = Table(
+    "passages", meta,
+    Column("id", Integer, primary_key=True),
+    Column("utilisateur", String(80), index=True, nullable=False),
+    Column("source", String(500), index=True, nullable=False),
+    Column("numero", Integer, nullable=False),
+    Column("texte", Text, nullable=False),
+    Column("cree_le", DateTime(timezone=True), nullable=False),
+)
+# Bibliothèque : concepts digérés à partir de pages web, de livres et de Wikipédia
 digestions = Table(
     "digestions", meta,
     Column("id", Integer, primary_key=True),
@@ -326,6 +336,29 @@ class Memoire:
         return len(lignes), sum(1 for l in lignes if l.resolue)
 
     # ---------- Bibliothèque ----------
+    # ---------- Mémoire de lecture ----------
+    def garder_passages(self, utilisateur, source, textes):
+        """Range les passages d'un document (remplace une lecture précédente du même document)."""
+        with self.moteur.begin() as c:
+            c.execute(delete(passages).where(passages.c.source == source[:500], passages.c.utilisateur == utilisateur))
+            if textes:
+                quand = maintenant()
+                c.execute(insert(passages), [{"utilisateur": utilisateur, "source": source[:500], "numero": i,
+                                              "texte": t, "cree_le": quand} for i, t in enumerate(textes)])
+
+    def passages(self, utilisateurs=None):
+        requete = select(passages.c.id, passages.c.utilisateur, passages.c.source, passages.c.numero, passages.c.texte)
+        if utilisateurs is not None:
+            requete = requete.where(passages.c.utilisateur.in_(list(utilisateurs)))
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(requete.order_by(passages.c.id))]
+
+    def compter_passages(self):
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(
+                select(passages.c.source, passages.c.utilisateur, func.count().label("passages"))
+                .group_by(passages.c.source, passages.c.utilisateur))]
+
     def garder_digestion(self, utilisateur, source, famille, concepts, analogie, confiance):
         with self.moteur.begin() as c:
             c.execute(insert(digestions).values(utilisateur=utilisateur, source=source[:500], famille=famille,

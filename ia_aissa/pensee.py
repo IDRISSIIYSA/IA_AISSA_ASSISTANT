@@ -190,6 +190,15 @@ def bulletin(brut):
             f"_{p['remarque']}_")
 
 
+def evolution(texte):
+    """Une question sur l'évolution d'un impôt dans le temps : la clé de la chronologie connue, sinon None."""
+    t = texte.lower()
+    if not re.search(r"([ée]vol\w*tion|[ée]volu|historique|r[ée]forme|changement|a chang|depuis quand|chronologie)", t):
+        return None
+    return next((k for k, motif in (("tva", r"\btva\b|taxe sur la valeur"), ("is", r"\bis\b|impôt sur les sociétés"),
+                                    ("ir", r"\bir\b|impôt sur le revenu")) if re.search(motif, t)), None)
+
+
 def valeur_apres(texte, motif, portee=40):
     """Le premier nombre qui suit un mot-clé (à moins de 40 caractères) : « bénéfice de 500 000 dh » -> 500000."""
     m = re.search(motif, texte, re.I)
@@ -210,11 +219,6 @@ def calculer(texte):
             return f"**{expression.strip()} = {valeur:,.6g}**".replace(",", " "), ["Opération reconnue, calculée pas à pas."]
         except (ValueError, SyntaxError, ZeroDivisionError, TypeError):
             pass
-    if re.search(r"([ée]vol\w*tion|[ée]volu|historique|r[ée]forme|changement|a chang|depuis quand|chronologie)", t):
-        sujet = next((k for k, motif in (("tva", r"\btva\b|taxe sur la valeur"), ("is", r"\bis\b|impôt sur les sociétés"),
-                                          ("ir", r"\bir\b|impôt sur le revenu")) if re.search(motif, t)), None)
-        if sujet:
-            return K.EVOLUTIONS[sujet], ["Question sur une évolution dans le temps : je réponds par la chronologie."]
     annees = re.compile(r"(?<![\d.,])(19[5-9]\d|20[0-4]\d)(?![\d.,])")
     sans_annees = annees.sub(" ", t) if re.search(r"\b(de|à|a|en|depuis|entre|et|jusqu'à|année|annee|loi de finances)\s+"
                                                   r"(19|20)\d\d\b", t) else t
@@ -338,10 +342,23 @@ def penser(texte, memoire=None, conclusion=None, precedente=None, utilisateur=No
         if motif.search(texte) and len(texte.split()) <= 6:
             return reponse, ["Petite conversation reconnue."], 0.95
 
-    calcul = calculer(texte)
+    sujet_evolution = evolution(texte)
+    calcul = None if sujet_evolution else calculer(texte)
     if calcul:
         reponse, etapes = calcul
         return reponse, ["Je repère des chiffres et un calcul que je sais faire."] + etapes, 0.9
+
+    from .lecture import repondre_par_lecture
+    lu = repondre_par_lecture(texte, memoire, utilisateur)
+    if lu:                                             # ce qu'elle a lu passe avant ce qu'on lui a écrit
+        return ("D'après mes lectures :\n\n" + lu["reponse"],
+                [f"Je cherche dans ma mémoire de lecture : {len(lu['sources'])} document(s) répondent "
+                 f"({', '.join(lu['sources'][:4])}).", "Je cite les phrases exactes, avec leur source."], lu["confiance"])
+    if sujet_evolution:
+        return (K.EVOLUTIONS[sujet_evolution] + "\n\n_Connaissance intégrée : je ne l'ai pas encore trouvée dans mes "
+                "lectures (dépose-moi les textes officiels pour que je la vérifie)._",
+                ["Question sur une évolution dans le temps.", "Rien de proche dans mes lectures : chronologie intégrée."],
+                0.7)
 
     analogies = memoire_associative(memoire).chercher(texte, n=3)
     cerveaux = repondre_automatiquement(texte)
@@ -536,7 +553,7 @@ MAX_PASSAGES = 60               # au-delà, 60 passages répartis du début à l
 MAX_PAGES_LUES = 150            # très gros PDF : 150 pages réparties du début à la fin (mémoire vive ménagée)
 
 
-def lire_livre(chemin, nom):
+def lire_livre(chemin, nom, max_pages=MAX_PAGES_LUES):
     """Texte d'un PDF ou d'un EPUB lu sur le disque ; un très gros PDF est lu page par page, sur un échantillon
     régulier de pages, sans charger tout le fichier en mémoire. Renvoie (titre, texte, pages lues, pages totales)."""
     from .bibliotheque import texte_epub
@@ -547,12 +564,12 @@ def lire_livre(chemin, nom):
     from pypdf import PdfReader
     lecteur = PdfReader(chemin)
     total = len(lecteur.pages)
-    choisies = sorted({round(i * (total - 1) / max(1, MAX_PAGES_LUES - 1)) for i in range(min(total, MAX_PAGES_LUES))})
+    choisies = sorted({round(i * (total - 1) / max(1, max_pages - 1)) for i in range(min(total, max_pages))})
     titre = lecteur.metadata.title if lecteur.metadata and lecteur.metadata.title else ""
     return titre, "\n".join((lecteur.pages[i].extract_text() or "") for i in choisies), len(choisies), total
 
 
-def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None, source=None):
+def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None, source=None, max_pages=MAX_PAGES_LUES):
     """Lit un livre déjà sur le disque, le rumine avec sa pensée propre (sans clé API), range les concepts dans sa
     mémoire durable et une copie distillée dans data/aissa_memoire.json, puis SUPPRIME le fichier (os.remove).
     Renvoie le bilan ; lève ValueError si le livre n'a pas de texte (scan sans OCR)."""
@@ -560,7 +577,7 @@ def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None
     from datetime import datetime
     from .bibliotheque import TAILLE_MORCEAU, digerer
     try:
-        titre, texte, pages_lues, pages_total = lire_livre(chemin, nom)
+        titre, texte, pages_lues, pages_total = lire_livre(chemin, nom, max_pages)
     finally:
         if os.path.exists(chemin):
             os.remove(chemin)                         # le fichier source ne reste jamais sur le disque du serveur
@@ -569,6 +586,9 @@ def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None
         raise ValueError("ce livre n'a presque pas de texte : c'est sans doute un livre scanné (des images de pages). "
                          "Il faudrait d'abord le passer à la reconnaissance de caractères (OCR).")
     source = source or titre or nom
+    from .lecture import decouper
+    morceaux_lus = decouper(texte)
+    memoire.garder_passages(utilisateur, source, morceaux_lus)     # le texte lui-même : elle pourra le retrouver
     passages = -(-len(texte) // TAILLE_MORCEAU)
     bilan = digerer(memoire, None, None, source, texte, utilisateur, nb_bouchees=min(passages, MAX_PASSAGES))
     concepts = [c for d in bilan["digestions"] for c in d["concepts"]]
@@ -584,25 +604,26 @@ def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None
                     "familles": sorted({d["famille"] for d in bilan["digestions"]}), "concepts": concepts})
     fichier_json.write_text(json.dumps(archive, ensure_ascii=False, indent=1), encoding="utf-8")
     return {"source": source, "caracteres": len(texte), "passages_lus": bilan["bouchees"],
-            "passages_total": passages, "concepts": len(concepts),
-            "entier": bilan["bouchees"] >= passages and pages_lues >= pages_total,
+            "passages_total": passages, "concepts": len(concepts), "passages_gardes": len(morceaux_lus),
+            "entier": pages_lues >= pages_total,
             "pages_lues": pages_lues, "pages_total": pages_total, "lacunes_comblees": len(bilan["lacunes_comblees"])}
 
 
-def ingerer_pdf(memoire, nom, contenu, utilisateur="Aissa", fichier_json=None):
+def ingerer_pdf(memoire, nom, contenu, utilisateur="Aissa", fichier_json=None, max_pages=3000):
     """Un livre reçu en mémoire (dépôt) : écrit dans un fichier temporaire, lu, puis supprimé aussitôt."""
     import tempfile
     temporaire = tempfile.NamedTemporaryFile(suffix=Path(nom).suffix or ".pdf", delete=False)
     temporaire.write(contenu)
     temporaire.close()
-    return ingerer_fichier(memoire, temporaire.name, nom, utilisateur, fichier_json)
+    return ingerer_fichier(memoire, temporaire.name, nom, utilisateur, fichier_json, max_pages=max_pages)
 
 
 def confirmation_ingestion(bilan):
     """Le message de l'alien après un livre, en darija et en français, fidèle à ce qui a vraiment été lu."""
     if bilan["entier"]:
-        lu = (f"Klit lktab kamel w wssa3t l3alam dyali ! J'ai digéré tout le livre « {bilan['source']} » "
-              f"({bilan['passages_lus']} passages, {bilan['concepts']} concepts) et agrandi mon univers.")
+        lu = (f"Klit lktab kamel w wssa3t l3alam dyali ! J'ai lu tout le livre « {bilan['source']} » : "
+              f"{bilan.get('passages_gardes', bilan['passages_lus'])} passages gardés mot pour mot dans ma mémoire de "
+              f"lecture et {bilan['concepts']} concepts digérés.")
     else:
         pages = (f"{bilan['pages_lues']} pages sur {bilan['pages_total']}, " if bilan.get("pages_total", 1) > 1
                  and bilan.get("pages_lues", 1) < bilan["pages_total"] else "")

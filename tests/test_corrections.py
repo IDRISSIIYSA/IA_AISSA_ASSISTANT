@@ -406,3 +406,29 @@ def test_si_le_site_refuse_elle_cherche_ailleurs(labo, monkeypatch):
     bilan = LL.repas_de_livre(mem, b)
     assert bilan["source"] == "OpenStax — Principles of Management" and "403" in bilan["refus"][0]
     assert LL.repas_de_livre(mem, b)["source"] is None                       # tout est lu ou refusé : rien à refaire
+
+
+CGI_2021 = ("Article 98. Taux normal. Le taux normal de la taxe sur la valeur ajoutee est fixe a 20% pour toutes les "
+            "operations non soumises a un taux reduit. Article 99. Taux reduits. Sont soumises a la taxe sur la valeur "
+            "ajoutee au taux reduit de 7% avec droit a deduction les ventes d'eau et les produits pharmaceutiques. "
+            "Sont soumises au taux de 14% les prestations de transport et l'energie electrique. ")
+CGI_2026 = ("Article 98. Taux normal. Le taux normal de la taxe sur la valeur ajoutee est fixe a 20%. Article 99. Taux "
+            "reduit. Sont soumises a la taxe sur la valeur ajoutee au taux reduit de 10% avec droit a deduction "
+            "l'eau et l'energie electrique. Les taux de 7% et de 14% sont supprimes a compter du 1er janvier 2026. ")
+
+
+def test_elle_repond_avec_ce_qu_elle_a_lu_dans_le_cgi(labo, tmp_path):
+    from ia_aissa.lecture import examen_lecture, historique_examens
+    from ia_aissa.pensee import ingerer_pdf, penser
+    mem, _ = labo
+    for nom, texte in (("CGI_2021.pdf", CGI_2021 * 2), ("CGI_2026.pdf", CGI_2026 * 2)):
+        bilan = ingerer_pdf(mem, nom, _pdf_de_test(texte), "Bibliothèque", fichier_json=tmp_path / "m.json")
+        assert bilan["passages_gardes"] >= 1
+    reponse, etapes, _ = penser("QU IL EST LEVOLUSTION DE TVA AU MAROC DE 2021 A 2026", mem, utilisateur="Visiteur x")
+    assert reponse.startswith("D'après mes lectures") and "CGI_2021.pdf" in reponse and "CGI_2026.pdf" in reponse
+    assert "Connaissance intégrée" not in reponse                                   # ses lectures d'abord
+    seule = penser("quel est le taux de tva sur l'energie electrique en 2026 ?", mem, utilisateur="Visiteur x")[0]
+    assert "CGI_2026.pdf" in seule and "CGI_2021.pdf" not in seule and "10" in seule
+    assert "Connaissance intégrée" in penser("évolution de l'IS", mem)[0]           # rien lu sur l'IS : elle le dit
+    bilan = examen_lecture(mem, n=10)
+    assert bilan["questions"] > 0 and bilan["score"] >= 0.5 and historique_examens(mem)

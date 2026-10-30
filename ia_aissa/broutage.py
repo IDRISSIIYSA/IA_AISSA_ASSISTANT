@@ -261,6 +261,8 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
                     livre = repas_de_livre(memoire, brouteur)
                     ETAT["dernier_livre"] = {"quand": datetime.now(timezone.utc), "source": livre["source"],
                                              "concepts": livre["concepts"], "refus": livre["refus"]}
+                    from .lecture import examen_lecture
+                    ETAT["examen_lecture"] = examen_lecture(memoire)        # chaque jour, elle s'examine
                 except Exception as e:
                     ETAT["erreurs"] = (ETAT["erreurs"] + [f"livres — {type(e).__name__} : {str(e)[:100]}"])[-5:]
             try:                                       # rester sous le plafond de mémoire vive
