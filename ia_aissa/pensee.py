@@ -18,6 +18,8 @@ import collections
 import json
 import time
 from datetime import timezone
+
+import pandas as pd
 from pathlib import Path
 import math
 import operator
@@ -134,8 +136,9 @@ SUITE = re.compile(r"^\s*(ex\w*li\w*|e?xpli\w*|détaill\w*|detaill\w*|plus de d�
 # Calculs à partir des chiffres de la question
 # ==========================================
 # un nombre, suivi au plus d'une unité (k, mille, dh…) ; jamais les chiffres-lettres de la darija (rb7, 3la, 9al)
-NOMBRE = (r"(?<![^\W\d_])(\d[\d\s.,]*\d|\d)(?!(?!k\b|mille|alf|dhs?\b|mad\b|dirham|ألف)[^\W\d_])"
-          r"(\s*(k\b|mille|alf|ألف))?")
+# l'espace ne sépare les milliers que par groupes de trois chiffres (« 8 000 ») : « 30000 40000 » reste deux nombres
+NOMBRE = (r"(?<![^\W\d_])(\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d+)?(?!\d)|\d{1,3}(?:\.\d{3})+,\d+|\d{1,3}(?:\.\d{3}){2,}(?!\d)|\d+(?:[.,]\d+)?)"
+          r"(?!(?!k\b|mille|alf|dhs?\b|mad\b|dirham|ألف)[^\W\d_])(\s*(k\b|mille|alf|ألف))?")
 OPERATEURS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
               ast.Pow: operator.pow, ast.USub: operator.neg, ast.UAdd: operator.pos}
 
@@ -145,7 +148,7 @@ def nombres(texte):
     valeurs = []
     for m in re.finditer(NOMBRE, texte, re.I):
         brut = re.sub(r"\s", "", m.group(1))
-        if re.fullmatch(r"\d{1,3}(\.\d{3})+", brut):
+        if re.fullmatch(r"\d{1,3}(\.\d{3})+", brut) or ("." in brut and "," in brut):
             brut = brut.replace(".", "")
         brut = brut.replace(",", ".")
         try:
@@ -201,6 +204,82 @@ def evolution(texte):
                                     ("ir", r"\bir\b|impôt sur le revenu")) if re.search(motif, t)), None)
 
 
+def tableau_md(df, lignes=None):
+    """Un DataFrame en tableau markdown (les premières et dernières lignes si long)."""
+    if lignes and len(df) > lignes:
+        df = pd.concat([df.head(lignes // 2), df.tail(lignes - lignes // 2)])
+    entetes = "| " + " | ".join(df.columns) + " |\n|" + "---|" * len(df.columns)
+    corps = "\n".join("| " + " | ".join(f"{v:,.2f}".replace(",", " ").replace(".00", "") if isinstance(v, float)
+                                          else str(v) for v in ligne) + " |" for ligne in df.itertuples(index=False))
+    return entetes + "\n" + corps
+
+
+def simuler(t, valeurs):
+    """Les simulations demandées en toutes lettres : crédit, épargne, amortissement, investissement, prix, auto-entrepreneur."""
+    from . import simulations as S
+    pourcents = [float(x.replace(",", ".")) for x in re.findall(r"(\d+(?:[.,]\d+)?)\s*%", t)]
+    duree = re.search(r"(\d+)\s*(ans?|années?|annees?|mois)\b", t)
+    mois = (int(duree.group(1)) * (1 if duree.group(2).startswith("mois") else 12)) if duree else None
+    if re.search(r"(échéancier|echeancier|tableau d.amortissement|amortissement (du|d.un|de mon) (crédit|credit|prêt|pret|emprunt))", t) \
+            and valeurs and pourcents and mois:
+        e = S.echeancier_credit(max(valeurs), pourcents[0] / 100, mois)
+        return (f"**Crédit de {montant(max(valeurs))} à {pourcents[0]:g} % sur {mois} mois** : mensualité "
+                f"**{montant(e['mensualite'])}**, coût total des intérêts {montant(e['cout_total'])}, total remboursé "
+                f"{montant(e['total_rembourse'])}.\n\n" + tableau_md(e["tableau"], 8),
+                ["Simulation de crédit : échéancier à mensualités constantes."])
+    if re.search(r"(épargn|epargn|économiser|economiser|placer|placement|intérêts composés|interets composes)", t) \
+            and valeurs and pourcents and duree:
+        versement = min(v for v in valeurs if v not in pourcents and v != int(duree.group(1))) if len(valeurs) > 2 else max(valeurs)
+        annees = mois // 12 or 1
+        e = S.epargne(versement, pourcents[0] / 100, annees)
+        return (f"**Épargne de {montant(versement)} par mois à {pourcents[0]:g} % pendant {annees} an(s)** : capital "
+                f"**{montant(e['capital_final'])}**, dont {montant(e['total_verse'])} versés et "
+                f"{montant(e['interets'])} d'intérêts.\n\n" + tableau_md(e["tableau"], 10),
+                ["Simulation d'épargne : intérêts composés chaque mois."])
+    if re.search(r"amortissement|amortir", t) and re.search(r"(dégressif|degressif|linéaire|lineaire|machine|matériel|"
+                                                             r"materiel|véhicule|vehicule|immobilisation|ordinateur)", t) \
+            and valeurs and duree:
+        methode = "degressif" if re.search(r"d[ée]gressif", t) else "lineaire"
+        a = S.amortissement(max(valeurs), int(duree.group(1)), methode)
+        tete = (f"**Amortissement {('dégressif (coefficient ' + str(a['coefficient']) + ')') if methode == 'degressif' else 'linéaire'}"
+                f" de {montant(max(valeurs))} sur {duree.group(1)} ans**")
+        return tete + " :\n\n" + tableau_md(a["tableau"]), ["Plan d'amortissement selon les règles marocaines."]
+    if re.search(r"(\btri\b|taux de rentabilité interne|van\b|valeur actuelle nette|rentabilité d.un (projet|investissement)|"
+                 r"délai de récupération)", t) and len(valeurs) >= 3:
+        taux = (pourcents[0] / 100) if pourcents else 0.1
+        nombres_sans_taux = [v for v in valeurs if v not in pourcents]
+        investissement, flux = nombres_sans_taux[0], nombres_sans_taux[1:]
+        r = S.rentabilite_investissement(investissement, flux, taux)
+        tri = f"{r['tri']:.1%}" if r["tri"] is not None else "non calculable"
+        return (f"**Investissement de {montant(investissement)}**, flux {', '.join(montant(f) for f in flux)}, taux "
+                f"d'actualisation {taux:.0%} : **VAN {montant(r['van'])}**, **TRI {tri}**, délai de récupération "
+                f"{r['delai_recuperation_ans']} an(s) → {r['decision']}.",
+                ["Simulation d'investissement : VAN, TRI (dichotomie), délai de récupération."])
+    if re.search(r"prix de vente", t) and valeurs and pourcents:
+        cout = max(v for v in valeurs if v not in pourcents)
+        if re.search(r"(taux de )?marque", t):
+            p = S.prix_de_vente(cout, taux_de_marque=pourcents[0] / 100)
+        else:
+            p = S.prix_de_vente(cout, taux_marge_sur_cout=pourcents[0] / 100)
+        return (f"Coût de revient {montant(cout)} → **prix de vente HT {montant(p['prix_ht'])}** (TTC "
+                f"{montant(p['prix_ttc'])}), marge {montant(p['marge'])} : taux de marge {p['taux_de_marge']:.1%}, "
+                f"taux de marque {p['taux_de_marque']:.1%}.", ["Simulation de prix : marge sur coût ou sur prix."])
+    if re.search(r"auto[- ]?entrepreneur", t) and valeurs:
+        a = S.auto_entrepreneur(max(valeurs), "commerce" if re.search(r"commerc|industr|artisan", t) else "services")
+        return (f"Auto-entrepreneur ({a['activite']}), chiffre d'affaires {montant(max(valeurs))} : **impôt "
+                f"{montant(a['impot'])}** ({a['taux']:.1%})."
+                + (f" ⚠️ Au-delà du plafond de {montant(a['plafond'])} : le régime ne s'applique plus."
+                   if a["depasse_le_plafond"] else ""), ["Simulation auto-entrepreneur."])
+    if re.search(r"(simulation|simuler|simulateur)s?\b", t) and not valeurs:
+        lignes = "\n".join(f"- {icone} **{nom}** : {detail}" for icone, nom, detail in S.CATALOGUE)
+        texte = ("Je sais faire toutes ces simulations — écris-moi les chiffres, ou ouvre le panneau « 🧮 Simulations » :\n\n"
+                 + lignes + "\n\nExemples : « échéancier crédit 200000 dh à 5% sur 10 ans », « épargne 500 dh par mois "
+                 "à 4% pendant 10 ans », « amortissement dégressif machine 100000 dh 5 ans », « TRI investissement "
+                 "100000 flux 30000 40000 50000 20000 à 8% », « prix de vente coût 80 dh taux de marque 20% ».")
+        return texte, ["Tu me demandes quelles simulations je sais faire."]
+    return None
+
+
 def valeur_apres(texte, motif, portee=40):
     """Le premier nombre qui suit un mot-clé (à moins de 40 caractères) : « bénéfice de 500 000 dh » -> 500000."""
     m = re.search(motif, texte, re.I)
@@ -225,6 +304,9 @@ def calculer(texte):
     sans_annees = annees.sub(" ", t) if re.search(r"\b(de|à|a|en|depuis|entre|et|jusqu'à|année|annee|loi de finances)\s+"
                                                   r"(19|20)\d\d\b", t) else t
     valeurs = [v for v in nombres(sans_annees) if v > 0]
+    simulation = simuler(t, valeurs)
+    if simulation:
+        return simulation
     if re.search(r"bulletin de (paie|salaire)|fiche de paie|fiche de salaire", t):
         brut = max(valeurs) if valeurs else 8000.0
         return (f"Bulletin de paie simulé (Maroc) pour un salaire brut mensuel de **{montant(brut)}**"

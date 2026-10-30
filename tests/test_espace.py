@@ -257,3 +257,35 @@ def test_un_extrait_de_lecture_doit_partager_plusieurs_vrais_mots(tmp_path):
     mem.garder_passages("IA AISSA", "OpenStax — Principles of Management", [
         "Finding the optimal balance between organizational and personal control is not an easy task for managers."])
     assert repondre_par_lecture("la balance commerciale du Maroc", mem) is None             # « balance » seul : non
+
+
+def test_toutes_les_simulations(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa import simulations as S
+    from ia_aissa.pensee import nombres, penser
+    e = S.echeancier_credit(200_000, 0.05, 120)
+    assert e["mensualite"] == 2121.31 and e["tableau"]["Capital restant dû"].iloc[-1] == 0
+    assert S.epargne(500, 0.04, 10)["capital_final"] == 73624.9
+    assert S.amortissement(100_000, 5, "degressif")["tableau"]["Dotation"].tolist() == [40000, 24000, 14400, 10800, 10800]
+    r = S.rentabilite_investissement(100_000, [30_000, 40_000, 50_000, 20_000], 0.08)
+    assert r["van"] > 0 and abs(r["tri"] - 0.1532) < 0.001 and r["delai_recuperation_ans"] == 2.6
+    assert S.prix_de_vente(80, taux_de_marque=0.2)["prix_ht"] == 100
+    assert S.tresorerie(10_000, [20_000] * 3, [25_000, 26_000, 10_000])["premier_mois_a_decouvert"] == 2
+    assert 0 < S.risque_monte_carlo(800_000, 1_200_000, 0.55, 0.7, 350_000)["probabilite_de_perte"] < 1
+    assert nombres("flux 30000 40000 50000 20000") == [30000, 40000, 50000, 20000]
+    assert nombres("6 459,87 et 1.234,56") == [6459.87, 1234.56]
+    assert "TRI 15.3%" in penser("TRI investissement 100000 flux 30000 40000 50000 20000 à 8%")[0]
+    assert "2 121.31" in penser("échéancier crédit 200000 dh à 5% sur 10 ans")[0]
+    assert "Monte-Carlo" in penser("quelles simulations sais-tu faire ?")[0]
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+
+    def page():
+        from ia_aissa.interface import panneau_simulations
+        panneau_simulations()
+
+    at = AppTest.from_function(page, default_timeout=300).run()
+    options = at.selectbox(key="sim_choix").options
+    assert len(options) == len(S.CATALOGUE)
+    for option in options:
+        at.selectbox(key="sim_choix").set_value(option).run()
+        assert not at.exception, option

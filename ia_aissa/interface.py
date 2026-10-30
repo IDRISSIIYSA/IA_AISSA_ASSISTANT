@@ -850,19 +850,169 @@ def simulateur_de_paie():
     """Simulateur de paie simple pour les clients : brut ou net, et l'essentiel en un coup d'œil (barème 2026)."""
     from . import connaissances as K
     from .pensee import bulletin
-    with st.expander("💼 Simulateur de paie (CNSS · AMO · IR · Net)"):
-        c1, c2 = st.columns([1.2, 1])
-        sens = c1.radio("Je connais", ["le salaire brut", "le salaire net"], horizontal=True, key="paie_sens")
-        montant = c2.number_input("Montant mensuel (DH)", min_value=0.0, value=8000.0, step=500.0, key="paie_montant")
-        brut = K.brut_pour_net(montant) if sens == "le salaire net" else montant
-        p = K.calculer_paie(brut)
-        colonnes = st.columns(5)
-        for col, (libelle, valeur) in zip(colonnes, [("Brut", brut), ("CNSS", p["cnss_salarie"]), ("AMO", p["amo_salarie"]),
-                                                     ("IR", p["ir"]), ("Net", p["salaire_net"])]):
-            col.metric(libelle, f"{valeur:,.0f} DH".replace(",", " "))
-        st.caption(f"Coût pour l'employeur : {brut + p['charges_patronales']:,.0f} DH par mois".replace(",", " "))
-        with st.popover("📄 Bulletin détaillé"):
-            st.markdown(bulletin(brut))
+    c1, c2 = st.columns([1.2, 1])
+    sens = c1.radio("Je connais", ["le salaire brut", "le salaire net"], horizontal=True, key="paie_sens")
+    montant = c2.number_input("Montant mensuel (DH)", min_value=0.0, value=8000.0, step=500.0, key="paie_montant")
+    brut = K.brut_pour_net(montant) if sens == "le salaire net" else montant
+    p = K.calculer_paie(brut)
+    colonnes = st.columns(5)
+    for col, (libelle, valeur) in zip(colonnes, [("Brut", brut), ("CNSS", p["cnss_salarie"]), ("AMO", p["amo_salarie"]),
+                                                 ("IR", p["ir"]), ("Net", p["salaire_net"])]):
+        col.metric(libelle, f"{valeur:,.0f} DH".replace(",", " "))
+    st.caption(f"Coût pour l'employeur : {brut + p['charges_patronales']:,.0f} DH par mois".replace(",", " "))
+    with st.popover("📄 Bulletin détaillé"):
+        st.markdown(bulletin(brut))
+
+
+def dh(v):
+    return f"{v:,.0f} DH".replace(",", " ")
+
+
+def panneau_simulations():
+    """Toutes les simulations, au même endroit, pour les visiteurs."""
+    from . import connaissances as K
+    from . import simulations as S
+    with st.expander("🧮 Simulations (paie, crédit, épargne, investissement, impôts, risque…)"):
+        choix = st.selectbox("Simulation", [f"{i} {n} — {d}" for i, n, d in S.CATALOGUE], key="sim_choix",
+                             label_visibility="collapsed")
+        nom = choix.split(" ", 1)[1].split(" — ")[0]
+        c = st.columns(3)
+        if nom == "Paie":
+            simulateur_de_paie()
+        elif nom == "Crédit":
+            capital = c[0].number_input("Capital (DH)", 0.0, value=200_000.0, step=10_000.0, key="sim_cap")
+            taux = c[1].number_input("Taux annuel (%)", 0.0, 30.0, 5.0, 0.1, key="sim_taux") / 100
+            ans = c[2].number_input("Durée (ans)", 1, 30, 10, key="sim_ans")
+            e = S.echeancier_credit(capital, taux, ans * 12)
+            m = st.columns(3)
+            m[0].metric("Mensualité", dh(e["mensualite"]))
+            m[1].metric("Coût des intérêts", dh(e["cout_total"]))
+            m[2].metric("Total remboursé", dh(e["total_rembourse"]))
+            st.line_chart(e["tableau"].set_index("Mois")[["Capital restant dû"]])
+            st.dataframe(e["tableau"], hide_index=True, width="stretch", height=240)
+        elif nom == "Épargne":
+            versement = c[0].number_input("Versement mensuel (DH)", 0.0, value=500.0, step=100.0, key="sim_ver")
+            taux = c[1].number_input("Rendement annuel (%)", 0.0, 20.0, 4.0, 0.1, key="sim_rend") / 100
+            ans = c[2].number_input("Durée (ans)", 1, 50, 10, key="sim_ep_ans")
+            e = S.epargne(versement, taux, ans)
+            m = st.columns(3)
+            m[0].metric("Capital final", dh(e["capital_final"]))
+            m[1].metric("Total versé", dh(e["total_verse"]))
+            m[2].metric("Intérêts gagnés", dh(e["interets"]))
+            st.area_chart(e["tableau"].set_index("Année")[["Total versé", "Intérêts gagnés"]])
+        elif nom == "Amortissement":
+            valeur = c[0].number_input("Valeur d'acquisition HT (DH)", 0.0, value=100_000.0, step=5_000.0, key="sim_val")
+            ans = c[1].number_input("Durée (ans)", 1, 40, 5, key="sim_am_ans")
+            methode = c[2].radio("Méthode", ["lineaire", "degressif"], format_func=str.capitalize, key="sim_meth")
+            a = S.amortissement(valeur, ans, methode)
+            if methode == "degressif":
+                st.caption(f"Coefficient {a['coefficient']} → taux {a['taux']:.1%} ; passage au linéaire quand il devient plus favorable.")
+            st.dataframe(a["tableau"], hide_index=True, width="stretch")
+        elif nom == "Investissement":
+            investissement = c[0].number_input("Investissement (DH)", 0.0, value=100_000.0, step=10_000.0, key="sim_inv")
+            taux = c[1].number_input("Taux d'actualisation (%)", 0.0, 50.0, 8.0, 0.5, key="sim_act") / 100
+            flux = c[2].text_input("Flux annuels (DH, séparés par ;)", "30000; 40000; 50000; 20000", key="sim_flux")
+            try:
+                liste = [float(x.replace(" ", "").replace(",", ".")) for x in flux.split(";") if x.strip()]
+                r = S.rentabilite_investissement(investissement, liste, taux)
+                m = st.columns(3)
+                m[0].metric("VAN", dh(r["van"]))
+                m[1].metric("TRI", f"{r['tri']:.1%}" if r["tri"] is not None else "—")
+                m[2].metric("Récupération", f"{r['delai_recuperation_ans']} an(s)" if r["delai_recuperation_ans"] else "jamais")
+                st.caption(r["decision"])
+            except ValueError:
+                st.error("Écris les flux comme ceci : 30000; 40000; 50000")
+        elif nom == "Seuil de rentabilité":
+            prix = c[0].number_input("Prix de vente unitaire", 0.0, value=100.0, key="sim_px")
+            cv = c[1].number_input("Coût variable unitaire", 0.0, value=60.0, key="sim_cv")
+            cf = c[2].number_input("Charges fixes annuelles", 0.0, value=200_000.0, step=10_000.0, key="sim_cf")
+            r = K.seuil_rentabilite(prix, cv, cf)
+            if r.get("seuil_en_quantite") is None:
+                st.error(r["remarque"])
+            else:
+                m = st.columns(2)
+                m[0].metric("Seuil (unités)", f"{r['seuil_en_quantite']:,.0f}".replace(",", " "))
+                m[1].metric("Seuil (chiffre d'affaires)", dh(r["seuil_en_chiffre_affaires"]))
+        elif nom == "Prix de vente":
+            cout = c[0].number_input("Coût de revient (DH)", 0.0, value=80.0, key="sim_cout")
+            base = c[1].radio("Je fixe", ["un taux de marge (sur coût)", "un taux de marque (sur prix)"], key="sim_base")
+            taux = c[2].number_input("Taux (%)", 0.0, 99.0, 25.0, key="sim_tm") / 100
+            p = S.prix_de_vente(cout, taux_de_marque=taux) if "marque" in base else S.prix_de_vente(cout, taux_marge_sur_cout=taux)
+            m = st.columns(3)
+            m[0].metric("Prix HT", f"{p['prix_ht']:,.2f} DH".replace(",", " "))
+            m[1].metric("Prix TTC (20 %)", f"{p['prix_ttc']:,.2f} DH".replace(",", " "))
+            m[2].metric("Marge", f"{p['marge']:,.2f} DH".replace(",", " "))
+            st.caption(f"Taux de marge {p['taux_de_marge']:.1%} · taux de marque {p['taux_de_marque']:.1%}")
+        elif nom == "Trésorerie":
+            solde = c[0].number_input("Solde de départ (DH)", value=50_000.0, step=5_000.0, key="sim_solde")
+            enc = c[1].text_input("Encaissements des 12 mois (;)", "80000; 60000; 90000; 70000; 85000; 60000; "
+                                                                    "95000; 70000; 80000; 90000; 75000; 100000", key="sim_enc")
+            dec = c[2].text_input("Décaissements des 12 mois (;)", "90000; 85000; 80000; 75000; 80000; 85000; "
+                                                                    "80000; 90000; 75000; 80000; 85000; 80000", key="sim_dec")
+            try:
+                lire = lambda t: [float(x.replace(" ", "").replace(",", ".")) for x in t.split(";") if x.strip()]
+                r = S.tresorerie(solde, lire(enc), lire(dec))
+                m = st.columns(3)
+                m[0].metric("Solde final", dh(r["solde_final"]))
+                m[1].metric("Solde le plus bas", dh(r["solde_minimum"]))
+                m[2].metric("Premier mois à découvert", r["premier_mois_a_decouvert"] or "aucun")
+                st.bar_chart(r["tableau"].set_index("Mois")[["Solde fin de mois"]])
+            except ValueError:
+                st.error("Écris les montants comme ceci : 80000; 60000; 90000")
+        elif nom == "Risque (Monte-Carlo)":
+            ca = st.slider("Chiffre d'affaires possible (DH)", 0, 5_000_000, (800_000, 1_200_000), 50_000, key="sim_ca")
+            tcv = st.slider("Coûts variables (% du chiffre d'affaires)", 0, 100, (55, 70), key="sim_tcv")
+            cf = st.number_input("Charges fixes (DH)", 0.0, value=350_000.0, step=10_000.0, key="sim_mc_cf")
+            r = S.risque_monte_carlo(ca[0], ca[1], tcv[0] / 100, tcv[1] / 100, cf)
+            m = st.columns(3)
+            m[0].metric("Probabilité de perte", f"{r['probabilite_de_perte']:.0%}")
+            m[1].metric("Résultat moyen", dh(r["resultat_moyen"]))
+            m[2].metric("Fourchette 90 %", f"{dh(r['p5'])} à {dh(r['p95'])}")
+            st.bar_chart(pd.Series(r["resultats"]).value_counts(bins=30, sort=False).rename("Simulations")
+                         .set_axis([f"{i.mid:,.0f}".replace(",", " ") for i in
+                                    pd.Series(r["resultats"]).value_counts(bins=30, sort=False).index]))
+            st.caption(f"{r['simulations']:,} tirages au hasard dans les fourchettes (lois uniformes).".replace(",", " "))
+        elif nom == "Impôts":
+            impot = c[0].radio("Impôt", ["TVA", "IS", "IR"], key="sim_impot")
+            if impot == "TVA":
+                coll = c[1].number_input("TVA collectée", 0.0, value=50_000.0, key="sim_coll")
+                ded = c[2].number_input("TVA déductible", 0.0, value=30_000.0, key="sim_ded")
+                r = K.calculer_tva_due(coll, ded)
+                st.metric("TVA due" if r["tva_due"] else "Crédit de TVA", dh(r["tva_due"] or r["credit_de_tva"]))
+            elif impot == "IS":
+                ben = c[1].number_input("Résultat fiscal (DH)", value=500_000.0, step=10_000.0, key="sim_ben")
+                prod = c[2].number_input("Produits / CA (DH)", 0.0, value=3_000_000.0, step=100_000.0, key="sim_prod")
+                r = K.calculer_is_du(ben, prod)
+                m = st.columns(3)
+                m[0].metric("IS proportionnel", dh(r["is"]))
+                m[1].metric("Cotisation minimale", dh(r["cotisation_minimale"]))
+                m[2].metric("IS dû", dh(r["is_du"]))
+            else:
+                rev = c[1].number_input("Revenu net imposable annuel", 0.0, value=120_000.0, step=5_000.0, key="sim_rev")
+                r = K.calculer_ir(rev)
+                m = st.columns(3)
+                m[0].metric("IR annuel", dh(r["ir_annuel"]))
+                m[1].metric("IR mensuel", dh(r["ir_mensuel"]))
+                m[2].metric("Taux moyen", f"{r['taux_moyen']:.1%}")
+        elif nom == "Auto-entrepreneur":
+            ca = c[0].number_input("Chiffre d'affaires annuel (DH)", 0.0, value=150_000.0, step=10_000.0, key="sim_ae")
+            act = c[1].radio("Activité", ["services", "commerce"], key="sim_act_ae")
+            r = S.auto_entrepreneur(ca, act)
+            c[2].metric("Impôt", dh(r["impot"]))
+            if r["depasse_le_plafond"]:
+                st.warning(f"Au-delà du plafond de {dh(r['plafond'])} : le régime ne s'applique plus.")
+        elif nom == "Douane":
+            caf = c[0].number_input("Valeur CAF (DH)", 0.0, value=100_000.0, step=5_000.0, key="sim_caf")
+            di = c[1].number_input("Droit d'importation (%)", 0.0, 200.0, 17.5, key="sim_di") / 100
+            r = K.calculer_droits_import(caf, di)
+            c[2].metric("Coût dédouané", dh(r["cout_total_dedouane"]))
+            st.caption(f"Droit {dh(r['droit_importation'])} · TVA à l'import {dh(r['tva_import'])}. {r['remarque']}")
+        elif nom == "Stock":
+            d = c[0].number_input("Demande annuelle (unités)", 0.0, value=12_000.0, key="sim_dem")
+            cp = c[1].number_input("Coût d'une commande (DH)", 0.0, value=500.0, key="sim_cp")
+            cs = c[2].number_input("Coût de stockage / unité / an", 0.01, value=2.0, key="sim_cs")
+            r = K.quantite_wilson(d, cp, cs)
+            st.write(" · ".join(f"**{k.replace('_', ' ')}** : {v}" for k, v in r.items()))
 
 
 def ingestion_de_livres(utilisateur):
@@ -935,6 +1085,8 @@ espace_unique = application             # ancien nom
 
 
 def espace_visiteur():
+    if "admin" in st.query_params and PAGE_ADMIN is not None:   # https://…/?admin : chemin de secours vers /admin
+        st.switch_page(PAGE_ADMIN)
     utilisateur = identite_visiteur()
     mem = memoire()
     if "affichage" not in st.session_state:
@@ -959,7 +1111,9 @@ def espace_visiteur():
         st.session_state["parole"] = {"texte": texte, "audio": _dire(salut, "Darija"), "voix": "ar-MA",
                                       "nouveau": True}
 
-    simulateur_de_paie()
+    panneau_simulations()
+    if PAGE_ADMIN is not None:
+        st.page_link(PAGE_ADMIN, label="🛡️ Administration (réservée)")
 
     if not st.session_state["affichage"]:
         st.markdown('<p class="astuce">🎙️ Appuie sur le micro bleu pour parler · ✅ pour envoyer ta voix · '

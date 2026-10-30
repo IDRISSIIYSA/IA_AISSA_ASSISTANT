@@ -19,7 +19,7 @@ et espagnol, à l'écrit comme à l'oral.
 
 **Créer le compte administrateur** : ajoutez d'abord dans Streamlit Cloud (Settings → Secrets) `ADMIN_CODE = "…"`
 (un code secret à vous) et `MEMOIRE_URL = "postgresql://…"` (sinon tout est effacé à chaque redémarrage), puis
-ouvrez `/admin` : le code est demandé à la création, pour que personne d'autre ne puisse se déclarer administrateur.
+ouvrez `/admin` (ou le lien « 🛡️ Administration » en bas de l'accueil, ou `?admin`) : le code est demandé à la création, pour que personne d'autre ne puisse se déclarer administrateur.
 
 L'administration ne montre jamais le contenu des conversations des visiteurs, seulement des comptes. Les corrections
 d'un visiteur (« non, c'est … ») n'entrent dans les cerveaux qu'après validation, pour qu'on ne puisse pas lui
@@ -290,6 +290,14 @@ Sur Streamlit Cloud, le disque du serveur est effacé à chaque redémarrage : l
 Les livres et documents déposés par une personne ne servent qu'à elle : la bibliothèque, la pensée propre,
 l'assistante et l'atelier d'invention ne cherchent que dans ses documents et dans le savoir commun lu seule sur le
 web. (Les données sont dans la base `MEMOIRE_URL` ; leur chiffrement au repos dépend de l'hébergeur de la base.)
+
+### Simulations (`ia_aissa/simulations.py`)
+Panneau « 🧮 Simulations » et questions en toutes lettres : paie (brut ↔ net), crédit (échéancier), épargne
+(intérêts composés), amortissement linéaire ou dégressif (coefficients 1,5 / 2 / 3), investissement (VAN, TRI,
+délai de récupération), seuil de rentabilité, prix de vente (taux de marge / de marque), trésorerie sur 12 mois,
+risque de perte (Monte-Carlo, 10 000 tirages), impôts (TVA due, IS avec cotisation minimale, IR),
+auto-entrepreneur, droits de douane, stock (Wilson). Exemples : « échéancier crédit 200000 dh à 5% sur 10 ans »,
+« TRI investissement 100000 flux 30000 40000 50000 20000 à 8% ».
 
 ### Simulateur de paie
 « 💼 Simulateur de paie » : brut ou net, et en un coup d'œil brut, CNSS, AMO, IR, net, coût employeur
