@@ -999,10 +999,12 @@ def espace_visiteur():
         choix = st.session_state.get("mode_bouton")
         if choix == MODES[0]:
             st.session_state.pop("simulation", None)
+            st.session_state["sim_liste"] = None
         if choix in MODES:
             st.session_state["mode_visiteur"] = choix
 
-    st.session_state["mode_bouton"] = st.session_state["mode_visiteur"]
+    if st.session_state.get("mode_bouton") != st.session_state["mode_visiteur"]:   # seulement si elle doit changer
+        st.session_state["mode_bouton"] = st.session_state["mode_visiteur"]
     with zone_mode:
         st.segmented_control("Que veux-tu faire ?", MODES, key="mode_bouton", on_change=basculer,
                              label_visibility="collapsed", width="stretch")

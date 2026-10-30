@@ -67,19 +67,26 @@ def barre_laterale():
             st.session_state["simulation"] = toutes[libelles.index(choix)][1]
             st.session_state["mode_visiteur"] = MODES[1]
 
+    def fermer():
+        st.session_state.pop("simulation", None)
+        st.session_state["sim_liste"] = None
+        st.session_state["mode_visiteur"] = MODES[0]
+
     actuelle = st.session_state.get("simulation")
-    st.session_state["sim_liste"] = next((l for l, (_, n) in zip(libelles, toutes) if n == actuelle), None)
+    attendu = next((l for l, (_, n) in zip(libelles, toutes) if n == actuelle), None)
+    # N'écrire la valeur de la liste que si elle doit changer : la réécrire à chaque affichage effaçait un choix
+    # fait pendant qu'une relance automatique (coffre de l'appareil) était en cours
+    if attendu and st.session_state.get("sim_liste") != attendu:
+        st.session_state["sim_liste"] = attendu
     with st.sidebar:
         st.markdown("## 🧮 Simulations")
         st.caption(f"{len(toutes)} simulations et guides, classés par type. Résultats justifiés (lois, articles, année, "
                    "taux) et rapport PDF traçable.")
         st.caption(" · ".join(categorie for categorie in CATEGORIES))
-        st.selectbox("Choisir une simulation", libelles, key="sim_liste", on_change=choisir,
+        st.selectbox("Choisir une simulation", libelles, index=None, key="sim_liste", on_change=choisir,
                      placeholder="🔎 Choisir ou taper (paie, crédit, TVA…)", label_visibility="collapsed")
-        if actuelle and st.button("✖ Fermer la simulation", width="stretch"):
-            st.session_state.pop("simulation")
-            st.session_state["mode_visiteur"] = MODES[0]
-            st.rerun()
+        if actuelle:
+            st.button("✖ Fermer la simulation", width="stretch", on_click=fermer)
     return st.session_state.get("simulation")
 
 
@@ -91,8 +98,9 @@ def choix_principal():
     listes suivent toujours la simulation en cours (choisie ici ou dans la barre latérale)."""
     actuelle = st.session_state.get("simulation") or next(iter(CATEGORIES.values()))[0]
     st.session_state["simulation"] = actuelle
-    st.session_state["choix_type"] = categorie_de(actuelle)
-    st.session_state["choix_sim"] = actuelle
+    for cle, valeur in (("choix_type", categorie_de(actuelle)), ("choix_sim", actuelle)):
+        if st.session_state.get(cle) != valeur:            # seulement si elle doit changer (voir barre_laterale)
+            st.session_state[cle] = valeur
 
     def changer_type():
         st.session_state["simulation"] = CATEGORIES[st.session_state["choix_type"]][0]
