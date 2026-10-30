@@ -77,45 +77,47 @@ STYLE = """<style>
     background: rgba(255,255,255,.85) !important; box-shadow: 0 2px 10px rgba(14,165,233,.15); }
   [data-testid="stCaptionContainer"] { color: #475569 !important; }
 
-  /* ---------- Barre de conversation : boutons en 3D, grands et lisibles ---------- */
-  [data-testid="stChatInput"] { border-radius: 28px !important; background: rgba(255,255,255,.95) !important;
-                                border: 1px solid rgba(14,165,233,.5) !important;
-                                box-shadow: 0 0 0 1px rgba(14,165,233,.10), 0 8px 26px rgba(30,64,175,.12) !important;
-                                transition: box-shadow .3s, border-color .3s; }
-  [data-testid="stChatInput"]:focus-within { box-shadow: 0 0 0 3px rgba(14,165,233,.28), 0 8px 30px rgba(14,165,233,.22) !important; }
-  [data-testid="stChatInputTextArea"] { color: #0f172a !important; }
-  [data-testid="stChatInputTextArea"] { font-size: 16.5px !important; }
+  /* ---------- Barre de conversation : verre dépoli, contour cosmique, boutons nets ---------- */
+  [data-testid="stBottom"] > div { background: linear-gradient(to top, rgba(247,249,255,.97) 55%, rgba(247,249,255,0)) !important; }
+  [data-testid="stChatInput"] {
+    border-radius: 26px !important; border: 1.5px solid transparent !important; padding: 4px 6px !important;
+    background: linear-gradient(rgba(255,255,255,.92), rgba(255,255,255,.92)) padding-box,
+                linear-gradient(120deg, #38bdf8, #6366f1 45%, #a855f7) border-box !important;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(79,70,229,.14), 0 2px 6px rgba(15,23,42,.06) !important;
+    transition: box-shadow .25s ease, transform .25s ease; }
+  /* le cadre intérieur de Streamlit (fond bleuté, contour au focus) disparaît : un seul contour, le cosmique */
+  [data-testid="stChatInput"] > div, [data-testid="stChatInput"] > div:focus-within, [data-testid="stChatInput"] > div:hover {
+    background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+  [data-testid="stChatInput"]:focus-within {
+    box-shadow: 0 0 0 4px rgba(99,102,241,.16), 0 14px 36px rgba(79,70,229,.24) !important; transform: translateY(-1px); }
+  [data-testid="stChatInputTextArea"] { color: #0f172a !important; font-size: 16.5px !important; caret-color: #6366f1; }
+  [data-testid="stChatInputTextArea"]::placeholder { color: #94a3b8 !important; }
   [data-testid="stChatInputMicButton"], [data-testid="stChatInputSubmitButton"],
   [data-testid="stChatInputApproveButton"], [data-testid="stChatInputCancelButton"],
   [data-testid="stChatInputFileUploadButton"] button {
-    width: 48px !important; height: 48px !important; min-width: 48px !important; border-radius: 50% !important;
-    border: none !important; color: #fff !important; margin: 0 3px !important; position: relative;
-    box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 10px 18px rgba(15,23,42,.28),
-                inset 0 2px 3px rgba(255,255,255,.55), inset 0 -4px 6px rgba(0,0,0,.22) !important;
-    transition: transform .12s, box-shadow .12s, filter .2s;
-  }
-  [data-testid="stChatInputMicButton"] svg, [data-testid="stChatInputSubmitButton"] svg,
-  [data-testid="stChatInputApproveButton"] svg, [data-testid="stChatInputCancelButton"] svg,
-  [data-testid="stChatInputFileUploadButton"] button svg { width: 24px !important; height: 24px !important;
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
-  /* le micro : bleu cosmique bombé, qui respire pour attirer le regard */
+    width: 44px !important; height: 44px !important; min-width: 44px !important; border-radius: 50% !important;
+    border: none !important; color: #fff !important; margin: 0 2px !important; position: relative;
+    box-shadow: 0 6px 16px rgba(79,70,229,.28) !important;
+    transition: transform .15s ease, box-shadow .2s ease, filter .2s ease, background .2s ease; }
+  /* le micro : violet cosmique, qui respire doucement */
   [data-testid="stChatInputMicButton"] {
-    background: radial-gradient(circle at 32% 28%, #bae6fd 0%, #38bdf8 28%, #2563eb 62%, #1e3a8a 100%) !important;
-    animation: micro-respire 2.8s ease-in-out infinite; }
-  @keyframes micro-respire { 50% { box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 0 0 7px rgba(56,189,248,.22),
-    0 10px 22px rgba(37,99,235,.45), inset 0 2px 3px rgba(255,255,255,.55), inset 0 -4px 6px rgba(0,0,0,.22); } }
-  /* l'envoi : vert émeraude bombé, terne tant qu'il n'y a rien à envoyer */
-  [data-testid="stChatInputSubmitButton"] {
-    background: radial-gradient(circle at 32% 28%, #bbf7d0 0%, #34d399 30%, #059669 65%, #064e3b 100%) !important; }
-  [data-testid="stChatInputSubmitButton"]:disabled { filter: grayscale(.85) opacity(.5); }
-  [data-testid="stChatInputFileUploadButton"] button {
-    background: radial-gradient(circle at 32% 28%, #f5f5f4 0%, #d6d3d1 40%, #a8a29e 75%, #57534e 100%) !important; }
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%) !important;
+    animation: micro-respire 2.6s ease-in-out infinite; }
+  @keyframes micro-respire { 50% { box-shadow: 0 0 0 7px rgba(139,92,246,.16), 0 8px 20px rgba(99,102,241,.38); } }
+  /* l'envoi : bleu ciel vers indigo ; gris clair tant qu'il n'y a rien à envoyer */
+  [data-testid="stChatInputSubmitButton"] { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 60%, #4f46e5 100%) !important; }
+  [data-testid="stChatInputSubmitButton"]:disabled { background: #e2e8f0 !important; box-shadow: none !important; }
+  [data-testid="stChatInputSubmitButton"]:disabled::after { background: #94a3b8 !important; filter: none !important; }
+  /* joindre : discret, il s'allume au survol */
+  [data-testid="stChatInputFileUploadButton"] button { background: transparent !important; box-shadow: none !important; }
+  [data-testid="stChatInputFileUploadButton"] button:hover { background: rgba(99,102,241,.10) !important; }
   [data-testid="stChatInputMicButton"]:hover, [data-testid="stChatInputSubmitButton"]:not(:disabled):hover,
-  [data-testid="stChatInputApproveButton"]:hover, [data-testid="stChatInputFileUploadButton"] button:hover {
-    transform: translateY(-2px) scale(1.06); }
+  [data-testid="stChatInputApproveButton"]:hover, [data-testid="stChatInputCancelButton"]:hover {
+    transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 10px 22px rgba(79,70,229,.36) !important; }
   [data-testid="stChatInputMicButton"]:active, [data-testid="stChatInputSubmitButton"]:active,
-  [data-testid="stChatInputApproveButton"]:active, [data-testid="stChatInputCancelButton"]:active {
-    transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18), inset 0 2px 6px rgba(0,0,0,.3) !important; }
+  [data-testid="stChatInputApproveButton"]:active, [data-testid="stChatInputCancelButton"]:active,
+  [data-testid="stChatInputFileUploadButton"] button:active { transform: scale(.93); }
 
   /* ---------- Enregistrement en cours : impossible de le manquer ---------- */
   [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"]) {
@@ -131,12 +133,11 @@ STYLE = """<style>
   [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"]) { overflow: visible !important; }
   [data-testid="stChatInputApproveButton"] {
     width: 56px !important; height: 56px !important; min-width: 56px !important;
-    background: radial-gradient(circle at 32% 28%, #bbf7d0 0%, #22c55e 35%, #15803d 70%, #14532d 100%) !important;
+    background: linear-gradient(135deg, #34d399, #059669) !important;
     animation: envoi-pulse 1.2s ease-in-out infinite; }
-  @keyframes envoi-pulse { 50% { box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 0 0 9px rgba(34,197,94,.28),
-    inset 0 2px 3px rgba(255,255,255,.55), inset 0 -4px 6px rgba(0,0,0,.22); } }
-  [data-testid="stChatInputCancelButton"] {
-    background: radial-gradient(circle at 32% 28%, #fecaca 0%, #f87171 35%, #b91c1c 75%, #7f1d1d 100%) !important; }
+  @keyframes envoi-pulse { 50% { box-shadow: 0 0 0 9px rgba(16,185,129,.22), 0 8px 20px rgba(5,150,105,.4); } }
+  [data-testid="stChatInputCancelButton"] { background: linear-gradient(135deg, #fb7185, #e11d48) !important;
+    box-shadow: 0 6px 16px rgba(225,29,72,.3) !important; }
 
   /* ---------- Icônes redessinées, nettes et pleines (le dessin d'origine est masqué) ---------- */
   [data-testid="stChatInputMicButton"] svg, [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInputApproveButton"] svg, [data-testid="stChatInputCancelButton"] svg, [data-testid="stChatInputFileUploadButton"] button svg { opacity: 0 !important; }
@@ -156,9 +157,10 @@ STYLE = """<style>
     background: #fff; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l8.1-8.1a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l8.1-8.1a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3%27/%3E%3C/svg%3E") center/contain no-repeat;
     filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.45)); pointer-events: none; }
   [data-testid="stChatInputMicButton"]::before, [data-testid="stChatInputSubmitButton"]::before, [data-testid="stChatInputCancelButton"]::before, [data-testid="stChatInputFileUploadButton"] button::before { content: ""; position: absolute; left: 18%; top: 7%; width: 64%; height: 38%;
-    border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+    border-radius: 50%; background: none; display: none;
     pointer-events: none; }
-  [data-testid="stChatInputFileUploadButton"] button::after { background: #1f2937; filter: none; }
+  [data-testid="stChatInputFileUploadButton"] button::after { background: #64748b; filter: none; }
+  [data-testid="stChatInputFileUploadButton"] button:hover::after { background: #4f46e5; }
   [data-testid="stChatInputMicButton"]:focus-visible, [data-testid="stChatInputSubmitButton"]:focus-visible { outline: 3px solid #fde68a !important; outline-offset: 2px; }
 
   .astuce { font-size: 13px; color: #475569; text-align: center; margin-top: -4px; }
@@ -174,6 +176,9 @@ STYLE = """<style>
     [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) { height: 470px !important; max-height: 470px !important; min-height: 0 !important; }
     .block-container { padding-left: 12px; padding-right: 12px; }
     [data-testid="stChatInputTextArea"] { font-size: 15px !important; }
+    [data-testid="stChatInputMicButton"], [data-testid="stChatInputSubmitButton"],
+    [data-testid="stChatInputFileUploadButton"] button { width: 40px !important; height: 40px !important;
+      min-width: 40px !important; }
     [data-testid="stChatInputTextArea"]::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
       content: "● Enregistrement… ✅ envoyer · ✖ annuler"; } }
