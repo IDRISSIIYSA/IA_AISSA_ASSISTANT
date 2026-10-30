@@ -267,7 +267,9 @@ Déposez un livre ou un cours **PDF ou EPUB** dans « 🌌 Cosmic Knowledge Inge
 - le fichier temporaire est supprimé aussitôt (`os.remove`) et le dépôt est vidé ;
 - l'alien confirme en darija et en français : « Klit lktab kamel… tu peux supprimer le fichier source ! »
   (ou, pour un très gros livre, combien de passages il a digérés) ;
-- un PDF scanné (images de pages) est signalé : il faut d'abord un OCR.
+- un PDF scanné (images de pages) : elle renvoie vers l'**OCR d'IWELAH** (https://iwelah.com/fr/ocr-pdf/, Tesseract
+  dans le navigateur, gratuit, 50 Mo / 100 pages ; « Diviser un PDF » pour les livres plus longs, « Scanner un
+  document » pour des photos), puis lit le résultat redéposé (PDF avec texte ou fichier .txt).
 Sur Streamlit Cloud, le disque du serveur est effacé à chaque redémarrage : la mémoire qui dure est la base
 (`MEMOIRE_URL`), le fichier JSON n'est qu'une copie.
 

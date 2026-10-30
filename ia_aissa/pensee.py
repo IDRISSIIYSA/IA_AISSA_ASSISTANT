@@ -550,6 +550,16 @@ FICHIER_MEMOIRE = Path(__file__).resolve().parents[1] / "data" / "aissa_memoire.
 MAX_PASSAGES = 60               # au-delà, 60 passages répartis du début à la fin du livre
 
 
+IWELAH_OCR = "https://iwelah.com/fr/ocr-pdf/"
+IWELAH_DIVISER = "https://iwelah.com/fr/diviser-pdf/"
+IWELAH_SCANNER = "https://iwelah.com/app/?lang=fr#/scan"
+GUIDE_OCR = (
+    "ce livre n'a presque pas de texte : c'est un scan (des images de pages). Passe-le d'abord à la reconnaissance de "
+    f"caractères sur **IWELAH** : \n\n1. Ouvre [l'OCR PDF d'IWELAH]({IWELAH_OCR}) (gratuit, dans ton navigateur : le "
+    "fichier ne quitte pas ton appareil).\n2. Dépose le scan (50 Mo et 100 pages au plus ; un livre plus long : "
+    f"[découpe-le d'abord]({IWELAH_DIVISER})).\n3. Télécharge le résultat (PDF avec texte, ou fichier texte .txt).\n"
+    "4. Redépose-le moi : je le lirai en entier.\n\nPour des pages photographiées au téléphone : "
+    f"[Scanner un document avec IWELAH]({IWELAH_SCANNER}).")
 MAX_PAGES_LUES = 150            # très gros PDF : 150 pages réparties du début à la fin (mémoire vive ménagée)
 
 
@@ -557,6 +567,9 @@ def lire_livre(chemin, nom, max_pages=MAX_PAGES_LUES):
     """Texte d'un PDF ou d'un EPUB lu sur le disque ; un très gros PDF est lu page par page, sur un échantillon
     régulier de pages, sans charger tout le fichier en mémoire. Renvoie (titre, texte, pages lues, pages totales)."""
     from .bibliotheque import texte_epub
+    if nom.lower().endswith((".txt", ".md")):             # texte sorti de l'OCR d'IWELAH, par exemple
+        with open(chemin, "rb") as f:
+            return "", f.read().decode("utf-8", errors="replace"), 1, 1
     if nom.lower().endswith(".epub"):
         with open(chemin, "rb") as f:
             titre, texte = texte_epub(f.read())
@@ -583,8 +596,7 @@ def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None
             os.remove(chemin)                         # le fichier source ne reste jamais sur le disque du serveur
     texte = " ".join(texte.split())
     if len(texte) < 200:
-        raise ValueError("ce livre n'a presque pas de texte : c'est sans doute un livre scanné (des images de pages). "
-                         "Il faudrait d'abord le passer à la reconnaissance de caractères (OCR).")
+        raise ValueError(GUIDE_OCR)
     source = source or titre or nom
     from .lecture import decouper
     morceaux_lus = decouper(texte)

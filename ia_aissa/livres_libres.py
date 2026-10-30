@@ -65,7 +65,8 @@ def recommander(theme=""):
     return ("Voici des bibliothèques **gratuites et légales** (jamais de sites piratés) :\n\n" + "\n".join(lignes)
             + "\n\nAvant d'entrer sur un site, je lis son robots.txt : s'il m'accepte j'entre, sinon je cherche "
               "ailleurs. Donne-moi un lien vers un PDF libre, ou dépose le livre : je le lis et je te dis quand "
-              "tu peux le supprimer.")
+              "tu peux le supprimer.\n\n🛠️ Un livre scanné ? Passe-le d'abord à l'[OCR d'IWELAH](https://iwelah.com/fr/ocr-pdf/) "
+              "(gratuit, dans ton navigateur), puis dépose-moi le résultat.")
 
 
 def catalogue_openstax(brouteur):

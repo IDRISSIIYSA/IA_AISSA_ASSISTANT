@@ -343,7 +343,7 @@ def test_ingestion_d_un_livre_pdf_sans_cle_api(labo, tmp_path, monkeypatch):
     with zipfile.ZipFile(epub, "w") as z:
         z.writestr("chap1.xhtml", "<html><body>" + "".join(f"<p>{p}.</p>" for p in ARTICLE_LOCAL.split(". ")) + "</body></html>")
     assert ingerer_pdf(mem, "livre.epub", epub.getvalue(), fichier_json=tmp_path / "e.json")["concepts"] >= 2
-    with pytest.raises(ValueError, match="scanné"):
+    with pytest.raises(ValueError, match="iwelah.com/fr/ocr-pdf"):
         ingerer_pdf(mem, "scan.pdf", _pdf_de_test(" "), fichier_json=tmp_path / "x.json")
 
 
@@ -432,3 +432,13 @@ def test_elle_repond_avec_ce_qu_elle_a_lu_dans_le_cgi(labo, tmp_path):
     assert "Connaissance intégrée" in penser("évolution de l'IS", mem)[0]           # rien lu sur l'IS : elle le dit
     bilan = examen_lecture(mem, n=10)
     assert bilan["questions"] > 0 and bilan["score"] >= 0.5 and historique_examens(mem)
+
+
+def test_un_scan_est_envoye_a_l_ocr_d_iwelah_puis_lu_en_texte(labo, tmp_path):
+    from ia_aissa.pensee import GUIDE_OCR, ingerer_pdf, penser
+    mem, _ = labo
+    assert "https://iwelah.com/fr/ocr-pdf/" in GUIDE_OCR and "Redépose-le moi" in GUIDE_OCR
+    texte_ocr = (CGI_2026 * 2).encode("utf-8")                            # le .txt téléchargé depuis IWELAH
+    bilan = ingerer_pdf(mem, "CGI_2026_ocr.txt", texte_ocr, "Bibliothèque", fichier_json=tmp_path / "m.json")
+    assert bilan["passages_gardes"] >= 1
+    assert "CGI_2026_ocr.txt" in penser("taux de tva sur l'energie electrique", mem)[0]

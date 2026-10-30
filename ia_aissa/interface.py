@@ -666,7 +666,7 @@ def traiter(r, utilisateur, texte, fichiers):
         messages = []
         for f in lectures:
             try:
-                if f.name.lower().endswith((".pdf", ".epub")):
+                if f.name.lower().endswith((".pdf", ".epub", ".txt")):
                     messages.append(confirmation_ingestion(ingerer_pdf(mem, f.name, f.getvalue(), utilisateur)))
                 else:
                     source, contenu = brouter_fichier(f.name, f.getvalue())
@@ -861,9 +861,10 @@ def ingestion_de_livres(utilisateur):
     with st.expander("🌌 Cosmic Knowledge Ingestion (Upload PDF/Scanner Books)"):
         st.caption("Dépose des livres ou des cours (PDF, EPUB) : je les lis en entier, sans clé API, je garde l'essentiel "
                    "dans ma mémoire, puis je te dis quand tu peux supprimer le fichier pour gagner de la place. "
-                   "Les PDF scannés (images de pages) n'ont pas de texte lisible sans OCR.")
+                   "Un livre scanné (images de pages) ? Passe-le d'abord à l'OCR d'IWELAH (iwelah.com), puis dépose le "
+                   "résultat ici.")
         cle = f"livres_{st.session_state.get('livres_tour', 0)}"
-        livres = st.file_uploader("Livres PDF ou EPUB", type=["pdf", "epub"], accept_multiple_files=True, key=cle,
+        livres = st.file_uploader("Livres PDF, EPUB ou texte", type=["pdf", "epub", "txt"], accept_multiple_files=True, key=cle,
                                   label_visibility="collapsed")
         if livres:
             messages = []
