@@ -133,7 +133,9 @@ SUITE = re.compile(r"^\s*(ex\w*li\w*|e?xpli\w*|détaill\w*|detaill\w*|plus de d�
 # ==========================================
 # Calculs à partir des chiffres de la question
 # ==========================================
-NOMBRE = r"(\d[\d\s.,]*\d|\d)(\s*(k|mille|alf|ألف))?"
+# un nombre, suivi au plus d'une unité (k, mille, dh…) ; jamais les chiffres-lettres de la darija (rb7, 3la, 9al)
+NOMBRE = (r"(?<![^\W\d_])(\d[\d\s.,]*\d|\d)(?!(?!k\b|mille|alf|dhs?\b|mad\b|dirham|ألف)[^\W\d_])"
+          r"(\s*(k\b|mille|alf|ألف))?")
 OPERATEURS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
               ast.Pow: operator.pow, ast.USub: operator.neg, ast.UAdd: operator.pos}
 
@@ -305,7 +307,10 @@ def calculer(texte):
         taux = next((x / 100 for x in valeurs if x in (7, 10, 14, 20) and x != v), None)
         if taux is None:
             regime = repondre("tva", texte, top=1)[0]
-            if regime["confiance"] < 0.5:                 # produit inconnu : taux normal
+            produit = set(mots(texte)) - set(mots("tva sur de du la le les un une pour dh dirhams ht ttc montant prix "
+                                                  "calcule calcul calculer combien fait vente achat facture")) - {
+                m for m in mots(texte) if m.isdigit()}
+            if not produit or regime["confiance"] < 0.5:  # aucun produit nommé, ou inconnu : taux normal
                 taux = 0.2
             else:
                 taux = {"20 %": 0.2, "10 %": 0.1}.get(regime["reponse"], 0.0 if "xon" in regime["reponse"] else 0.2)
@@ -347,6 +352,13 @@ def penser(texte, memoire=None, conclusion=None, precedente=None, utilisateur=No
     if calcul:
         reponse, etapes = calcul
         return reponse, ["Je repère des chiffres et un calcul que je sais faire."] + etapes, 0.9
+
+    from .fiches import fiche
+    synthese = fiche(texte, memoire, utilisateur)
+    if synthese:                                       # « parle de la TVA » : tout ce qu'elle sait, rassemblé
+        contenu, sources = synthese
+        return contenu, ["Tu me demandes de parler d'un sujet : je rassemble tout ce que je sais."] + \
+            [f"Source : {s}" for s in sources], 0.9
 
     from .lecture import repondre_par_lecture
     lu = repondre_par_lecture(texte, memoire, utilisateur)

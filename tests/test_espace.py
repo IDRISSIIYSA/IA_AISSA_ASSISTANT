@@ -225,3 +225,15 @@ def test_creation_de_l_admin_exige_le_code_des_secrets(tmp_path, monkeypatch):
     at.text_input(key="adm_new2").set_value("motdepasse-solide")
     at.button[0].click().run()
     assert "incorrect" in at.error[-1].value
+
+
+def test_parle_de_tva_au_maroc_donne_une_vraie_fiche():
+    from ia_aissa.pensee import nombres, penser
+    r = penser("PARLE DE TVA AU MAROC")[0]
+    assert "La TVA au Maroc" in r and "20 %" in r and "10 %" in r and "Exonéré" in r and "crédit de TVA" in r
+    assert "La TVA au Maroc" in penser("TVA ?")[0] and "impôt sur les sociétés" in penser("c'est quoi l'IS")[0]
+    assert "Almohades" in penser("parle des dynasties du maroc")[0]
+    assert "Exonéré" in penser("tva dyal dwa")[0] and "La TVA au Maroc" not in penser("tva dyal dwa")[0]
+    assert "TVA 200 DH" in penser("tva sur 1000 dh")[0]                           # aucun produit : taux normal
+    assert nombres("dariba 3la rb7 dyal charika") == [] and nombres("khlast 3000dh") == [3000.0]
+    assert "IS (impôt sur les sociétés)" in penser("dariba 3la rb7 dyal charika")[0]

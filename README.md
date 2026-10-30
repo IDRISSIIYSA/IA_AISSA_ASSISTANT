@@ -295,6 +295,13 @@ web. (Les données sont dans la base `MEMOIRE_URL` ; leur chiffrement au repos d
 « 💼 Simulateur de paie » : brut ou net, et en un coup d'œil brut, CNSS, AMO, IR, net, coût employeur
 (barème IR 2026, frais professionnels 35 % / 25 %), avec le bulletin détaillé.
 
+### Fiches de synthèse (`ia_aissa/fiches.py`)
+« Parle de la TVA au Maroc », « c'est quoi l'IS », « explique la paie », « TVA ? » : sans grand moteur, elle
+rassemble tout ce qu'elle sait en un exposé (définition, taux 2026 de sa base, exemples de ses matières, calcul
+d'exemple, évolution, puis « Ce que disent mes lectures » avec les sources). Pour une de ses matières (« parle des
+dynasties », « des incoterms »), elle présente la matière avec un exemple de chaque réponse. Une question précise
+(« tva dyal dwa ») garde sa réponse précise.
+
 ### Pensée propre : conversation
 « explique plus », « pourquoi » reprennent la question précédente en détail ; « non, c'est … » devient une
 correction révisée aussitôt ; « non », « ok », « tu dois apprendre » ont une vraie réponse ; sous 50 % de
