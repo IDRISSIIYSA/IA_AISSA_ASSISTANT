@@ -16,12 +16,32 @@ AIDE_MEMOIRE = (
 )
 
 
-def secret(nom):
-    """Secrets de Streamlit Cloud, puis variables d'environnement, puis réglages enregistrés par l'administrateur."""
+def _secrets_a_plat():
+    """Tous les secrets de Streamlit, y compris ceux rangés par erreur dans une section ([general], [secrets]…)."""
+    a_plat = {}
     try:
-        valeur = st.secrets.get(nom) or os.environ.get(nom)
+        for cle, valeur in st.secrets.items():
+            if hasattr(valeur, "items"):
+                for sous_cle, sous_valeur in valeur.items():
+                    a_plat.setdefault(str(sous_cle), sous_valeur)
+            else:
+                a_plat[str(cle)] = valeur
     except Exception:
-        valeur = os.environ.get(nom)
+        pass
+    return a_plat
+
+
+def noms_des_secrets():
+    """Les noms (jamais les valeurs) des secrets que l'application voit : pour le diagnostic de l'administrateur."""
+    return sorted(_secrets_a_plat())
+
+
+def secret(nom):
+    """Secrets de Streamlit Cloud (même rangés dans une section, majuscules ou non), puis variables d'environnement,
+    puis réglages enregistrés par l'administrateur."""
+    secrets = _secrets_a_plat()
+    trouve = next((v for k, v in secrets.items() if k.strip().upper() == nom.upper()), None)
+    valeur = (str(trouve).strip() if trouve not in (None, "") else None) or os.environ.get(nom)
     if valeur or nom == "MEMOIRE_URL":
         return valeur
     from .admin import valeur_app

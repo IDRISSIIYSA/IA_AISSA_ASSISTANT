@@ -289,3 +289,27 @@ def test_toutes_les_simulations(tmp_path, monkeypatch):
     for option in options:
         at.selectbox(key="sim_choix").set_value(option).run()
         assert not at.exception, option
+
+
+def test_secrets_ranges_dans_une_section_et_adresse_neon_copiee_avec_psql(monkeypatch):
+    from ia_aissa import partage
+    from ia_aissa.memoire import normaliser_url
+    monkeypatch.setattr(partage.st, "secrets", {"general": {"ADMIN_CODE": " code-1 "}, "memoire_url": "sqlite://"})
+    assert partage.secret("ADMIN_CODE") == "code-1" and partage.secret("MEMOIRE_URL") == "sqlite://"
+    assert partage.noms_des_secrets() == ["ADMIN_CODE", "memoire_url"]
+    assert normaliser_url("psql 'postgresql://u:p@h.neon.tech/db?sslmode=require'") == \
+        "postgresql+psycopg://u:p@h.neon.tech/db?sslmode=require"
+
+
+def test_diagnostic_des_secrets_sur_la_page_admin(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.delenv("ADMIN_CODE", raising=False)
+    monkeypatch.delenv("MEMOIRE_URL", raising=False)
+
+    def page():
+        from ia_aissa.espace_admin import espace_admin
+        espace_admin()
+
+    at = AppTest.from_function(page, default_timeout=300).run()
+    texte = " ".join(i.value for i in at.info)
+    assert "Diagnostic des Secrets" in texte and "❌ `ADMIN_CODE`" in texte and "❌ `MEMOIRE_URL`" in texte

@@ -252,9 +252,22 @@ def admin_connexion():
     mem = memoire()
     if est_admin():
         return True
-    if not mem.persistante:
+    if getattr(mem, "erreur", None):
+        st.error(f"🔴 `MEMOIRE_URL` est bien là, mais la connexion à la base échoue : {mem.erreur}. Vérifiez l'adresse "
+                 "copiée chez Neon (mot de passe compris, sans espace), puis redémarrez l'application (⋮ → Reboot).")
+    elif not mem.persistante:
         st.warning("⚠️ Mémoire temporaire : sans `MEMOIRE_URL` dans les Secrets de Streamlit, tout (compte administrateur "
                    "compris) est effacé à chaque redémarrage du serveur.")
+    if not mem.persistante or not admin.admin_existe(mem):
+        from .partage import noms_des_secrets
+        vus = noms_des_secrets()
+        attendus = {n: n in [v.strip().upper() for v in vus] for n in ("MEMOIRE_URL", "ADMIN_CODE")}
+        st.info("🔎 **Diagnostic des Secrets** (noms seulement, jamais les valeurs) — l'application voit : "
+                + (", ".join(f"`{n}`" for n in vus) if vus else "**aucun secret**") + "\n\n"
+                + " · ".join(f"{'✅' if ok else '❌'} `{n}`" for n, ok in attendus.items())
+                + ("\n\nAucun secret : ils n'ont pas été enregistrés pour **cette** application (vérifiez que vous êtes "
+                   "dans Settings → Secrets de l'app « iaiysa », cliquez sur Save, puis attendez le redémarrage)."
+                   if not vus else ""))
     if not admin.admin_existe(mem):
         code_attendu = secret("ADMIN_CODE")
         if not code_attendu:

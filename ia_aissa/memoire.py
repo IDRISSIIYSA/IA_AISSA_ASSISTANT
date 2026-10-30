@@ -10,6 +10,7 @@ ex. Neon ou Supabase : postgresql+psycopg://utilisateur:motdepasse@hote/base), s
 SQLite local, qui sur Streamlit Cloud est effacé à chaque redémarrage de l'application.
 """
 
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -147,6 +148,9 @@ medias = Table(
 def normaliser_url(url):
     """Accepte l'adresse telle que la donnent Neon ou Supabase (postgresql://… ou postgres://…)."""
     url = str(url).strip().strip('"').strip("'")
+    trouvee = re.search(r"postgres(?:ql)?://[^\s'\"]+", url)      # « psql 'postgresql://…' » copié tel quel depuis Neon
+    if trouvee and not url.startswith(("postgres://", "postgresql://")):
+        url = trouvee.group(0)
     for prefixe in ("postgres://", "postgresql://"):
         if url.startswith(prefixe):
             url = "postgresql+psycopg://" + url[len(prefixe):]
