@@ -832,3 +832,94 @@ _enrichir(TRANSIT, {
                                      "origine pour bénéficier de l'accord avec l'europe"],
 })
 _enrichir(UNITES_SI, {"Newton (N)": ["unité de la force"]})
+
+
+# ==========================================
+# Université (suite) : comptabilité générale, audit, marketing digital ; invention : TRIZ
+# ==========================================
+# Écritures simplifiées hors TVA, comptes du CGNC (Code général de normalisation comptable).
+ECRITURES = {
+    "Débit 6111 Achats de marchandises / Crédit 4411 Fournisseurs": [
+        "achat de marchandises à crédit", "facture d'un fournisseur de marchandises payable à 60 jours",
+        "chrit sel3a b crédit", "achat de marchandises non réglé", "شراء البضائع بالدين"],
+    "Débit 3421 Clients / Crédit 7111 Ventes de marchandises": [
+        "vente de marchandises à crédit", "facture de vente de marchandises à un client payable à 30 jours",
+        "bi3t sel3a b crédit", "vente de marchandises non encaissée", "بيع البضائع بالدين"],
+    "Débit 5141 Banque / Crédit 3421 Clients": [
+        "encaissement d'un client par virement", "le client règle sa facture par chèque déposé en banque",
+        "client khalesni f l'banque", "recouvrement d'une créance client"],
+    "Débit 4411 Fournisseurs / Crédit 5141 Banque": [
+        "règlement d'un fournisseur par virement", "paiement de la facture fournisseur par chèque",
+        "khalest lfournisseur mn l'banque", "virement au fournisseur"],
+    "Débit 4432 Rémunérations dues au personnel / Crédit 5141 Banque": [
+        "paiement des salaires par virement", "virement des salaires nets aux employés", "khalest salaire dyal l'khddama"],
+    "Débit 2355 Matériel informatique / Crédit 5141 Banque": [
+        "achat d'ordinateurs payé par chèque", "acquisition de matériel informatique réglée par virement",
+        "chrit pc l charika w khalest mn l'banque"],
+    "Débit 5141 Banque / Crédit 1111 Capital social": [
+        "apport en capital en numéraire déposé en banque", "les associés versent le capital à la constitution",
+        "apport des associés en argent"],
+    "Débit 5161 Caisse / Crédit 5141 Banque": [
+        "retrait d'espèces à la banque pour alimenter la caisse", "retrait au guichet pour la caisse", "jbt cash mn l'banque"],
+    "Débit 6193 Dotations aux amortissements / Crédit 283 Amortissements des immobilisations corporelles": [
+        "dotation aux amortissements de fin d'exercice", "constater l'amortissement annuel du matériel",
+        "amortissement de la voiture de service"],
+}
+CONTROLE_INTERNE = {
+    "Séparation des tâches": [
+        "la même personne commande, réceptionne et paie les fournisseurs", "le caissier tient aussi la comptabilité de la caisse",
+        "une seule personne crée les fournisseurs et valide les paiements"],
+    "Rapprochement bancaire": [
+        "le solde comptable de la banque diffère du relevé", "écart entre le relevé bancaire et le compte 5141",
+        "chèques émis non encore débités par la banque"],
+    "Inventaire physique": [
+        "les stocks en comptabilité ne correspondent pas aux quantités en magasin", "vols suspectés dans l'entrepôt",
+        "compter les marchandises en fin d'exercice"],
+    "Double signature et seuils d'autorisation": [
+        "un seul responsable peut signer des chèques de montant élevé", "paiements importants sans validation hiérarchique",
+        "aucune limite d'engagement pour les acheteurs"],
+    "Contrôle des accès informatiques": [
+        "tous les employés ont le mot de passe de l'administrateur du logiciel comptable",
+        "un ancien salarié a toujours accès à l'erp", "droits d'accès jamais revus"],
+    "Piste d'audit et pièces justificatives": [
+        "des écritures comptables sans facture ni pièce justificative", "impossible de retrouver l'origine d'une écriture",
+        "écritures modifiées sans trace"],
+}
+MARKETING_DIGITAL = {
+    "SEO (référencement naturel)": [
+        "apparaître gratuitement en tête de google", "optimiser les mots-clés et le contenu du site",
+        "améliorer la position du site dans les résultats de recherche"],
+    "SEA (annonces payantes sur les moteurs)": [
+        "payer au clic pour apparaître sur google", "campagne google ads", "acheter des mots-clés"],
+    "Emailing et newsletter": [
+        "envoyer une lettre d'information aux clients inscrits", "relancer les abonnés par courriel",
+        "taux d'ouverture des emails"],
+    "Marketing d'influence": [
+        "faire présenter le produit par une influenceuse sur instagram", "partenariat avec des créateurs de contenu",
+        "influenceur marocain sur tiktok"],
+    "Reciblage (retargeting)": [
+        "montrer une publicité aux visiteurs qui ont abandonné leur panier", "relancer les internautes déjà venus sur le site",
+        "publicité pour ceux qui ont vu le produit sans l'acheter"],
+    "Taux de conversion": [
+        "part des visiteurs qui achètent", "nombre de ventes divisé par le nombre de visites",
+        "combien de visiteurs deviennent clients"],
+}
+PRINCIPES_TRIZ = {
+    "Segmentation": ["diviser un objet en parties indépendantes", "meuble en kit démontable", "conteneurs modulaires"],
+    "Extraction": ["retirer la partie gênante", "épouvantail sonore qui reproduit le cri des oiseaux sans l'oiseau",
+                   "isoler le compresseur bruyant à l'extérieur du climatiseur"],
+    "Poupées russes (imbrication)": ["mettre un objet à l'intérieur d'un autre", "antenne télescopique",
+                                     "tables gigognes"],
+    "Inversion": ["faire l'inverse de l'action habituelle", "tapis roulant où c'est le sol qui bouge",
+                  "refroidir la pièce au lieu de chauffer l'objet"],
+    "Dynamisme": ["rendre ajustables les caractéristiques d'un objet", "volet d'avion qui change de forme",
+                  "siège réglable en hauteur"],
+    "Action périodique": ["remplacer une action continue par des impulsions", "gyrophare clignotant",
+                          "irrigation goutte à goutte par intermittence"],
+    "Self-service": ["l'objet se répare ou se sert lui-même", "pneu qui se regonfle seul", "four autonettoyant"],
+    "Copie": ["utiliser une copie simple et bon marché à la place de l'original", "visite virtuelle en 3d au lieu de se déplacer",
+              "maquette numérique pour tester"],
+    "Universalité": ["un objet remplit plusieurs fonctions", "couteau suisse", "smartphone appareil photo et gps"],
+    "Transformer un mal en bien": ["utiliser un déchet comme ressource", "chaleur perdue récupérée pour chauffer l'eau",
+                                   "fumier transformé en biogaz"],
+}

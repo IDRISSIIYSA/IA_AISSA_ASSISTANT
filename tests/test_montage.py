@@ -92,3 +92,13 @@ def test_exemples_fournis_se_montent():
     for fichier in sorted(EXEMPLES.glob("*")):
         out, _ = monter_fichier(fichier.read_bytes(), fichier.name)
         assert len(out) > 0 and out["reel"].notna().all() and out["budget"].notna().all(), fichier.name
+
+
+def test_prevision_du_mois_suivant_avec_intervalle():
+    import controle_gestion_ia as cg
+    df = cg.preparer(cg.generer_donnees_exemple(36))
+    p = cg.prevoir(df)
+    assert len(p) == df["centre"].nunique() and (p["periode"] == "2026-01").all()
+    assert ((p["bas_95"] < p["prevision"]) & (p["prevision"] < p["haut_95"])).all()
+    assert (p["saisonnalite"] == "oui").all()
+    assert (cg.prevoir(cg.preparer(cg.generer_donnees_exemple(12)))["saisonnalite"] != "oui").all()

@@ -61,10 +61,18 @@ def lire_json(texte):
     return json.loads(texte[debut:fin + 1]) if debut >= 0 and fin > debut else []
 
 
+def par_progres(memoire, lacunes):
+    """Curiosité guidée par le progrès : les lacunes des matières où IA AISSA progresse le plus passent d'abord."""
+    from .croissance import vitesse_apprentissage
+    vitesses = vitesse_apprentissage(memoire)
+    rang = {cle: i for i, cle in enumerate(vitesses["matiere"])} if not vitesses.empty else {}
+    return sorted(lacunes, key=lambda l: (rang.get(l.get("matiere_devinee"), len(rang)), l["id"]))
+
+
 def etudier_seule(memoire, moteur_config, client, limite=25, explorer=True):
     """Étudie les lacunes ouvertes, enregistre les corrections et révise. Ce qui sort du programme de l'école
     n'est pas abandonné : IA AISSA part l'explorer sur Wikipédia et le digère (un sujet par cycle)."""
-    lacunes = memoire.lacunes_ouvertes(limite)
+    lacunes = par_progres(memoire, memoire.lacunes_ouvertes(limite * 4))[:limite]
     if not lacunes:
         return {"etudiees": 0, "apprises": 0, "hors_programme": 0, "revisions": []}
     reponses = {r.get("id"): r for r in lire_json(demander(moteur_config, client, consigne_etude(lacunes)))

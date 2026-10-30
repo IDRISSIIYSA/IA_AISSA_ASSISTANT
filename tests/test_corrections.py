@@ -131,3 +131,15 @@ def test_croissance_par_famille_de_sciences(labo):
     assert apres["Sciences naturelles"] == depart["Sciences naturelles"] + 1
     assert apres["Sciences formelles"] == depart["Sciences formelles"]          # l'aiguilleur ne compte pas
     assert croissance.famille("comptabilite") == croissance.HUMAINES
+
+
+def test_curiosite_guidee_par_le_progres(tmp_path):
+    from ia_aissa.autonomie import par_progres
+    from ia_aissa.croissance import vitesse_apprentissage
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    v = vitesse_apprentissage(mem)
+    assert not v.empty and v["progres"].is_monotonic_decreasing and "orientation" not in set(v["matiere"])
+    premiere, derniere = v["matiere"].iloc[0], v["matiere"].iloc[-1]
+    lacunes = [{"id": 1, "matiere_devinee": derniere}, {"id": 2, "matiere_devinee": premiere}]
+    assert [l["id"] for l in par_progres(mem, lacunes)] == [2, 1]

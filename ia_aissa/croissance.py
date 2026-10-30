@@ -15,11 +15,11 @@ from .ecole import MATIERES, charger
 FAMILLES = {
     "Sciences formelles": {"maths_financieres", "statistiques", "ia", "structures_donnees", "complexite", "fractions",
                            "discriminant", "derivee", "suites", "orientation", "investissement", "elasticite",
-                           "probabilite"},
+                           "probabilite", "limites"},
     "Sciences naturelles": {"sciences", "familles_sciences", "corps_humain", "unites", "mouvement", "ph", "genetique",
-                            "ohm"},
+                            "ohm", "equilibrer"},
     "Sciences appliquées": {"production", "logistique", "transit", "incoterms", "credit", "cycle_de_vie", "bcg",
-                            "commercial", "creation"},
+                            "commercial", "creation", "transport", "triz"},
 }
 HUMAINES = "Sciences humaines et gestion"
 
@@ -57,6 +57,35 @@ def serie(memoire):
     return pd.concat([depart, cumul[list(base)]]).ffill()
 
 
+def vitesse_apprentissage(memoire, jours=14):
+    """Courbe de progrès de chaque matière (curiosité guidée par le progrès, à la Oudeyer) :
+    - pente de fin de courbe d'école : ce que le cerveau gagnait encore à la fin de son entraînement ;
+    - corrections apprises ces derniers jours : ce qu'il apprend en ce moment.
+    Renvoie un DataFrame trié du plus grand progrès au plus petit."""
+    maintenant = pd.Timestamp.now(tz="UTC")
+    recentes = {}
+    for c in memoire.corrections_de():
+        if c["apprise"] and c["matiere"] != "orientation":
+            date = pd.Timestamp(c["cree_le"])
+            date = date.tz_localize("UTC") if date.tzinfo is None else date
+            if date > maintenant - pd.Timedelta(days=jours):
+                recentes[c["matiere"]] = recentes.get(c["matiere"], 0) + 1
+    lignes = []
+    for m in MATIERES:
+        if m.cle == "orientation":
+            continue
+        _, historique = charger(m.cle)
+        notes = [h["precision"] for h in historique or [] if isinstance(h.get("pas"), int)]
+        if not notes:
+            continue
+        mi = len(notes) // 2
+        pente = max(0.0, notes[-1] - notes[mi])                    # progrès de la deuxième moitié de l'école
+        lignes.append({"matiere": m.cle, "nom": m.nom, "note": notes[-1], "progres_ecole": pente,
+                       "appris_recemment": recentes.get(m.cle, 0),
+                       "progres": pente + 0.05 * recentes.get(m.cle, 0) + 0.5 * (1 - notes[-1])})
+    return pd.DataFrame(lignes).sort_values("progres", ascending=False).reset_index(drop=True)
+
+
 def indicateurs(memoire):
     lacunes_total, _ = memoire.compter_lacunes()
     toutes = memoire.corrections_de()
@@ -86,5 +115,12 @@ def afficher(st, memoire):
         st.bar_chart(par_jour, y_label="Nouveaux concepts par jour")
     else:
         st.bar_chart(s.iloc[-1], y_label="Concepts maîtrisés", horizontal=True)
+    vitesses = vitesse_apprentissage(memoire)
+    if not vitesses.empty:
+        st.caption("🧭 Curiosité guidée par le progrès : IA AISSA étudie d'abord les matières où elle progresse le plus.")
+        st.dataframe(vitesses.head(8)[["nom", "note", "progres_ecole", "appris_recemment"]].rename(columns={
+            "nom": "Matière", "note": "Note", "progres_ecole": "Progrès en fin d'école",
+            "appris_recemment": "Appris (14 j)"}), hide_index=True,
+            column_config={"Note": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent")})
     st.caption("Chaque famille part de ce qu'IA AISSA a appris à l'école, puis grandit à chaque correction apprise. "
                "Plus on lui parle, plus elle repère de lacunes et plus elle apprend vite.")

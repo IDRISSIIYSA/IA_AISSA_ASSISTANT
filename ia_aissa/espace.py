@@ -122,13 +122,18 @@ def analyser_controle(nom, contenu, n_episodes=None):
     par_centre = (df.groupby("centre")[["budget", "reel"]].sum()
                   .assign(ecart_pct=lambda d: (d["reel"] - d["budget"]) / d["budget"]).sort_values("ecart_pct"))
     pire = par_centre.index[-1]
+    previsions = cg.prevoir(df)
     montant = lambda v: f"{v:,.0f}".replace(",", " ")
     resume = (f"Fichier « {nom} » : {df['centre'].nunique()} centre(s), {df['periode'].nunique()} période(s). "
               f"Budget {montant(budget)}, réalisé {montant(reel)}, écart global {(reel - budget) / budget:+.1%}. "
               f"Centre le plus en dérive : {pire} ({par_centre.loc[pire, 'ecart_pct']:+.1%}). "
               f"{len(graves)} alerte(s) d'écart grave, {doutes} décision(s) dont je doute, "
               f"{len(intrigues)} écart(s) inhabituel(s) à vérifier. Principes découverts : "
-              + (" ".join(principes[:2]) or "pas encore assez d'épisodes pour en énoncer."))
+              + (" ".join(principes[:2]) or "pas encore assez d'épisodes pour en énoncer.")
+              + ("" if previsions.empty else
+                 f" Prévision du réalisé pour {previsions['periode'].iloc[0]} : "
+                 + ", ".join(f"{p.centre} {montant(p.prevision)} (entre {montant(p.bas_95)} et {montant(p.haut_95)})"
+                             for p in previsions.itertuples()) + "."))
     elements = [
         {"type": "metriques", "valeurs": [("Budget", f"{budget:,.0f}".replace(",", " ")),
                                          ("Réalisé", f"{reel:,.0f}".replace(",", " ")),
@@ -137,6 +142,8 @@ def analyser_controle(nom, contenu, n_episodes=None):
         {"type": "graphique", "titre": "Écart budgétaire par centre (%)",
          "donnees": df.pivot_table(index="periode", columns="centre", values="ecart_pct", aggfunc="mean") * 100},
         {"type": "liste", "titre": "📜 Principes découverts par IA AISSA", "lignes": principes},
+        {"type": "tableau", "titre": "🔮 Prévision du réalisé de la période suivante (intervalle de confiance 95 %)",
+         "donnees": previsions},
         {"type": "liste", "titre": "🔧 Montage des données brutes", "lignes": rapport},
         {"type": "tableau", "titre": "🚨 Alertes et décisions dont je doute",
          "donnees": lisible[(df["decision_ia"] == cg.ACTIONS[0]) | (df["statut"] != cg.STATUTS["sur"])]

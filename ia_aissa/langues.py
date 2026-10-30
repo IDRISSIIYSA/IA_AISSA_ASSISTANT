@@ -13,7 +13,15 @@ LANGUES = {
         "phrases": ["كيداير لاباس عليك", "واش كاين شي مشكل", "بغيت نفهم هاد الحساب", "شحال كيخلص فالشهر",
                     "دابا غادي نصيفط ليك الفاتورة", "هادشي زوين بزاف", "فين كاين البيرو ديال المدير",
                     "kidayr labas 3lik", "wach kayn chi mochkil", "bghit nfhem had l7sab", "chhal kaykhles f chhar",
-                    "daba ghadi nsifet lik la facture", "hadchi zwin bzaf", "safi mzyan nchoufou ghda"],
+                    "daba ghadi nsifet lik la facture", "hadchi zwin bzaf", "safi mzyan nchoufou ghda",
+                    # au travail et les chiffres
+                    "عندنا اجتماع مع المدير مع العشرة", "الكليان باقي ما خلصش الفاتورة", "خاصنا نقصو من المصاريف",
+                    "الميزانية ديال هاد العام طلعات", "عطيني الحساب ديال الشهر لي فات", "واحد جوج ثلاثة ربعة خمسة",
+                    "ستة سبعة ثمنية تسعود عشرة", "الف ومية درهم", "عشرين الف ريال",
+                    "3ndna ijtima3 m3a lmoudir m3a l3achra", "lclient ba9i ma khlsch la facture",
+                    "khasna n9ess mn lmasarif", "lbudget dyal had l3am tla3", "3tini l7sab dyal chhar li fat",
+                    "wa7ed jouj tlata reb3a khamsa", "stta seb3a tmenya ts3oud 3achra", "alf w mya dirham",
+                    "3echrin alf ryal", "l'commande wslat lyoum", "sift lia devis 3afak"],
     },
     "Français": {
         "voix": "fr-FR",

@@ -382,6 +382,55 @@ def _ohm(rng):
         f"Tension {tension:.1f} V aux bornes d'une résistance de {resistance:.0f} Ω : intensité I = U / R ?"
 
 
+def _limites(rng):
+    """Limite en +∞ d'une fraction rationnelle : on compare les degrés et le signe des termes de plus haut degré."""
+    p, q = int(rng.integers(0, 4)), int(rng.integers(0, 4))
+    a, b = int(rng.choice([-5, -3, -2, -1, 1, 2, 3, 4, 7])), int(rng.choice([1, 2, 3, 5]))
+    if rng.random() < 0.5:
+        b = -b
+    signe = 1 if a * b > 0 else -1
+    y = 0 if p < q else 1 if p == q else (2 if signe > 0 else 3)
+    monome = lambda c, d: f"{c}" if d == 0 else f"{c}x" if d == 1 else f"{c}x^{d}"
+    return np.array([p / 3, q / 3, (p - q) / 3, float(signe), float(p > q), float(p == q), float(p < q)], np.float32), y, \
+        f"Limite en +∞ de ({monome(a, p)} + …) / ({monome(b, q)} + …) ?"
+
+
+ACTIONS_EQUILIBRE = ["1 A₂ + 1 B₂ → 2 AB", "2 A₂ + 1 B₂ → 2 A₂B", "1 A₂ + 2 B₂ → 2 AB₂", "3 A₂ + 1 B₂ → 2 A₃B",
+                     "1 A₂ + 3 B₂ → 2 AB₃", "1 A₂ + 1 B₂ → 1 A₂B₂", "3 A₂ + 2 B₂ → 2 A₃B₂", "2 A₂ + 3 B₂ → 2 A₂B₃"]
+EXEMPLES_EQUILIBRE = {(1, 1): "H₂ + Cl₂ → HCl", (2, 1): "H₂ + O₂ → H₂O", (1, 2): "N₂ + O₂ → NO₂",
+                      (3, 1): "lettres génériques", (1, 3): "N₂ + H₂ → NH₃", (2, 2): "H₂ + O₂ → H₂O₂",
+                      (3, 2): "lettres génériques", (2, 3): "N₂ + O₂ → N₂O₃"}
+PAIRES_EQUILIBRE = list(EXEMPLES_EQUILIBRE)
+
+
+def _equilibrer(rng):
+    """Synthèse a A₂ + b B₂ → c AₓBᵧ : les plus petits coefficients entiers qui conservent chaque élément."""
+    cible = int(rng.integers(len(PAIRES_EQUILIBRE)))
+    x, y = PAIRES_EQUILIBRE[cible]
+    return np.array([x / 3, y / 3, float(x % 2), float(y % 2), (x - y) / 3], np.float32), cible, \
+        f"Équilibrer A₂ + B₂ → A{x}B{y} (exemple : {EXEMPLES_EQUILIBRE[(x, y)]})"
+
+
+def _transport(rng):
+    """Choix du mode de transport : délai, masse, distance, mer à traverser, valeur de la marchandise."""
+    masse = float(np.exp(rng.uniform(np.log(0.05), np.log(40))))        # tonnes
+    distance = float(np.exp(rng.uniform(np.log(50), np.log(12000))))    # km
+    urgent, outre_mer = bool(rng.random() < 0.3), bool(rng.random() < 0.4)
+    valeur = float(np.exp(rng.uniform(np.log(2), np.log(2000))))       # DH par kg
+    if urgent and (valeur > 200 or masse < 1) and (outre_mer or distance > 800):
+        y = 3                                                            # aérien
+    elif outre_mer:
+        y = 2                                                            # maritime
+    elif masse > 15 and distance > 500 and not urgent:
+        y = 1                                                            # ferroviaire
+    else:
+        y = 0                                                            # routier
+    return np.array([np.log10(masse) / 2, np.log10(distance) / 4, float(urgent), float(outre_mer),
+                     np.log10(valeur) / 3], np.float32), y, \
+        (f"{masse:.1f} t sur {distance:.0f} km{' outre-mer' if outre_mer else ''}, "
+         f"{'urgent' if urgent else 'sans urgence'}, {valeur:.0f} DH/kg : quel mode de transport ?")
+
+
 MATIERES = [
     _matiere_texte("comptabilite", "Imputation au Plan Comptable Marocain", "Comptabilité", K.PCM,
                    "Trouver le compte du CGNC correspondant à une opération.", lambda k, v: f"{k} {v[0]}"),
@@ -502,6 +551,10 @@ MATIERES = [
             note="Mathématiques : probabilité = cas favorables / cas possibles."),
     Matiere("ohm", "Loi d'Ohm : ordre de grandeur de l'intensité", "École — lycée",
             ["Moins de 0,1 A", "0,1 à 1 A", "1 à 10 A", "Plus de 10 A"], 3, _ohm, note="Physique : I = U / R."),
+    Matiere("limites", "Limites en l'infini", "École — lycée", ["0", "Limite finie non nulle (a/b)", "+∞", "−∞"],
+            7, _limites, note="Mathématiques : fraction rationnelle, on compare les degrés du numérateur et du dénominateur."),
+    Matiere("equilibrer", "Équilibrer une réaction chimique", "École — lycée", ACTIONS_EQUILIBRE, 5, _equilibrer,
+            note="Chimie : conservation des éléments, plus petits coefficients entiers."),
     _matiere_texte("epoques", "Les grandes époques de l'histoire", "École — lycée", K.EPOQUES,
                    "Histoire : situer un événement dans son époque."),
     _matiere_texte("litterature_fr", "Œuvres littéraires françaises", "École — lycée", K.OEUVRES_FR,
@@ -527,6 +580,17 @@ MATIERES = [
                    "Management : reconnaître l'auteur d'une théorie."),
     _matiere_texte("sciences_sociales", "Auteurs des sciences sociales", "Université — sciences humaines",
                    K.AUTEURS_SCIENCES_SOCIALES, "Sociologie et psychologie : reconnaître l'auteur d'un concept."),
+    _matiere_texte("compta_generale", "Écritures de comptabilité générale", "Université — gestion", K.ECRITURES,
+                   "Comptabilité générale (CGNC) : passer l'écriture débit / crédit d'une opération, hors TVA."),
+    _matiere_texte("controle_interne", "Audit et contrôle interne", "Université — gestion", K.CONTROLE_INTERNE,
+                   "Audit : trouver le contrôle interne qui couvre un risque."),
+    _matiere_texte("marketing_digital", "Marketing digital", "Université — gestion", K.MARKETING_DIGITAL,
+                   "Marketing : reconnaître le levier ou l'indicateur digital."),
+    Matiere("transport", "Choix du mode de transport", "Université — logistique",
+            ["Routier", "Ferroviaire", "Maritime", "Aérien"], 5, _transport,
+            note="Logistique : délai, masse, distance, mer à traverser et valeur au kilo."),
+    _matiere_texte("triz", "Principes inventifs TRIZ", "Invention", K.PRINCIPES_TRIZ,
+                   "Invention : reconnaître le principe inventif d'Altshuller derrière une invention."),
     _matiere_texte("ia", "Types d'intelligence artificielle", "Intelligence artificielle", K.TYPES_IA,
                    "Reconnaître le type d'apprentissage adapté à un problème (dont le sien : le renforcement)."),
 ]

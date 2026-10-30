@@ -7,8 +7,8 @@ et espagnol, à l'écrit comme à l'oral.
 
 ## Un seul espace : l'alien et une ligne de conversation
 
-Toute l'application tient dans un seul écran (`ia_aissa/interface.py`), dans une ambiance cosmique sombre
-(nébuleuses, étoiles, messages en verre lumineux, barre néon) : IA AISSA, l'alien en 3D réaliste, grand et centré
+Toute l'application tient dans un seul écran (`ia_aissa/interface.py`), dans un thème clair
+(ciel d'aube pastel, poussière d'étoiles discrète, messages en verre dépoli blanc) : IA AISSA, l'alien en 3D réaliste, grand et centré
 dans son portail cosmique, et une seule ligne de conversation qui accepte le texte, la voix (🎙️) et les fichiers (📎).
 Les réglages (moteur, clé API, réponses écrites/vocales, niveau, conversations, souvenirs, reconnaissance du
 visage, image de l'alien) tiennent dans un seul panneau ⚙️.
@@ -75,10 +75,11 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 | Visa et voyage | Pièces du dossier de visa |
 | École — primaire | Comparer des fractions ; régions du Maroc (12 régions) |
 | École — collège et lycée | Équation du second degré (discriminant) ; corps humain (SVT) ; grandeurs et unités (physique-chimie) ; nature des mots (français) ; النحو : اسم، فعل، حرف (arabe) ; English tenses ; philosophes (bac) ; quelle matière pour un exercice |
-| École — lycée (suite) | Génétique (croisements), probabilités (urne), loi d'Ohm, dérivée et sens de variation, suites, nature d'un mouvement, pH, grandes époques de l'histoire, œuvres françaises du programme, الأدب العربي |
-| Université | Écoles de pensée économique, élasticité-prix, méthodes de coûts, finance d'entreprise, structures de données, complexité des algorithmes, branches du droit, théories des organisations, auteurs des sciences sociales |
+| École — lycée (suite) | Limites en l'infini (fractions rationnelles), équilibrer une réaction de synthèse, génétique (croisements), probabilités (urne), loi d'Ohm, dérivée et sens de variation, suites, nature d'un mouvement, pH, grandes époques de l'histoire, œuvres françaises du programme, الأدب العربي |
+| Université | Écoles de pensée économique, élasticité-prix, méthodes de coûts, finance d'entreprise, structures de données, complexité des algorithmes, branches du droit, théories des organisations, auteurs des sciences sociales, écritures de comptabilité générale (CGNC, débit/crédit), audit et contrôle interne, marketing digital, choix du mode de transport |
+| Invention | Principes inventifs TRIZ (segmentation, inversion, poupées russes…) |
 | Intelligence artificielle | Types d'apprentissage (dont le sien : le renforcement) |
-| Méta-intelligence | **Orientation automatique** : deviner seule la matière d'une question (38 matières) |
+| Méta-intelligence | **Orientation automatique** : deviner seule la matière d'une question (42 matières) |
 
 ### Répondre sans qu'on lui indique la rubrique
 
@@ -172,6 +173,9 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
   conseil, à prédire si sa propre décision est juste : ✅ Sûr, 🟡 À confirmer, 🤔 Je ne sais pas.
   S'il doute de plus de 10 % de ses décisions, il demande à réapprendre.
 - **Curiosité** : l'agent signale aussi les écarts sous les seuils d'alerte mais inhabituels pour leur centre.
+- **Prévision** : réalisé de la période suivante par centre (tendance linéaire + saisonnalité mensuelle dès
+  24 périodes) avec un intervalle de confiance à 95 %. Sur les données d'exemple (dérives et incidents
+  ponctuels), le vrai réalisé tombe dans l'intervalle environ 83 % du temps : un incident imprévisible reste imprévisible.
 
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
@@ -205,13 +209,19 @@ redémarrage, y compris les cerveaux révisés. Sans ce secret, la mémoire est 
 
 Dans ⚙️ Réglages → 🛡️ Administration, sans passer par Streamlit Cloud :
 
-1. **Créer l'administrateur** : le premier mot de passe créé (8 caractères au moins) devient celui de
-   l'application ; l'appareil reste connecté (jeton dans un cookie d'un an) jusqu'à la déconnexion.
+1. **Créer l'administrateur** : votre prénom et un mot de passe (8 caractères au moins). Ce compte est à la fois
+   votre compte de connexion et le compte administrateur : connecté avec lui, vous êtes administrateur d'office.
+   L'appareil reste connecté (jeton dans le stockage local du navigateur) jusqu'à « Se déconnecter ».
+   Un administrateur créé avant cette version est relié à votre compte à sa prochaine connexion.
 2. **Clés API de l'application** (Claude, GPT-4o, MiniMax) : valables sur tous les appareils et pour le
    broutage autonome ; affichées masquées.
 3. **Personnes autorisées** : prénom + mot de passe ; dès qu'une personne est ajoutée, l'accès est réservé
    (ajoutez-vous vous-même en premier).
 4. **Broutage autonome** : marche/arrêt et nombre de repas par jour.
+
+**Clé API personnelle** : une personne connectée qui coche « Ne jamais oublier ma clé » la retrouve sur tous
+ses appareils et après chaque nouvelle session (gardée avec son compte dans la base de mémoire, et dans le
+stockage local de l'appareil). Les cookies ne sont pas utilisés : Streamlit Cloud ne les transmet pas à l'application.
 
 Les mots de passe ne sont jamais gardés en clair (empreintes PBKDF2). Les réglages sont dans la base de mémoire :
 durables avec `MEMOIRE_URL`, effacés au redémarrage sinon. Les secrets de Streamlit Cloud restent prioritaires.

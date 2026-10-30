@@ -82,6 +82,35 @@ def preparer(df):
     return df
 
 
+def prevoir(df, z=1.96):
+    """Prévision du réalisé de la période suivante, par centre : tendance linéaire + saisonnalité mensuelle
+    (dès 24 périodes, moyenne des résidus par mois de l'année), et intervalle de confiance à 95 % tiré de la
+    dispersion des résidus (élargi par l'incertitude sur la tendance)."""
+    lignes = []
+    for centre, groupe in df.sort_values("periode").groupby("centre"):
+        y = groupe["reel"].to_numpy(dtype=float)
+        n = len(y)
+        if n < 3:
+            continue
+        t = np.arange(n, dtype=float)
+        pente, origine = np.polyfit(t, y, 1)
+        residus = y - (origine + pente * t)
+        saison = np.zeros(12)
+        if n >= 24:
+            saison = np.array([residus[t % 12 == m].mean() for m in range(12)])
+            residus = residus - saison[t.astype(int) % 12]
+        ecart_type = float(np.sqrt((residus ** 2).sum() / max(1, n - 2 - (11 if n >= 24 else 0))))
+        prevision = origine + pente * n + saison[n % 12]
+        marge = z * ecart_type * np.sqrt(1 + 1 / n + (n - t.mean()) ** 2 / ((t - t.mean()) ** 2).sum())
+        try:
+            suivante = str(pd.Period(str(groupe["periode"].iloc[-1]), freq="M") + 1)
+        except (ValueError, TypeError):
+            suivante = "suivante"
+        lignes.append((suivante, centre, round(prevision, 2), round(prevision - marge, 2), round(prevision + marge, 2),
+                       "oui" if n >= 24 else "non (moins de 24 périodes)"))
+    return pd.DataFrame(lignes, columns=["periode", "centre", "prevision", "bas_95", "haut_95", "saisonnalite"])
+
+
 def classer_situation(ligne):
     e, t = ligne["ecart_pct"], ligne["tendance"]
     if e > SEUIL_ALERTE or (e > SEUIL_VIGILANCE and t > 0.03):

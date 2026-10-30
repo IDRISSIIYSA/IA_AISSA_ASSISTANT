@@ -8,23 +8,25 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 ## À faire
 
-- [ ] Matières de lycée : mathématiques (limites de fonctions usuelles en l'infini), chimie (équilibrer une réaction simple)
-- [ ] Matières d'université : comptabilité générale (écritures débit/crédit d'une opération), audit et contrôle interne, marketing digital, logistique (choix du mode de transport)
-- [ ] Invention : matière « principes inventifs TRIZ » (reconnaître le principe d'une invention) et galerie des idées de l'atelier d'invention gardée en mémoire
-- [ ] Contrôle de gestion : prévision du réalisé du mois suivant par l'agent (tendance + saisonnalité) avec intervalle de confiance
-- [ ] Méta-intelligence : afficher pour chaque matière sa « courbe de progrès » (vitesse d'apprentissage) et étudier en priorité les matières où IA AISSA progresse le plus vite (curiosité guidée par le progrès)
+- [x] Matières de lycée : mathématiques (limites de fonctions usuelles en l'infini), chimie (équilibrer une réaction simple)
+- [x] Matières d'université : comptabilité générale (écritures débit/crédit d'une opération), audit et contrôle interne, marketing digital, logistique (choix du mode de transport)
+- [x] Invention : matière « principes inventifs TRIZ » (galerie des idées déjà gardée en mémoire)
+- [x] Contrôle de gestion : prévision du réalisé du mois suivant par l'agent (tendance + saisonnalité) avec intervalle de confiance
+- [x] Méta-intelligence : afficher pour chaque matière sa « courbe de progrès » (vitesse d'apprentissage) et étudier en priorité les matières où IA AISSA progresse le plus vite (curiosité guidée par le progrès)
 - [ ] Langues : atelier de prononciation en darija avec phrases du quotidien professionnel, et score suivi dans le temps
 - [ ] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
 - [ ] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s)
 
 - [ ] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée
-- [ ] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
+- [x] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
 
 - [ ] Bibliothèque : bouton « Nourrir IA AISSA chaque jour » qui digère un article Wikipédia tiré de ses lacunes à chaque visite, dans la limite d'un appel au moteur
 
-- [ ] Espace unique : afficher les graphiques et tableaux du contrôleur de gestion dans des onglets repliables pour garder la conversation compacte sur téléphone
+- [x] Espace unique : afficher les graphiques et tableaux du contrôleur de gestion dans des onglets repliables pour garder la conversation compacte sur téléphone
 
 - [ ] Broutage : ajouter des sources ouvertes marocaines et financières via leurs API ou flux publics (ex. publications statistiques), en vérifiant leurs conditions d'utilisation
+- [ ] Contrôle de gestion : prévision robuste aux dérives (tendance sur les 12 dernières périodes) et mesure de la couverture réelle de l'intervalle
+- [ ] École : entraînement de l'orientation avec un pas d'apprentissage adaptatif (lr 1e-3 donne 96 % contre 64 % à 2e-3 avec 42 matières)
 
 ## Fait
 

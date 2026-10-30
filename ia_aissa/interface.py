@@ -421,8 +421,16 @@ def reglages(utilisateur):
 # ==========================================
 # Les éléments affichés dans la conversation
 # ==========================================
+REPLIABLES = ("graphique", "tableau", "liste")
+
+
 def afficher_element(e, cle):
+    """Les graphiques, tableaux et listes se replient : la conversation reste compacte, surtout sur téléphone."""
     t = e["type"]
+    if t in REPLIABLES and e.get("titre"):
+        with st.expander(e["titre"], expanded=t == "graphique"):
+            afficher_element({k: v for k, v in e.items() if k != "titre"}, cle)
+        return
     if e.get("titre") and t not in ("telechargement",):
         st.markdown(f"**{e['titre']}**")
     if t == "metriques":
