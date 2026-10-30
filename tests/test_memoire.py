@@ -84,3 +84,21 @@ def test_adresse_neon_ou_supabase_acceptee_telle_quelle():
     assert normaliser_url(' "postgres://u:p@db.supabase.co:5432/postgres" ') == \
         "postgresql+psycopg://u:p@db.supabase.co:5432/postgres?sslmode=require"
     assert normaliser_url("sqlite:///x.db") == "sqlite:///x.db"
+
+
+def test_cache_des_reglages_pour_une_base_distante(tmp_path):
+    from ia_aissa.memoire import Memoire
+    m = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    assert m.cache_reglages_s == 0                     # base locale : pas de cache
+    m.cache_reglages_s = 30                            # comme pour Neon (postgresql://…)
+    autre = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    assert m.reglage("ADMIN_X") is None
+    autre.definir_reglage("ADMIN_X", "1")              # écrit par un autre serveur : visible après 30 s au plus
+    assert m.reglage("ADMIN_X") is None
+    m.definir_reglage("ADMIN_X", "2")                  # écrit par ce serveur : visible tout de suite
+    assert m.reglage("ADMIN_X") == "2"
+    m.supprimer_reglage("ADMIN_X")
+    assert m.reglage("ADMIN_X") is None
+    m._cache_reglages["ADMIN_X"] = (0, "périmé")       # au-delà de 30 s : relu dans la base
+    autre.definir_reglage("ADMIN_X", "3")
+    assert m.reglage("ADMIN_X") == "3"

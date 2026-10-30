@@ -11,6 +11,7 @@ SQLite local, qui sur Streamlit Cloud est effacé à chaque redémarrage de l'ap
 """
 
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -169,6 +170,10 @@ class Memoire:
         self.persistante = url is not None
         self.moteur = create_engine(self.url, pool_pre_ping=True)
         meta.create_all(self.moteur)
+        # Base distante (Neon) : chaque requête traverse le réseau. Les réglages lus à chaque affichage (secrets
+        # absents, quotas…) sont gardés 30 s en mémoire du serveur ; toute écriture par ce serveur les met à jour.
+        self.cache_reglages_s = 30 if self.url.startswith("postgresql") else 0
+        self._cache_reglages = {}
 
     # ---------- Conversations ----------
     def nouvelle_conversation(self, utilisateur, premiere_question):
@@ -384,9 +389,16 @@ class Memoire:
 
     # ---------- Réglages (administration) ----------
     def reglage(self, cle):
+        if self.cache_reglages_s:
+            garde = self._cache_reglages.get(cle)
+            if garde and time.monotonic() - garde[0] < self.cache_reglages_s:
+                return garde[1]
         with self.moteur.connect() as c:
             l = c.execute(select(reglages.c.valeur).where(reglages.c.cle == cle)).first()
-            return l[0] if l else None
+        valeur = l[0] if l else None
+        if self.cache_reglages_s:
+            self._cache_reglages[cle] = (time.monotonic(), valeur)
+        return valeur
 
     def reglages(self, prefixe=""):
         with self.moteur.connect() as c:
@@ -396,10 +408,12 @@ class Memoire:
         with self.moteur.begin() as c:
             c.execute(delete(reglages).where(reglages.c.cle == cle))
             c.execute(insert(reglages).values(cle=cle, valeur=valeur, modifie_le=maintenant()))
+        self._cache_reglages.pop(cle, None)
 
     def supprimer_reglage(self, cle):
         with self.moteur.begin() as c:
             c.execute(delete(reglages).where(reglages.c.cle == cle))
+        self._cache_reglages.pop(cle, None)
 
     # ---------- Visages ----------
     def ajouter_visage(self, utilisateur, empreinte):
