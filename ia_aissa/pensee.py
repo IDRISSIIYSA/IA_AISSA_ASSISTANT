@@ -259,7 +259,9 @@ def penser(texte, memoire=None):
     lectures = []
     if memoire is not None:
         from .bibliotheque import chercher
-        lectures = [l for l in chercher(memoire, texte, n=2) if l["pertinence"] >= 0.25]
+        cles = {x for x in mots(texte) if x not in VIDES and len(x) > 3}
+        lectures = [l for l in chercher(memoire, texte, n=2) if l["pertinence"] >= 0.4      # proche ET un vrai mot commun
+                    and cles & {x for x in mots(f"{l['concept']} {l['explication']}") if len(x) > 3}]
         if lectures:
             etapes.append(f"Ma bibliothèque : {len(lectures)} concept(s) proche(s) dans mes lectures.")
 

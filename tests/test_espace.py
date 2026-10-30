@@ -146,3 +146,13 @@ def test_le_compte_administrateur_est_le_compte_du_proprietaire(tmp_path):
     assert admin.session(mem, jeton) == "Aissa"                        # connexion retenue sur l'appareil
     admin.fermer_session(mem, jeton)
     assert admin.session(mem, jeton) is None
+
+
+def test_la_bibliotheque_n_ajoute_que_des_lectures_pertinentes(tmp_path):
+    import json
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.pensee import penser
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.garder_digestion("Aissa", "wikipedia", "Sciences humaines", json.dumps(
+        [{"nom": "7 World Trade Center", "explication": "La tour a été inaugurée le 18 mai 2006."}]), "", 0.8)
+    assert "World Trade" not in penser("chkoun li bna lkoutoubia", mem)[0]
