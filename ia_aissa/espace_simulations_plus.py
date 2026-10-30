@@ -459,11 +459,11 @@ def construire_plus(nom, memoire, c):
                                  "Acheter pour revendre avant 5 ans est rarement gagnant : les frais d'acquisition pèsent."])
     # ------------------------------------------------------------------ Énergie
     if nom == "Chauffe-eau solaire":
-        litres = c[0].number_input("Eau chaude par jour (litres)", 10.0, value=200.0, step=10.0, key="ce_l")
-        cov = c[1].number_input("Couverture solaire (%)", 10.0, 100.0, 75.0, 5.0, key="ce_c") / 100
-        prix = c[2].number_input("Prix du kWh d'appoint (DH)", 0.0, value=1.2, step=0.05, key="ce_p")
+        litres = c[0].number_input("Eau chaude par jour (litres)", 10.0, value=200.0, step=10.0, key="ces_l")
+        cov = c[1].number_input("Couverture solaire (%)", 10.0, 100.0, 75.0, 5.0, key="ces_c") / 100
+        prix = c[2].number_input("Prix du kWh d'appoint (DH)", 0.0, value=1.2, step=0.05, key="ces_p")
         c2 = st.columns(2)
-        cout = c2[0].number_input("Coût de l'installation (DH)", 0.0, value=12_000.0, step=500.0, key="ce_k")
+        cout = c2[0].number_input("Coût de l'installation (DH)", 0.0, value=12_000.0, step=500.0, key="ces_k")
         x = S.chauffe_eau_solaire(litres, 15, 55, cov, prix, cout)
         return rapport(nom, categorie_de(nom), {"Eau chaude": f"{litres:g} L/jour", "Couverture solaire": pc(cov),
                                                 "Prix du kWh": dh(prix), "Coût": dh(cout)},
@@ -616,7 +616,7 @@ def construire_plus(nom, memoire, c):
                                       "par dichotomie."], refs, debut.year, tableau=sen["tableau"], conseils=conseils)
         st.markdown("#### 📑 Compte de résultat prévisionnel")
         st.dataframe(bp["compte_de_resultat"], hide_index=True, width="stretch")
-        return rapport(nom, categorie_de(nom), entrees,
+        r = rapport(nom, categorie_de(nom), entrees,
                        {"Besoins de départ": dh(bp["besoins_initiaux"]), "Ressources de départ": dh(bp["ressources_initiales"]),
                         "Équilibre du financement": dh(bp["ecart_financement"]), "Mensualité de l'emprunt": dh(bp["mensualite"]),
                         "Seuil de rentabilité annuel": dh(bp["seuil_rentabilite"]) if bp["seuil_rentabilite"] else "—",
@@ -631,6 +631,8 @@ def construire_plus(nom, memoire, c):
                                   "plan de financement et de trésorerie.", "Non traités : TVA sur investissements "
                                   "(crédit de TVA de départ), saisonnalité mensuelle, distribution de dividendes."],
                        conseils=conseils)
+        r["annexes"] = {"Compte de résultat": bp["compte_de_resultat"]}
+        return r
     if nom == "Plan de financement initial":
         st.caption("Une ligne par poste : libellé, montant.")
         b = c[0].text_area("Besoins", "Matériel, 300000\nAménagement du local, 120000\nFrais de démarrage, 20000\n"
@@ -765,5 +767,135 @@ def construire_plus(nom, memoire, c):
                        tableau=x["tableau"], remarques=["Avantages en nature, indemnités imposables et régularisations "
                        "d'entrée ou de sortie en cours d'année : à ajouter au brut annuel.",
                        "Déduction pour charges de famille de 500 DH par personne : vérifiez le montant de l'exercice."],
+                       conseils=conseils)
+    if nom == "Plus-value immobilière (profit foncier)":
+        prix_v = c[0].number_input("Prix de vente (DH)", 0.0, value=1_500_000.0, step=50_000.0, key="pf_pv")
+        frais_v = c[1].number_input("Frais de cession (DH)", 0.0, value=20_000.0, step=1_000.0, key="pf_fv",
+                                    help="Frais d'annonce, de courtage, de mainlevée… justifiés.")
+        prix_a = c[2].number_input("Prix d'acquisition (DH)", 0.0, value=800_000.0, step=50_000.0, key="pf_pa")
+        c2 = st.columns(3)
+        annee_a = c2[0].number_input("Année d'acquisition", 1946, aujourdhui.year, 2010, key="pf_aa")
+        frais_r = c2[1].number_input("Frais d'acquisition justifiés (DH, 0 = forfait 15 %)", 0.0, value=0.0,
+                                     step=1_000.0, key="pf_fa")
+        travaux = c2[2].number_input("Travaux et investissements justifiés (DH)", 0.0, value=100_000.0, step=5_000.0,
+                                     key="pf_tr")
+        c3 = st.columns(3)
+        coef = c3[0].number_input("Coefficient de réévaluation de l'année d'acquisition", 1.0, 20.0, 1.30, 0.01,
+                                  key="pf_co", help="Publié chaque année par la DGI (circulaire) : lisez celui de votre "
+                                  "année d'acquisition. Exemple indicatif : 1,30 pour 2010 vendu en 2026.")
+        rp = c3[1].checkbox("Résidence principale occupée au moins 5 ans", key="pf_rp")
+        autres = c3[2].number_input("Autres cessions immobilières cette année (DH)", 0.0, value=0.0, step=10_000.0,
+                                    key="pf_au")
+        x = S.profit_foncier(prix_v, frais_v, prix_a, frais_r, travaux, coef, rp, prix_v + autres)
+        conseils = [f"Régime appliqué : {x['regime']}."]
+        if not x["tpi"]:
+            conseils.append("Exonération : déposez quand même la déclaration dans les 30 jours avec les justificatifs "
+                            "(certificat de résidence, factures), pour obtenir l'attestation de liquidation.")
+        elif "Cotisation minimale" in x["regime"]:
+            conseils.append(f"La cotisation minimale ({dh(x['cotisation_minimale'])}) dépasse 20 % du profit : chaque "
+                            "frais ou travaux justifié n'y change rien ; vérifiez surtout le coefficient et le prix.")
+        else:
+            conseils.append(f"Chaque 10 000 DH de travaux ou frais justifiés en plus réduisent l'impôt d'environ "
+                            f"{dh(10_000 * coef * 0.20)} : rassemblez toutes les factures.")
+        if x["forfait_15"]:
+            conseils.append("Frais d'acquisition retenus au forfait de 15 % (plus avantageux que vos frais justifiés).")
+        conseils.append("Le notaire exige l'attestation de liquidation : déclarez et payez dans les 30 jours suivant "
+                        "la vente (CGI, art. 83 et 173), sinon pénalités de l'art. 184 et de l'art. 208.")
+        return rapport(nom, categorie_de(nom), {"Prix de vente": dh(prix_v), "Frais de cession": dh(frais_v),
+                                                "Prix d'acquisition": dh(prix_a), "Année d'acquisition": annee_a,
+                                                "Travaux justifiés": dh(travaux), "Coefficient": f"{coef:g}",
+                                                "Résidence principale (5 ans)": "oui" if rp else "non"},
+                       {"Frais d'acquisition retenus": dh(x["frais_acquisition"]) + (" (forfait 15 %)" if x["forfait_15"] else ""),
+                        "Coût d'acquisition réévalué": dh(x["cout_reevalue"]), "Profit net": dh(x["profit_net"]),
+                        "20 % du profit": dh(x["ir_20"]), "Cotisation minimale (3 % du prix)": dh(x["cotisation_minimale"]),
+                        "Impôt dû (TPI)": dh(x["tpi"]), "Net pour le vendeur": dh(x["net_vendeur"])},
+                       ["Profit net = (prix de vente − frais de cession) − (prix d'acquisition + frais d'acquisition + "
+                        "travaux) × coefficient de réévaluation.",
+                        "Frais d'acquisition : réels justifiés, ou forfait de 15 % du prix d'acquisition s'il est plus élevé.",
+                        "Impôt = le plus élevé de 20 % du profit net et de 3 % du prix de vente (dû même sans profit).",
+                        "Exonérations : cessions de l'année ≤ 140 000 DH ; résidence principale occupée 5 ans au moins "
+                        "(au-delà de 4 000 000 DH, 3 % sur la fraction excédentaire)."],
+                       ["CGI, art. 61-II, 63, 65, 73-II-F-6°, 83, 144-II, 173 et 184",
+                        f"Vérifié le {B.VERIFIE_LE} (Upsilon Consulting — profit foncier 2026 ; ReaConsult)"],
+                       aujourdhui.year, remarques=["Coefficient de réévaluation à lire dans la circulaire de la DGI de "
+                       "l'année de vente.", "Non traités : logement social (4 ans), donations en famille, biens hérités "
+                       "(prix = valeur au décès), terrains urbains non bâtis (taxe spécifique)."], conseils=conseils)
+    if nom == "Solde de tout compte":
+        salaire = c[0].number_input("Salaire mensuel brut (DH)", 0.0, value=8_000.0, step=250.0, key="stc_s")
+        categorie = c[1].selectbox("Catégorie", list(S.PREAVIS), key="stc_c")
+        anc = c[2].number_input("Ancienneté (années)", 0.0, 50.0, 7.0, 0.5, key="stc_a")
+        c2 = st.columns(4)
+        motif = c2[0].selectbox("Motif", ["Licenciement (hors faute grave)", "Démission", "Faute grave",
+                                          "Fin de CDD"], key="stc_m")
+        effectue = c2[1].checkbox("Préavis effectué", key="stc_p")
+        jours = c2[2].number_input("Jours travaillés le dernier mois", 0, 26, 15, key="stc_j")
+        conges = c2[3].number_input("Jours de congés non pris", 0.0, 60.0, 10.0, 0.5, key="stc_cg")
+        x = S.solde_de_tout_compte(salaire, categorie, anc, motif, effectue, jours, conges)
+        conseils = [f"Préavis minimal pour un {categorie.lower()} de {anc:g} ans : {x['preavis']} (décret 2-04-469) — "
+                    "le contrat ou la convention collective peut prévoir plus."]
+        if motif == "Démission":
+            conseils.append("En cas de démission, c'est le salarié qui doit le préavis : s'il ne l'effectue pas, "
+                            "l'employeur peut lui réclamer l'indemnité correspondante.")
+        if motif == "Faute grave":
+            conseils.append("Faute grave : ni préavis ni indemnité de licenciement, mais la procédure de l'art. 62 "
+                            "(convocation, audition, procès-verbal) doit être respectée, sinon le licenciement est abusif.")
+        conseils.append("Remettez le certificat de travail (art. 72) et le reçu pour solde de tout compte (art. 73) : "
+                        "le salarié peut le dénoncer dans les 60 jours.")
+        return rapport(nom, categorie_de(nom), {"Salaire brut": dh(salaire), "Catégorie": categorie,
+                                                "Ancienneté": f"{anc:g} ans", "Motif": motif,
+                                                "Préavis effectué": "oui" if effectue else "non",
+                                                "Jours travaillés": jours, "Congés non pris": f"{conges:g} jours"},
+                       {"Total brut dû": dh(x["total"]), "dont imposable (IR, CNSS)": dh(x["imposable"]),
+                        "dont exonéré": dh(x["exonere"]), "Préavis minimal": x["preavis"]},
+                       ["Salaire et congés : salaire mensuel ÷ 26 jours ouvrables × jours dus.",
+                        "Préavis non effectué (licenciement) : salaire × durée du préavis (8 jours = 8/26 de mois).",
+                        "Indemnité de licenciement (après 6 mois) : 96 h par année les 5 premières années, 144 h de la "
+                        "6e à la 10e, 192 h de la 11e à la 15e, 240 h au-delà, au salaire horaire (mensuel ÷ 191 h)."],
+                       [f"{CODE_TRAVAIL}, art. 43, 51 à 53, 62, 72, 73 et 251",
+                        "Décret n° 2-04-469 du 29 décembre 2004 (BO n° 5280) : délais de préavis",
+                        "CGI, art. 57-7° (indemnité de licenciement exonérée dans la limite légale)",
+                        f"Vérifié le {B.VERIFIE_LE} (Upsilon Consulting, Rekrute)"],
+                       aujourdhui.year, tableau=x["tableau"],
+                       remarques=["Non traités : dommages-intérêts pour licenciement abusif (art. 41), primes "
+                                  "contractuelles, 13e mois au prorata, perte d'emploi (IPE de la CNSS)."],
+                       conseils=conseils)
+    if nom == "Remboursement anticipé d'un crédit":
+        capital = c[0].number_input("Capital emprunté (DH)", 0.0, value=500_000.0, step=10_000.0, key="ra_c")
+        taux = c[1].number_input("Taux annuel (%)", 0.0, 30.0, 5.0, 0.1, key="ra_t") / 100
+        duree = c[2].number_input("Durée totale (mois)", 12, 360, 240, key="ra_d")
+        c2 = st.columns(4)
+        ecoules = c2[0].number_input("Échéances déjà payées", 0, 359, 60, key="ra_e")
+        montant = c2[1].number_input("Montant remboursé par avance (DH)", 0.0, value=100_000.0, step=10_000.0, key="ra_m")
+        indem = c2[2].number_input("Indemnité du contrat (mois d'intérêts)", 0.0, 12.0, 1.0, 0.5, key="ra_i",
+                                   help="Lisez la clause de remboursement anticipé de votre contrat ; la loi n° 31-08 "
+                                        "encadre cette indemnité pour les crédits aux consommateurs.")
+        reduire = c2[3].radio("Réduire", ["la durée", "la mensualité"], key="ra_r")
+        if ecoules >= duree:
+            st.error("Le nombre d'échéances payées doit être inférieur à la durée.")
+            return None
+        x = S.remboursement_anticipe(capital, taux, duree, ecoules, montant, indem, reduire)
+        conseils = [f"Gain net : {dh(x['gain_net'])} d'intérêts économisés après l'indemnité de {dh(x['indemnite'])}."]
+        if reduire == "la mensualité" and x["nouveaux_mois"]:
+            autre = S.remboursement_anticipe(capital, taux, duree, ecoules, montant, indem, "la durée")
+            conseils.append(f"Réduire plutôt la durée économiserait {dh(autre['economie'] - x['economie'])} de plus "
+                            f"(fin du crédit {x['mois_restants'] - autre['nouveaux_mois']} mois plus tôt).")
+        conseils.append("Comparez avec le rendement d'un placement sans risque : rembourser rapporte l'équivalent "
+                        f"du taux du crédit ({pc(taux)}) sans impôt.")
+        return rapport(nom, categorie_de(nom), {"Capital": dh(capital), "Taux": pc(taux), "Durée": f"{duree} mois",
+                                                "Échéances payées": ecoules, "Remboursement anticipé": dh(montant),
+                                                "Indemnité contractuelle": f"{indem:g} mois d'intérêts", "Réduire": reduire},
+                       {"Capital restant dû avant": dh(x["capital_restant"]), "Montant remboursé": dh(x["rembourse"]),
+                        "Indemnité": dh(x["indemnite"]), "Intérêts restants prévus": dh(x["interets_prevus"]),
+                        "Intérêts restants après": dh(x["interets_apres"]), "Intérêts économisés": dh(x["economie"]),
+                        "Gain net": dh(x["gain_net"]),
+                        "Nouvelle mensualité": dh(x["nouvelle_mensualite"]) if x["nouveaux_mois"] else "crédit soldé",
+                        "Mois restants": f"{x['nouveaux_mois']} au lieu de {x['mois_restants']}"},
+                       ["Capital restant dû lu dans l'échéancier après les échéances payées.",
+                        "Indemnité = capital remboursé × taux mensuel × nombre de mois d'intérêts du contrat.",
+                        "Réduire la durée : même mensualité, durée recalculée ; réduire la mensualité : même durée, "
+                        "mensualité recalculée sur le capital restant."],
+                       ["Formule de l'annuité constante (mathématiques financières)",
+                        "Loi n° 31-08 édictant des mesures de protection du consommateur (crédit, remboursement anticipé)"],
+                       remarques=["Plafond légal de l'indemnité non encodé (non vérifié) : saisissez celle de votre contrat."],
                        conseils=conseils)
     return None

@@ -32,14 +32,17 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [ ] Fiscalité : faire vérifier par la lecture du CGI de chaque exercice (PDF déposés) les taux sectoriels de TVA à 10 % et les régimes transitoires d'IS, puis les encoder exercice par exercice
 - [ ] Obligations : rappel de la prochaine échéance dans le chat (« qu'est-ce que je dois payer ce mois-ci ? ») à partir du profil enregistré
-- [ ] Simulations : export Excel des tableaux (échéancier, business plan, état 9421) en plus du PDF
 - [ ] Performance : importer PyTorch seulement au premier usage d'un cerveau (1,1 s de démarrage à froid en moins) en isolant les classes de réseaux dans un module dédié
 - [ ] Performance : alerte dans le tableau de bord quand le 95e centile d'une page dépasse 3 s pendant une journée
 
 - [ ] Modèle local : affiner le petit modèle (LoRA) sur les corrections validées par l'administrateur, puis mesurer son taux de chiffres non sourcés avant et après
 - [ ] Serveur : sauvegarde quotidienne de la base Neon (pg_dump) vers un stockage à part, et page « santé du serveur » dans l'administration (RAM, disque, modèle chargé)
 
+- [ ] Simulations : coefficients de réévaluation du profit foncier lus dans la circulaire de la DGI de l'année (au lieu d'une saisie)
+- [ ] Simulations : comparer deux scénarios côte à côte (deux crédits, deux statuts, deux business plans) dans un même rapport
+
 ## Fait
+- [x] Simulations : classeur Excel pour chaque rapport (synthèse, tableau, compte de résultat du business plan, échéancier par année) ; plus-value immobilière (profit foncier), solde de tout compte avec préavis légal (décret 2-04-469), remboursement anticipé d'un crédit
 - [x] Indépendance : moteur « Modèle local (Ollama) » sans clé payante (ses faits sûrs d'abord, le modèle ne fait que parler, garde-fou des chiffres non sourcés) et paquet serveur deploy/ (Docker, Ollama 0.40.4, Caddy HTTPS, installer.sh)
 - [x] Choix « Chat » ou « Simulations et guides » ; 62 simulations et guides en 13 types : obligations et feuille de route, impôts décortiqués (IR, IS, TVA, état 9421, revenu global, loyers, attestations et classement), business plan sur 5 ans, sensibilité, plan de financement, échéancier daté avec différé, assurance et TEG, amortissement au prorata (CGI art. 10), bulletin de paie à l'envers depuis le net
 

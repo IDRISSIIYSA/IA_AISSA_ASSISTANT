@@ -472,3 +472,50 @@ def test_simulations_dans_une_seule_liste_deroulante(tmp_path, monkeypatch):
     assert any(m.value == "### Bulletin de paie complet" for m in at.markdown) and len(at.chat_input) == 0
     at.sidebar.button[0].click().run()                    # ✖ Fermer : retour au chat
     assert "simulation" not in at.session_state and len(at.chat_input) == 1
+
+
+def test_profit_foncier_solde_de_tout_compte_remboursement_anticipe_et_excel():
+    import io
+    import openpyxl
+    from ia_aissa import simulations as S
+    from ia_aissa.espace_simulations import excel
+    from ia_aissa.rapports import rapport
+    # Profit foncier : max(20 % du profit net, 3 % du prix), forfait de 15 %, exonérations
+    x = S.profit_foncier(1_500_000, 20_000, 800_000, 0, 100_000, 1.30)
+    assert x["frais_acquisition"] == 120_000 and x["profit_net"] == 154_000 and x["tpi"] == 45_000   # 3 % > 20 %
+    assert S.profit_foncier(900_000, 0, 800_000, 0, 0, 1.0)["tpi"] == 27_000                        # dû sans profit
+    assert S.profit_foncier(3_000_000, 0, 500_000, 0, 0, 1.2)["tpi"] == round((3_000_000 - 690_000) * 0.2, 2)
+    assert S.profit_foncier(130_000, 0, 50_000, 0, 0, 1.0)["tpi"] == 0                              # ≤ 140 000 DH
+    assert S.profit_foncier(2_000_000, 0, 500_000, 0, 0, 1.0, True)["tpi"] == 0                     # résidence 5 ans
+    assert S.profit_foncier(5_000_000, 0, 500_000, 0, 0, 1.0, True)["tpi"] == 30_000                # 3 % > 4 MDH
+    # Préavis (décret 2-04-469) et solde de tout compte
+    assert S.preavis("Employé ou ouvrier", 0.5)[0] == "8 jours" and S.preavis("Cadre ou assimilé", 7)[0] == "3 mois"
+    s = S.solde_de_tout_compte(8_000, "Cadre ou assimilé", 7, "Licenciement (hors faute grave)", False, 13, 13)
+    assert s["imposable"] == 4_000 + 4_000 + 24_000 and s["exonere"] > 0
+    assert len(S.solde_de_tout_compte(8_000, "Cadre ou assimilé", 7, "Démission", False, 13, 0)["tableau"]) == 2
+    # Remboursement anticipé
+    d = S.remboursement_anticipe(500_000, 0.05, 240, 60, 100_000, 1, "la durée")
+    m = S.remboursement_anticipe(500_000, 0.05, 240, 60, 100_000, 1, "la mensualité")
+    assert d["economie"] > m["economie"] > 0 and d["nouveaux_mois"] < 180 and m["nouvelle_mensualite"] < d["mensualite"]
+    assert d["indemnite"] == round(100_000 * 0.05 / 12, 2)
+    assert S.remboursement_anticipe(500_000, 0.05, 240, 60, 10**7)["nouveaux_mois"] == 0
+    # Classeur Excel : synthèse et tableau
+    r = rapport("Test", "🧾 Fiscalité", {"A": 1}, {"B": 2}, ["m"], ["CGI"], 2026, tableau=d and S.ferraillage([(12, 2, 6)])["tableau"])
+    r["annexes"] = {"Compte de résultat": S.ferraillage([(10, 1, 1)])["tableau"]}
+    classeur = openpyxl.load_workbook(io.BytesIO(excel(r)))
+    assert classeur.sheetnames == ["Synthèse", "Tableau", "Compte de résultat"]
+    valeurs = [c.value for c in classeur["Synthèse"]["B"]]
+    assert "Test" in valeurs and r["empreinte"] in valeurs
+
+
+def test_chaque_simulation_a_ses_propres_cles_de_saisie():
+    import re
+    proprietaires = {}
+    for f in ("ia_aissa/espace_simulations.py", "ia_aissa/espace_simulations_plus.py"):
+        courante = None
+        for ligne in (RACINE / f).read_text(encoding="utf-8").splitlines():
+            m = re.search(r'if nom == "([^"]+)"', ligne) or re.search(r"if nom in (.+):", ligne)
+            courante = m.group(1) if m else courante
+            for cle in re.findall(r'key="([^"{]+)"', ligne):
+                proprietaires.setdefault(cle, set()).add(courante)
+    assert not {k: v for k, v in proprietaires.items() if len(v) > 1}

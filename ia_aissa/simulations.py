@@ -646,3 +646,105 @@ def base_pour_net(net_vise, anciennete_ans=0, personnes_a_charge=0, deduction_pa
         net = paie_complete(milieu, anciennete_ans, personnes_a_charge, deduction_par_personne_an, indemnites_exonerees)["net"]
         bas, haut = (milieu, haut) if net < net_vise else (bas, milieu)
     return round(haut, 2)
+
+
+# ==========================================
+# RH : préavis et solde de tout compte
+# ==========================================
+# Décret n° 2-04-469 du 29 décembre 2004 (BO n° 5280 du 6 janvier 2005) : préavis minimal de rupture d'un CDI.
+PREAVIS = {"Cadre ou assimilé": [(1, "1 mois", 1.0), (5, "2 mois", 2.0), (float("inf"), "3 mois", 3.0)],
+           "Employé ou ouvrier": [(1, "8 jours", 8 / 26), (5, "1 mois", 1.0), (float("inf"), "2 mois", 2.0)]}
+
+
+def preavis(categorie, anciennete_ans):
+    """Durée minimale du préavis (texte) et sa valeur en mois de salaire (8 jours = 8/26 de mois)."""
+    return next((texte, mois) for plafond, texte, mois in PREAVIS[categorie] if anciennete_ans < plafond)
+
+
+def solde_de_tout_compte(salaire_brut, categorie, anciennete_ans, motif, preavis_effectue, jours_travailles_mois,
+                         jours_conges_restants, heures_mois=K.HEURES_LEGALES_MOIS):
+    """Ce qui est dû au départ : salaire du mois au prorata, congés non pris, préavis non effectué, indemnité légale."""
+    lignes = []
+    jour = salaire_brut / 26                                  # 26 jours ouvrables par mois
+    lignes.append(("Salaire du dernier mois (prorata)", round(jour * min(jours_travailles_mois, 26), 2), "imposable",
+                   "Jours travaillés × salaire ÷ 26"))
+    lignes.append(("Indemnité compensatrice de congés payés", round(jour * jours_conges_restants, 2), "imposable",
+                   "Code du travail, art. 251 : congés acquis non pris"))
+    texte_preavis, mois_preavis = preavis(categorie, anciennete_ans)
+    if motif == "Licenciement (hors faute grave)" and not preavis_effectue:
+        lignes.append((f"Indemnité compensatrice de préavis ({texte_preavis})", round(salaire_brut * mois_preavis, 2),
+                       "imposable", "Code du travail, art. 51 ; décret 2-04-469"))
+    if motif == "Licenciement (hors faute grave)" and anciennete_ans >= 0.5:
+        legale = indemnite_licenciement(salaire_brut / heures_mois, anciennete_ans)
+        lignes.append(("Indemnité légale de licenciement", legale["indemnite"], "exonérée d'IR (limite légale)",
+                       "Code du travail, art. 52 et 53 ; CGI, art. 57-7°"))
+    tableau = pd.DataFrame([{"Élément": a, "Montant brut": b, "Traitement fiscal": c, "Base": d} for a, b, c, d in lignes])
+    imposable = float(tableau[tableau["Traitement fiscal"] == "imposable"]["Montant brut"].sum())
+    return {"tableau": tableau, "total": round(float(tableau["Montant brut"].sum()), 2), "imposable": round(imposable, 2),
+            "exonere": round(float(tableau["Montant brut"].sum()) - imposable, 2), "preavis": texte_preavis,
+            "mois_preavis": mois_preavis}
+
+
+# ==========================================
+# Fiscalité : profit foncier (vente d'un bien immobilier)
+# ==========================================
+SEUIL_PETITES_CESSIONS = 140_000          # CGI, art. 63 : cessions annuelles n'excédant pas 140 000 DH
+PLAFOND_RESIDENCE_PRINCIPALE = 4_000_000  # au-delà, minimum de 3 % sur la fraction excédentaire (art. 144-II)
+
+
+def profit_foncier(prix_cession, frais_cession, prix_acquisition, frais_acquisition_reels, depenses_investissement,
+                   coefficient, residence_principale_5_ans=False, total_cessions_annee=None):
+    """TPI = max(20 % du profit net, 3 % du prix de cession) ; frais d'acquisition : réels ou forfait de 15 %."""
+    forfait = prix_acquisition * 0.15
+    frais_acq = max(frais_acquisition_reels or 0.0, forfait)
+    cout = (prix_acquisition + frais_acq + depenses_investissement) * coefficient
+    profit = (prix_cession - frais_cession) - cout
+    ir20, cm = max(profit, 0.0) * 0.20, prix_cession * 0.03
+    total_annee = prix_cession if total_cessions_annee is None else total_cessions_annee
+    if total_annee <= SEUIL_PETITES_CESSIONS:
+        regime, du = "Exonérée : cessions de l'année ≤ 140 000 DH (art. 63)", 0.0
+    elif residence_principale_5_ans and prix_cession <= PLAFOND_RESIDENCE_PRINCIPALE:
+        regime, du = "Exonérée : résidence principale occupée au moins 5 ans (art. 63-II-B)", 0.0
+    elif residence_principale_5_ans:
+        regime, du = ("Résidence principale au-delà de 4 000 000 DH : 3 % sur la fraction excédentaire (art. 144-II)",
+                      round((prix_cession - PLAFOND_RESIDENCE_PRINCIPALE) * 0.03, 2))
+    else:
+        regime = "20 % du profit net" if ir20 >= cm else "Cotisation minimale : 3 % du prix de cession"
+        du = max(ir20, cm)
+    return {"frais_acquisition": round(frais_acq, 2), "forfait_15": frais_acq == forfait, "cout_reevalue": round(cout, 2),
+            "profit_net": round(profit, 2), "ir_20": round(ir20, 2), "cotisation_minimale": round(cm, 2),
+            "tpi": round(du, 2), "regime": regime, "net_vendeur": round(prix_cession - frais_cession - du, 2)}
+
+
+# ==========================================
+# Banque : remboursement anticipé
+# ==========================================
+def remboursement_anticipe(capital, taux_annuel, duree_mois, mois_ecoules, montant, indemnite_mois_interets=1.0,
+                           reduire="la durée"):
+    """Remboursement anticipé total ou partiel après `mois_ecoules` échéances : intérêts économisés, indemnité
+    (en mois d'intérêts sur le capital remboursé, selon le contrat), nouvelle mensualité ou nouvelle durée."""
+    t = taux_annuel / 12
+    e = echeancier_credit(capital, taux_annuel, duree_mois)
+    m = e["mensualite"]
+    restant = float(e["tableau"]["Capital restant dû"].iloc[mois_ecoules - 1]) if mois_ecoules else float(capital)
+    rembourse = min(montant, restant)
+    indemnite = rembourse * t * indemnite_mois_interets
+    interets_prevus = float(e["tableau"]["Intérêts"].iloc[mois_ecoules:].sum())
+    reste = restant - rembourse
+    mois_restants = duree_mois - mois_ecoules
+    if reste <= 0.005:
+        nouvelle_mensualite, nouveaux_mois, interets_apres = 0.0, 0, 0.0
+    elif reduire == "la durée":
+        nouvelle_mensualite = m
+        nouveaux_mois = int(np.ceil(-np.log(1 - reste * t / m) / np.log(1 + t))) if t else int(np.ceil(reste / m))
+        interets_apres = float(echeancier_credit(reste, taux_annuel, nouveaux_mois)["tableau"]["Intérêts"].sum())
+    else:
+        nouveaux_mois = mois_restants
+        n = echeancier_credit(reste, taux_annuel, mois_restants)
+        nouvelle_mensualite, interets_apres = n["mensualite"], float(n["tableau"]["Intérêts"].sum())
+    economie = interets_prevus - interets_apres
+    return {"capital_restant": round(restant, 2), "rembourse": round(rembourse, 2), "indemnite": round(indemnite, 2),
+            "interets_prevus": round(interets_prevus, 2), "interets_apres": round(interets_apres, 2),
+            "economie": round(economie, 2), "gain_net": round(economie - indemnite, 2), "mensualite": m,
+            "nouvelle_mensualite": round(nouvelle_mensualite, 2), "nouveaux_mois": nouveaux_mois,
+            "mois_restants": mois_restants}

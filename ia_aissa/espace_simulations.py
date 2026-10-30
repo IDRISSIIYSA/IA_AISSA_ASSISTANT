@@ -18,16 +18,17 @@ CATEGORIES = {
     "📚 Impôts décortiqués": ["IR décortiqué", "IS décortiqué", "TVA décortiquée", "État 9421 (traitements et salaires)",
                              "Déclaration du revenu global (personnes physiques)", "Revenus fonciers (loyers) décortiqués"],
     "🧾 Fiscalité": ["IR (impôt sur le revenu)", "IS (impôt sur les sociétés)", "TVA due ou crédit de TVA",
-                    "Revenus fonciers (loyers)", "Retenue sur dividendes", "Pénalités de retard (IS, TVA, IR)",
+                    "Revenus fonciers (loyers)", "Plus-value immobilière (profit foncier)", "Retenue sur dividendes", "Pénalités de retard (IS, TVA, IR)",
                     "Auto-entrepreneur", "Douane à l'importation"],
     "👥 RH et paie": ["Bulletin de paie complet", "Paie (brut ↔ net)", "État 9421 (préparation)",
                      "Masse salariale et augmentation", "Heures supplémentaires", "Indemnité de licenciement",
-                     "Congés payés", "Retraite CNSS (pension)"],
+                     "Congés payés", "Solde de tout compte", "Retraite CNSS (pension)"],
     "📊 Projets et business plans": ["Business plan sur 5 ans", "Étude de sensibilité du projet",
                                     "Plan de financement initial"],
     "📒 Comptabilité": ["Amortissement", "Seuil de rentabilité", "Prix de vente et marges", "Coût de revient complet",
                        "Ratios financiers (bilan)"],
-    "🏦 Banque": ["Crédit (échéancier)", "TEG d'un crédit", "Capacité d'emprunt", "Leasing ou crédit",
+    "🏦 Banque": ["Crédit (échéancier)", "TEG d'un crédit", "Remboursement anticipé d'un crédit", "Capacité d'emprunt",
+                 "Leasing ou crédit",
                  "Épargne (intérêts composés)"],
     "💰 Finance": ["Investissement (VAN, TRI)", "Besoin en fonds de roulement (BFR)", "Trésorerie sur 12 mois",
                   "Valorisation d'entreprise (DCF)", "Effet de levier financier", "Risque de perte (Monte-Carlo)"],
@@ -106,6 +107,32 @@ def choix_principal():
     return actuelle
 
 
+def excel(r):
+    """Le rapport en classeur Excel : une feuille de synthèse (données, résultats, méthode, références, traçabilité)
+    et le tableau de calcul, pour le reprendre dans ses propres fichiers."""
+    import io
+    import pandas as pd
+    lignes = ([("Rapport", r["titre"]), ("Numéro", r["numero"]), ("Date", r["date"]), ("Type", r["categorie"]),
+               ("Année de référence", r.get("annee") or "")]
+              + [("", "")] + [("Donnée : " + k, v) for k, v in r["entrees"].items()]
+              + [("", "")] + [("Résultat : " + k, v) for k, v in r["resultats"].items()]
+              + [("", "")] + [("Méthode", m) for m in r["methode"]] + [("Référence", x) for x in r["references"]]
+              + [("Proposition", x) for x in r.get("conseils", [])] + [("À savoir", x) for x in r.get("remarques", [])]
+              + [("", ""), ("Empreinte SHA-256", r["empreinte"]), ("Limites", r["limites"])])
+    sortie = io.BytesIO()
+    with pd.ExcelWriter(sortie, engine="openpyxl") as classeur:
+        pd.DataFrame(lignes, columns=["Rubrique", "Valeur"]).to_excel(classeur, sheet_name="Synthèse", index=False)
+        if r.get("tableau") is not None:
+            r["tableau"].to_excel(classeur, sheet_name="Tableau", index=False)
+        for titre, tableau in r.get("annexes", {}).items():          # tableaux complémentaires (CPC, par année…)
+            tableau.to_excel(classeur, sheet_name=titre[:31], index=False)
+        for feuille in classeur.book.worksheets:
+            for colonne in feuille.columns:
+                largeur = max(len(str(c.value or "")) for c in colonne)
+                feuille.column_dimensions[colonne[0].column_letter].width = min(80, max(12, largeur + 2))
+    return sortie.getvalue()
+
+
 def categorie_de(nom):
     return next(c for c, noms in CATEGORIES.items() if nom in noms)
 
@@ -119,8 +146,13 @@ def afficher(nom, memoire):
     st.markdown(markdown(r), unsafe_allow_html=True)
     if r.get("tableau") is not None:
         st.dataframe(r["tableau"], hide_index=True, width="stretch", height=260)
-    if st.download_button("📄 Télécharger le rapport PDF", pdf(r), f"{r['numero']}.pdf", "application/pdf",
-                          key=f"pdf_{nom}"):
+    c = st.columns(2)
+    if c[0].download_button("📄 Rapport PDF", pdf(r), f"{r['numero']}.pdf", "application/pdf", key=f"pdf_{nom}",
+                            width="stretch"):
+        journaliser(memoire, r)
+    if c[1].download_button("📊 Classeur Excel", excel(r), f"{r['numero']}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"xlsx_{nom}",
+                            width="stretch"):
         journaliser(memoire, r)
 
 
@@ -314,7 +346,7 @@ def construire(nom, memoire):
                     "Négociez le taux et comparez le TEG (assurance et frais compris) de plusieurs banques : 0,5 point de "
                     f"moins économise environ {dh(x['cout_total'] - S.echeancier_credit(capital, max(0, taux - 0.005), ans * 12)['cout_total'])}.",
                     "Vérifiez les indemnités de remboursement anticipé prévues au contrat avant de signer."]
-        return rapport(nom, categorie_de(nom), {"Capital": dh(capital), "Taux nominal annuel": pc(taux),
+        r = rapport(nom, categorie_de(nom), {"Capital": dh(capital), "Taux nominal annuel": pc(taux),
                                                 "Durée": f"{ans} ans ({ans * 12} mois)",
                                                 "Date de déblocage": deblocage.strftime("%d/%m/%Y"),
                                                 "Différé": f"{differe} mois", "Assurance": dh(assurance) + "/mois",
@@ -342,6 +374,8 @@ def construire(nom, memoire):
                        tableau=x["tableau"], conseils=conseils + ([
                            f"Le différé de {differe} mois coûte {dh(x['cout_total'] - S.echeancier_credit(capital, taux, ans * 12)['cout_total'])} "
                            "d'intérêts en plus : ne le prenez que si le projet ne produit pas encore de revenus."] if differe else []))
+        r["annexes"] = {"Par année": x["par_annee"]}
+        return r
     if nom == "Épargne (intérêts composés)":
         versement = c[0].number_input("Versement mensuel (DH)", 0.0, value=500.0, step=100.0, key="ep_ver")
         taux = c[1].number_input("Rendement annuel (%)", 0.0, 20.0, 4.0, 0.1, key="ep_taux") / 100
@@ -735,11 +769,11 @@ def construire(nom, memoire):
                         "Loi n° 67-12 régissant les rapports contractuels entre bailleurs et locataires (habitation)"],
                        conseils=conseils)
     if nom == "Énergie solaire (photovoltaïque)":
-        kwc = c[0].number_input("Puissance installée (kWc)", 0.0, value=5.0, step=0.5, key="pv_k")
-        prod = c[1].number_input("Productible (kWh/kWc/an)", 500.0, 2500.0, 1800.0, 50.0, key="pv_p",
+        kwc = c[0].number_input("Puissance installée (kWc)", 0.0, value=5.0, step=0.5, key="pvs_k")
+        prod = c[1].number_input("Productible (kWh/kWc/an)", 500.0, 2500.0, 1800.0, 50.0, key="pvs_p",
                                  help="Selon la région et l'orientation : demandez l'étude de l'installateur.")
-        prix = c[2].number_input("Prix du kWh évité (DH)", 0.0, value=1.2, step=0.05, key="pv_px")
-        cout = st.number_input("Coût de l'installation (DH)", 0.0, value=60_000.0, step=5_000.0, key="pv_c")
+        prix = c[2].number_input("Prix du kWh évité (DH)", 0.0, value=1.2, step=0.05, key="pvs_px")
+        cout = st.number_input("Coût de l'installation (DH)", 0.0, value=60_000.0, step=5_000.0, key="pvs_c")
         x = S.photovoltaique(kwc, prod, prix, cout)
         conseils = [f"Retour sur investissement en {x['retour_sur_investissement_ans']} ans" if x["retour_sur_investissement_ans"]
                     else "Pas de retour sur 25 ans : revoyez le dimensionnement ou le prix.",
