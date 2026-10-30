@@ -188,7 +188,11 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
     morceaux = bouchees(texte, nb_bouchees)
     digestions = []
     for k, morceau in enumerate(morceaux, 1):
-        d = ruminer(moteur, client, morceau, source)
+        if client is None:                          # sans moteur : IA AISSA rumine seule
+            from .autodidacte import ruminer_local
+            d = ruminer_local(morceau, source)
+        else:
+            d = ruminer(moteur, client, morceau, source)
         if d["concepts"]:
             memoire.garder_digestion(utilisateur, source, d["famille"], json.dumps(d["concepts"], ensure_ascii=False),
                                      d["analogie"], d["confiance"])
@@ -198,7 +202,7 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
     concepts = [c for d in digestions for c in d["concepts"]]
     comblees = combler_lacunes(memoire, concepts)
     apprises = 0
-    for question, matiere, reponse in exercices_pour_ecole(moteur, client, concepts):
+    for question, matiere, reponse in (exercices_pour_ecole(moteur, client, concepts) if client else []):
         try:
             corriger(memoire, "IA AISSA", matiere, question, reponse, source="lecture")
             apprises += 1

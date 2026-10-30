@@ -85,11 +85,11 @@ def detecter_role(texte, noms_fichiers=()):
     return "compagnon"
 
 
-def reponse_locale(texte, memoire=None):
+def reponse_locale(texte, memoire=None, conclusion=None):
     """Sans clé API : IA AISSA pense avec ses propres cerveaux (calcul, analogie, école, bibliothèque),
     montre son raisonnement et dit honnêtement quand elle ne sait pas."""
     from .pensee import penser
-    reponse, etapes, confiance = penser(texte, memoire)
+    reponse, etapes, confiance = penser(texte, memoire, conclusion)
     return reponse, etapes, confiance
 
 

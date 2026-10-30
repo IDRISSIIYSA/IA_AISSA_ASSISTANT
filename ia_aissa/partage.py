@@ -59,16 +59,16 @@ def etat_memoire(st_):
 
 
 def broutage_autonome():
-    """Démarre le broutage autonome d'IA AISSA (un travailleur par serveur) dès qu'une clé API de l'application
-    existe (secrets ou administration) ; appelé régulièrement, il ne démarre qu'une fois.
+    """Démarre le broutage autonome d'IA AISSA (un travailleur par serveur), avec le grand moteur si une clé API de
+    l'application existe, sinon seule (rumination locale) ; appelé régulièrement, il ne démarre qu'une fois.
     Secrets facultatifs : BROUTAGE_AUTONOME = "non" pour l'arrêter, BROUTAGE_PAR_JOUR = 6 (repas par jour)."""
     from .assistant import MOTEURS, client_moteur
     from .broutage import ETAT, demarrer
-    if str(secret("BROUTAGE_AUTONOME") or "oui").lower() in ("non", "false", "0"):
+    if str(secret("BROUTAGE_AUTONOME") or "oui").lower() in ("non", "false", "0") or os.environ.get("IA_AISSA_TESTS"):
         return ETAT
     moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"])), None)
-    if moteur is None:
-        return ETAT
-    cle = secret(MOTEURS[moteur]["secret"])
     par_jour = int(secret("BROUTAGE_PAR_JOUR") or 6)
+    if moteur is None:                  # sans clé : elle broute, rumine et s'exerce seule
+        return demarrer(memoire(), None, lambda: None, par_jour)
+    cle = secret(MOTEURS[moteur]["secret"])
     return demarrer(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle), par_jour)

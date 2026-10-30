@@ -218,8 +218,9 @@ def calculer(texte):
 # ==========================================
 # Penser
 # ==========================================
-def penser(texte, memoire=None):
-    """Réponse d'IA AISSA avec ses propres cerveaux. Renvoie (réponse en markdown, étapes du raisonnement, confiance)."""
+def penser(texte, memoire=None, conclusion=None):
+    """Réponse d'IA AISSA avec ses propres cerveaux. Renvoie (réponse en markdown, étapes du raisonnement, confiance).
+    conclusion (dict facultatif) reçoit la matière, la réponse retenue et l'accord analogie × école."""
     for motif, reponse in CONVERSATION:
         if motif.search(texte) and len(texte.split()) <= 6:
             return reponse, ["Petite conversation reconnue."], 0.95
@@ -256,6 +257,8 @@ def penser(texte, memoire=None):
         choix, confiance = None, max(a["score"] if a else 0, c["confiance"])
         etapes.append("Rien d'assez proche dans ce que je connais : je préfère l'avouer.")
 
+    if conclusion is not None and choix is not None:
+        conclusion.update(cle=choix["cle"], reponse=choix["reponse"], confiance=confiance, accord=bool(d_accord))
     lectures = []
     if memoire is not None:
         from .bibliotheque import chercher

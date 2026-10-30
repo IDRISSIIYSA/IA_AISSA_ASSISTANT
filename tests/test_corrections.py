@@ -143,3 +143,45 @@ def test_curiosite_guidee_par_le_progres(tmp_path):
     premiere, derniere = v["matiere"].iloc[0], v["matiere"].iloc[-1]
     lacunes = [{"id": 1, "matiere_devinee": derniere}, {"id": 2, "matiere_devinee": premiere}]
     assert [l["id"] for l in par_progres(mem, lacunes)] == [2, 1]
+
+
+ARTICLE_LOCAL = ("Le contrôle de gestion aide la direction à piloter la performance. Le budget fixe les objectifs "
+                 "de chaque centre de responsabilité. Le contrôle de gestion compare ensuite le budget au réalisé "
+                 "et analyse chaque écart budgétaire. Un écart budgétaire défavorable déclenche une action corrective. "
+                 "Le tableau de bord résume les indicateurs du contrôle de gestion pour chaque centre. ") * 2
+
+
+def test_ia_aissa_lit_seule_sans_moteur(labo):
+    from ia_aissa.autodidacte import ruminer_local
+    from ia_aissa.bibliotheque import digerer
+    d = ruminer_local(ARTICLE_LOCAL)
+    noms = [c["nom"] for c in d["concepts"]]
+    assert "Contrôle" in noms or "Budget" in noms or "Gestion" in noms
+    assert d["famille"] in ("Sciences formelles", "Sciences naturelles", "Sciences humaines et gestion",
+                            "Sciences appliquées") and 0 < d["confiance"] <= 0.6
+    mem, _ = labo
+    bilan = digerer(mem, None, None, "Wikipédia — Contrôle de gestion", ARTICLE_LOCAL, nb_bouchees=1)
+    assert bilan["concepts"] >= 2 and bilan["exercices"] == 0 and mem.digestions()
+
+
+def test_pratique_deliberee_sans_regression(labo):
+    from ia_aissa.autodidacte import pratiquer
+    mem, _ = labo
+    bilan = pratiquer(mem, cle="ohm", pas=300)
+    assert bilan["matiere"] == "ohm" and isinstance(bilan["adoptee"], bool)
+    assert bilan["adoptee"] == (bilan["apres"] >= bilan["avant"] + 0.005)        # jamais d'adoption sans progrès
+    assert mem.revisions()[0]["matiere"] == "ohm"
+    assert pratiquer(mem, pas=200)["matiere"] != "orientation"                  # choisit seule sa matière
+
+
+def test_apprendre_de_ses_propres_reponses(labo):
+    from ia_aissa.autodidacte import apprendre_de_soi
+    from ia_aissa.pensee import penser
+    mem, _ = labo
+    conclusion = {}
+    penser("chkoun li bna lkoutoubia", mem, conclusion)
+    assert conclusion["accord"] and conclusion["reponse"] == "Almohades (1121-1269)"
+    assert apprendre_de_soi(mem, "chkoun li bna lkoutoubia", conclusion)
+    assert any(c["source"] == "auto-apprentissage" for c in mem.corrections_de("histoire"))
+    assert not apprendre_de_soi(mem, "bla bla bla", {"cle": "histoire", "reponse": "Almohades (1121-1269)",
+                                                   "confiance": 0.5, "accord": True})        # pas assez sûre

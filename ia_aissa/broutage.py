@@ -141,6 +141,11 @@ def cycle(memoire, moteur_config, client, brouteur=None, rng=random):
                                 d["confiance"], 0.0, f'{{"source": "{source}"}}')
             injections += 1
     bilan.update(sujet=sujet, injections=injections)
+    try:                                            # puis une séance de pratique délibérée dans une matière
+        from .autodidacte import pratiquer
+        bilan["pratique"] = pratiquer(memoire)
+    except Exception as e:
+        bilan["pratique"] = {"erreur": str(e)[:120]}
     return bilan
 
 
@@ -154,6 +159,7 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
 
     def boucle():
         brouteur = Brouteur()
+        time.sleep(120)                 # laisse l'application démarrer tranquillement avant le premier repas
         while True:
             jour = datetime.now(timezone.utc).date()
             if ETAT["jour"] != jour:
@@ -163,7 +169,7 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
                     bilan = cycle(memoire, moteur_config, fabrique_client(), brouteur)
                     ETAT["dernier_repas"] = {"quand": datetime.now(timezone.utc), "sujet": bilan["sujet"],
                                              "source": bilan["source"], "concepts": bilan["concepts"],
-                                             "injections": bilan["injections"]}
+                                             "injections": bilan["injections"], "pratique": bilan.get("pratique")}
                 except Exception as e:                  # réseau, site au repos, moteur indisponible…
                     ETAT["erreurs"] = (ETAT["erreurs"] + [f"{type(e).__name__} : {str(e)[:120]}"])[-5:]
                 ETAT["repas_du_jour"] += 1

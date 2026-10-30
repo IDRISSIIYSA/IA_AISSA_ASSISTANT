@@ -193,6 +193,18 @@ Sans clé API, IA AISSA ne se contente pas de classer : elle raisonne, et montre
 Banc d'essai des 20 questions libres : 11/20 avec les cerveaux d'école seuls, 19/20 avec la pensée propre
 (une partie de ces questions figure aussi dans ses formulations connues).
 
+## IA AISSA autodidacte (`ia_aissa/autodidacte.py`)
+
+Elle développe seule ses connaissances et ses compétences, **même sans clé API** :
+- **Elle lit seule** : le travailleur d'arrière-plan broute Wikipédia et arXiv (poliment) ; sans moteur, elle
+  rumine elle-même (mots-clés les plus fréquents et phrases qui les portent), classe par famille de sciences
+  avec son propre cerveau, et range les concepts dans sa bibliothèque.
+- **Elle s'exerce seule** : après chaque repas, une séance de pratique délibérée dans la matière où elle progresse
+  le plus ; le nouveau cerveau n'est adopté que s'il gagne au moins 0,5 point à l'examen (jamais de régression).
+- **Elle apprend de ses propres réponses** : quand sa mémoire associative et ses cerveaux d'école sont d'accord et
+  sûrs (90 % et plus), la question devient un exemple de plus (source « auto-apprentissage »).
+Avec une clé API, la rumination et l'étude des lacunes passent par le grand moteur, plus fin.
+
 ## Atelier de prononciation en darija (`ia_aissa/voix.py`)
 
 « Apprends-moi à dire… en darija » ouvre l'atelier : IA AISSA prononce une phrase du quotidien professionnel

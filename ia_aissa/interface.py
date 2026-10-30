@@ -35,6 +35,7 @@ from .partage import broutage_autonome, etat_memoire, memoire, secret
 from .parole import charger_oreille, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
+from .autodidacte import apprendre_de_soi
 from .voix import atelier_prononciation, atelier_suivi, noter_prononciation, suivi_prononciation
 
 STYLE = """<style>
@@ -622,7 +623,9 @@ def traiter(r, utilisateur, texte, fichiers):
     if client:
         return converser_avec_moteur(r, utilisateur, texte, role, journal), [], journal, role, \
             "hyper" if role == "inventeur" else "normal"
-    reponse, etapes, confiance = reponse_locale(texte, mem)
+    conclusion = {}
+    reponse, etapes, confiance = reponse_locale(texte, mem, conclusion)
+    st.session_state["conclusion_locale"] = conclusion
     st.session_state["meta_locale"] = {"confiance": confiance, "details": f"{len(etapes)} étape(s) · mon propre cerveau"}
     return reponse, [{"type": "liste", "titre": "🧠 Mon raisonnement", "lignes": etapes}], [], role, "normal"
 
@@ -632,6 +635,8 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
     mem = memoire()
     if question:
         noter_si_lacune(mem, question)
+        if apprendre_de_soi(mem, question, st.session_state.pop("conclusion_locale", None)):
+            st.toast("🌱 J'ai appris de ma propre réponse : je reconnaîtrai mieux cette façon de dire.")
     if not st.session_state.get("conversation_id"):
         st.session_state["conversation_id"] = mem.nouvelle_conversation(utilisateur, question or "Fichier")
     mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "user", question or "(fichier)")
@@ -654,10 +659,14 @@ def pouls_d_ia_aissa():
     total = int(serie_croissance(memoire()).iloc[-1].sum())
     repas = etat.get("dernier_repas")
     if not etat.get("actif"):
-        broutage = "broutage autonome en attente d'une clé API dans les secrets"
+        broutage = "broutage autonome arrêté par l'administrateur"
     elif repas:
         broutage = (f"dernier repas : « {repas['sujet']} » ({repas['source']}), {repas['concepts']} concept(s), "
                     f"{repas['injections']} analogie(s) injectée(s) dans l'atelier d'invention")
+        pratique = repas.get("pratique") or {}
+        if pratique.get("nom"):
+            broutage += (f" · pratique seule en « {pratique['nom']} » : {pratique['avant']:.0%} → {pratique['apres']:.0%}"
+                         + (" ✅ adoptée" if pratique["adoptee"] else " (gardée seulement si elle progresse)"))
     else:
         broutage = "broutage autonome actif, premier repas en cours"
     st.caption(f"🌱 {total} concepts maîtrisés · {broutage}")
