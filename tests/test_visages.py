@@ -43,3 +43,17 @@ def test_avatar_echappe_le_texte_et_porte_l_audio():
     h = avatar("<script>alert(1)</script> Bonjour", audio=b"ID3abc", code_voix="ar-MA")
     assert "<script>alert(1)</script>" not in h and "data:audio/mpeg;base64," in h and "Bonjour" in h
     assert 'src="data:image/png;base64,' in avatar("Salut", image=b"\x89PNG")
+
+
+def test_suivi_de_la_prononciation_en_darija(tmp_path):
+    from ia_aissa.langues import PHRASES_PRO_DARIJA
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.voix import ATELIER_JS, noter_prononciation, suivi_prononciation
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    phrase = PHRASES_PRO_DARIJA[0][0]
+    assert noter_prononciation(mem, "Aissa", "Darija", {"score": 62, "phrase": phrase, "quand": 1000})
+    assert not noter_prononciation(mem, "Aissa", "Darija", {"score": 62, "phrase": phrase, "quand": 1000})  # une seule fois
+    noter_prononciation(mem, "Aissa", "Darija", {"score": 81, "phrase": phrase, "quand": 2000})
+    assert [e["score"] for e in suivi_prononciation(mem, "Aissa")] == [62, 81]
+    assert suivi_prononciation(mem, "Autre") == []
+    assert "setTriggerValue('score'" in ATELIER_JS and len(PHRASES_PRO_DARIJA) >= 10

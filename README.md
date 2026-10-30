@@ -177,6 +177,13 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
   24 périodes) avec un intervalle de confiance à 95 %. Sur les données d'exemple (dérives et incidents
   ponctuels), le vrai réalisé tombe dans l'intervalle environ 83 % du temps : un incident imprévisible reste imprévisible.
 
+## Atelier de prononciation en darija (`ia_aissa/voix.py`)
+
+« Apprends-moi à dire… en darija » ouvre l'atelier : IA AISSA prononce une phrase du quotidien professionnel
+(facture, devis, réunion, budget… avec son sens en français), vous la répétez, le navigateur la transcrit et la
+note sur 100. Chaque essai est gardé avec votre compte : moyenne des 5 derniers essais, progression par rapport
+aux 5 précédents et courbe de vos scores.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :

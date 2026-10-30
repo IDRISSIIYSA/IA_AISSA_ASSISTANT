@@ -46,3 +46,18 @@ LANGUES = {
                     "la reunión será mañana por la mañana"],
     },
 }
+
+
+# Atelier de prononciation en darija : phrases du quotidien professionnel (darija en lettres latines, sens en français).
+PHRASES_PRO_DARIJA = [
+    ("salam, bghit nhder m3a lmoudir 3afak", "Bonjour, je voudrais parler au directeur s'il vous plaît"),
+    ("l'facture ghadi nsifetha lik lyoum", "Je vous envoie la facture aujourd'hui"),
+    ("chhal taman dyal had l'commande", "Quel est le prix de cette commande ?"),
+    ("3ndna ijtima3 ghda m3a l9 dyal sba7", "Nous avons une réunion demain à 9 heures du matin"),
+    ("lclient ba9i ma khlsch", "Le client n'a pas encore payé"),
+    ("khasna n9ess mn lmasarif had chhar", "Nous devons réduire les dépenses ce mois-ci"),
+    ("wach lbudget wajed", "Le budget est-il prêt ?"),
+    ("sift lia devis 3afak", "Envoyez-moi un devis s'il vous plaît"),
+    ("l'marchandise wslat f lw9t", "La marchandise est arrivée à temps"),
+    ("chokran 3la l'khedma dyalkom", "Merci pour votre travail"),
+]

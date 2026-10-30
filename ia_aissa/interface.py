@@ -29,13 +29,13 @@ from .ecole import MATIERES, charger, repondre
 from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_controle, detecter_role, intention, \
     reponse_locale, urls
 from .invention import annonce_darija, debattre, evoluer
-from .langues import LANGUES
+from .langues import LANGUES, PHRASES_PRO_DARIJA
 from .memoire import historique_api
 from .partage import broutage_autonome, etat_memoire, memoire, secret
 from .parole import charger_oreille, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
-from .voix import atelier_prononciation
+from .voix import atelier_prononciation, atelier_suivi, noter_prononciation, suivi_prononciation
 
 STYLE = """<style>
   @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600&family=Orbitron:wght@500;700&display=swap');
@@ -162,6 +162,8 @@ STYLE = """<style>
 
   .astuce { font-size: 13px; color: #475569; text-align: center; margin-top: -4px; }
   @media (max-width: 640px) { .block-container { padding-left: 12px; padding-right: 12px; }
+    [data-testid="stChatInputTextArea"] { font-size: 15px !important; }
+    [data-testid="stChatInputTextArea"]::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
       content: "● Enregistrement… ✅ envoyer · ✖ annuler"; } }
   @media (prefers-reduced-motion: reduce) { [data-testid="stChatInputMicButton"],
@@ -456,6 +458,21 @@ def afficher_element(e, cle):
         st.dataframe(pd.DataFrame(lignes), hide_index=True, width="stretch", column_config={
             "Naissance": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent"),
             "Aujourd'hui": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent")})
+    elif t == "atelier" and e.get("suivi"):
+        utilisateur = st.session_state.get("utilisateur", "Aissa")
+        essai = atelier_suivi(st, e["phrase"], LANGUES[e["langue"]]["voix"], e.get("sens", ""), cle=f"atelier{cle}")
+        if essai and essai.get("quand"):
+            noter_prononciation(memoire(), utilisateur, e["langue"], essai)
+        essais = [x for x in suivi_prononciation(memoire(), utilisateur) if x["langue"] == e["langue"]]
+        if essais:
+            scores = [x["score"] for x in essais]
+            recents, avant = scores[-5:], scores[-10:-5]
+            delta = f"{sum(recents) / len(recents) - sum(avant) / len(avant):+.0f}" if avant else None
+            st.metric(f"Ma prononciation en {e['langue']} (moyenne des 5 derniers essais)",
+                      f"{sum(recents) / len(recents):.0f} / 100", delta=delta)
+            if len(scores) > 1:
+                st.line_chart(pd.DataFrame({"Score": scores}, index=pd.RangeIndex(1, len(scores) + 1, name="Essai")),
+                              y_label="Score / 100")
     elif t == "atelier":
         st.iframe(atelier_prononciation(e["phrase"], LANGUES[e["langue"]]["voix"]), height=190)
 
@@ -577,6 +594,11 @@ def traiter(r, utilisateur, texte, fichiers):
             [{"type": "liste", "titre": "📚 Ma bibliothèque", "lignes": lignes}], [], "lecteur", "normal"
     if voulu == "prononciation":
         langue = next((l for l in LANGUES if l.lower() in texte.lower()), "Darija")
+        if langue == "Darija":          # phrases du quotidien professionnel, score suivi dans le temps
+            phrase, sens = random.choice(PHRASES_PRO_DARIJA)
+            return ("Écoute-moi, puis répète : je te note sur 100 et je suis tes progrès en darija.",
+                    [{"type": "atelier", "langue": langue, "phrase": phrase, "sens": sens, "suivi": True}], [],
+                    "savant", "normal")
         phrase = random.choice(LANGUES[langue]["phrases"])
         return (f"Écoute-moi, puis répète : je te note sur 100 ({langue}).",
                 [{"type": "atelier", "langue": langue, "phrase": phrase}], [], "savant", "normal")
