@@ -317,7 +317,7 @@ def test_diagnostic_des_secrets_sur_la_page_admin(tmp_path, monkeypatch):
 
     at = AppTest.from_function(page, default_timeout=300).run()
     texte = " ".join(i.value for i in at.info)
-    assert "Diagnostic des Secrets" in texte and "❌ `ADMIN_CODE`" in texte and "❌ `MEMOIRE_URL`" in texte
+    assert "Diagnostic des Secrets" in texte and "❌ `ADMIN_CODE`" in texte and "❌ `MEMOIRE_URL (ou DATABASE_URL)`" in texte
 
 
 
@@ -441,3 +441,17 @@ def test_temps_d_ouverture_des_pages_sous_3_secondes(tmp_path, monkeypatch):
     assert {"Visiteurs — 💬 Chat avec IA AISSA", "Visiteurs — 🧮 Simulations et guides"} <= set(t.index)
     assert (t["Médiane (s)"] < chrono.OBJECTIF_S).all(), t
     assert chrono.age_du_processus() is None or chrono.age_du_processus() > 0
+
+
+def test_adresse_de_la_memoire_donnee_par_neon(tmp_path, monkeypatch):
+    from ia_aissa import partage
+    monkeypatch.delenv("MEMOIRE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@ep-x.eu-central-1.aws.neon.tech/neondb")
+    assert partage.adresse_memoire().endswith("/neondb")              # le nom donné par Neon suffit
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    assert partage.adresse_memoire().startswith("sqlite")               # MEMOIRE_URL reste prioritaire
+    (tmp_path / ".env.local").write_text('# neon deploy\nDATABASE_URL="postgresql://a:b@h/db"\nexport X=1\n')
+    monkeypatch.setattr(partage, "RACINE", str(tmp_path))
+    assert partage.fichier_env() == {}                                  # jamais pendant les tests
+    monkeypatch.delenv("IA_AISSA_TESTS")
+    assert partage.fichier_env() == {"DATABASE_URL": "postgresql://a:b@h/db", "X": "1"}

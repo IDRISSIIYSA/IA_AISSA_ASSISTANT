@@ -8,3 +8,8 @@ __pycache__/
 memoire_ia_aissa.db
 ia_aissa/cerveaux/revises/
 data/aissa_memoire.json
+.env
+.env.local
+.env.*
+node_modules/
+.neon

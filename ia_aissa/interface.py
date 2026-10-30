@@ -258,7 +258,9 @@ def admin_connexion():
     if not mem.persistante or not admin.admin_existe(mem):
         from .partage import noms_des_secrets
         vus = noms_des_secrets()
-        attendus = {n: n in [v.strip().upper() for v in vus] for n in ("MEMOIRE_URL", "ADMIN_CODE")}
+        noms = [v.strip().upper() for v in vus]
+        attendus = {"MEMOIRE_URL (ou DATABASE_URL)": "MEMOIRE_URL" in noms or "DATABASE_URL" in noms,
+                    "ADMIN_CODE": "ADMIN_CODE" in noms}
         st.info("🔎 **Diagnostic des Secrets** (noms seulement, jamais les valeurs) — l'application voit : "
                 + (", ".join(f"`{n}`" for n in vus) if vus else "**aucun secret**") + "\n\n"
                 + " · ".join(f"{'✅' if ok else '❌'} `{n}`" for n, ok in attendus.items())

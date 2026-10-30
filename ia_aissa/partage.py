@@ -41,8 +41,8 @@ def secret(nom):
     puis réglages enregistrés par l'administrateur."""
     secrets = _secrets_a_plat()
     trouve = next((v for k, v in secrets.items() if k.strip().upper() == nom.upper()), None)
-    valeur = (str(trouve).strip() if trouve not in (None, "") else None) or os.environ.get(nom)
-    if valeur or nom == "MEMOIRE_URL":
+    valeur = (str(trouve).strip() if trouve not in (None, "") else None) or os.environ.get(nom) or fichier_env().get(nom)
+    if valeur or nom in ADRESSES_BASE:
         return valeur
     from .admin import valeur_app
     try:
@@ -51,9 +51,36 @@ def secret(nom):
         return None
 
 
+ADRESSES_BASE = ("MEMOIRE_URL", "DATABASE_URL")     # DATABASE_URL : le nom donné par Neon (neon deploy, intégrations)
+RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def fichier_env():
+    """Variables de .env.local ou .env à la racine du projet (écrits par « neon deploy »), pour un lancement local.
+    Ces fichiers ne sont jamais envoyés sur GitHub (.gitignore)."""
+    valeurs = {}
+    if os.environ.get("IA_AISSA_TESTS"):               # les tests ne touchent jamais la vraie base
+        return valeurs
+    for nom in (".env", ".env.local"):                  # .env.local l'emporte
+        try:
+            with open(os.path.join(RACINE, nom), encoding="utf-8") as f:
+                for ligne in f:
+                    ligne = ligne.strip()
+                    if ligne and not ligne.startswith("#") and "=" in ligne:
+                        k, v = ligne.removeprefix("export ").split("=", 1)
+                        valeurs[k.strip()] = v.strip().strip('"').strip("'")
+        except OSError:
+            pass
+    return valeurs
+
+
+def adresse_memoire():
+    return next((u for u in (secret(n) for n in ADRESSES_BASE) if u), None)
+
+
 @st.cache_resource(show_spinner="IA AISSA se connecte à sa mémoire…")
 def memoire():
-    url = secret("MEMOIRE_URL")
+    url = adresse_memoire()
     try:
         m = Memoire(url)
         m.erreur = None
