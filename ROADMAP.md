@@ -15,7 +15,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Méta-intelligence : afficher pour chaque matière sa « courbe de progrès » (vitesse d'apprentissage) et étudier en priorité les matières où IA AISSA progresse le plus vite (curiosité guidée par le progrès)
 - [x] Langues : atelier de prononciation en darija avec phrases du quotidien professionnel, et score suivi dans le temps
 - [x] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
-- [ ] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s)
+- [x] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s) — cerveaux déjà chargés au premier usage ; temps d'ouverture par page et démarrage à froid dans le tableau de bord ; SDK anthropic et openai importés à la demande (imports du serveur : 3,7 s → 1,8 s)
 
 - [ ] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée
 - [x] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
@@ -33,6 +33,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Fiscalité : faire vérifier par la lecture du CGI de chaque exercice (PDF déposés) les taux sectoriels de TVA à 10 % et les régimes transitoires d'IS, puis les encoder exercice par exercice
 - [ ] Obligations : rappel de la prochaine échéance dans le chat (« qu'est-ce que je dois payer ce mois-ci ? ») à partir du profil enregistré
 - [ ] Simulations : export Excel des tableaux (échéancier, business plan, état 9421) en plus du PDF
+- [ ] Performance : importer PyTorch seulement au premier usage d'un cerveau (1,1 s de démarrage à froid en moins) en isolant les classes de réseaux dans un module dédié
+- [ ] Performance : alerte dans le tableau de bord quand le 95e centile d'une page dépasse 3 s pendant une journée
 
 ## Fait
 - [x] Choix « Chat » ou « Simulations et guides » ; 62 simulations et guides en 13 types : obligations et feuille de route, impôts décortiqués (IR, IS, TVA, état 9421, revenu global, loyers, attestations et classement), business plan sur 5 ans, sensibilité, plan de financement, échéancier daté avec différé, assurance et TEG, amortissement au prorata (CGI art. 10), bulletin de paie à l'envers depuis le net

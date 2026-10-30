@@ -14,8 +14,6 @@ import time
 
 from urllib.parse import urlparse
 
-import anthropic
-import openai
 import pandas as pd
 import streamlit as st
 
@@ -630,6 +628,8 @@ def converser_avec_moteur(r, utilisateur, question, role, journal):
     profil = profil_conversation(utilisateur, r["niveau"], r["vocal"] and not r["ecrit"],
                                  [s["fait"] for s in mem.souvenirs_de(utilisateur)])
     profil += "\n" + ROLES[role][1]
+    import anthropic                    # SDK importés à la demande : le serveur démarre plus vite
+    import openai
     try:
         return converser_moteur(r["moteur"], client_moteur(r["moteur"], r["cle_api"]), st.session_state["messages_api"],
                                 journal=journal, profil=profil,
@@ -914,14 +914,19 @@ def identite_visiteur():
 def application():
     """Deux espaces : les visiteurs parlent avec IA AISSA ; l'administrateur la nourrit, la commande et la suit."""
     global PAGE_ADMIN
-    st.set_page_config(page_title="IA AISSA", page_icon="👽", layout="centered", initial_sidebar_state="auto")
-    st.markdown(STYLE, unsafe_allow_html=True)
-    coffre.ouvrir()                     # ce que cet appareil retient : identité, connexion, clé API
-    broutage_autonome()                 # le travailleur autonome (démarré une seule fois par serveur)
-    from .espace_admin import espace_admin
-    visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)
-    PAGE_ADMIN = st.Page(espace_admin, title="Administration", icon="🛡️", url_path="admin")
-    st.navigation([visiteurs, PAGE_ADMIN], position="hidden").run()
+    from .chrono import Chrono
+    with Chrono("page") as chrono:      # temps d'ouverture de chaque page (tableau de bord de l'administration)
+        st.set_page_config(page_title="IA AISSA", page_icon="👽", layout="centered", initial_sidebar_state="auto")
+        st.markdown(STYLE, unsafe_allow_html=True)
+        coffre.ouvrir()                 # ce que cet appareil retient : identité, connexion, clé API
+        broutage_autonome()             # le travailleur autonome (démarré une seule fois par serveur)
+        from .espace_admin import espace_admin
+        visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)
+        PAGE_ADMIN = st.Page(espace_admin, title="Administration", icon="🛡️", url_path="admin")
+        page = st.navigation([visiteurs, PAGE_ADMIN], position="hidden")
+        chrono.page = ("Visiteurs — " + st.session_state.get("mode_visiteur", "💬 Chat avec IA AISSA")
+                       if page.title == "IA AISSA" else page.title)
+        page.run()
 
 
 espace_unique = application             # ancien nom

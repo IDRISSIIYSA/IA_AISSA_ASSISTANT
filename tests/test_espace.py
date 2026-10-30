@@ -421,3 +421,23 @@ def test_choix_entre_chat_et_simulations(tmp_path, monkeypatch):
     at.run()
     assert not at.exception and len(at.chat_input) == 0
     assert any("Compte de résultat prévisionnel" in m.value for m in at.markdown)
+
+
+def test_temps_d_ouverture_des_pages_sous_3_secondes(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa import chrono
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    chrono.reinitialiser()
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300)
+    at.run()                                             # premier affichage (imports déjà faits par les tests)
+    at.run()
+    at.session_state["mode_visiteur"] = "🧮 Simulations et guides"
+    at.session_state["simulation"] = "Crédit (échéancier)"
+    at.run()
+    at.run()
+    t = chrono.tableau().set_index("Page")
+    assert {"Visiteurs — 💬 Chat avec IA AISSA", "Visiteurs — 🧮 Simulations et guides"} <= set(t.index)
+    assert (t["Médiane (s)"] < chrono.OBJECTIF_S).all(), t
+    assert chrono.age_du_processus() is None or chrono.age_du_processus() > 0

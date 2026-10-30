@@ -86,9 +86,27 @@ def tableau_de_bord(mem):
         par_jour = freq[freq["jour"] >= aujourdhui - timedelta(days=30)].groupby("jour").agg(
             Conversations=("utilisateur", "size"), Personnes=("utilisateur", "nunique"))
         st.bar_chart(par_jour, y_label="Fréquentation (30 jours)")
+    temps_d_ouverture()
     if etat.get("erreurs"):
         with st.expander(f"⚠️ {len(etat['erreurs'])} souci(s) récent(s) du travailleur autonome"):
             st.write("\n".join(f"- {e}" for e in etat["erreurs"]))
+
+
+def temps_d_ouverture():
+    """Temps d'ouverture mesuré de chaque page depuis le démarrage du serveur (objectif < 3 s)."""
+    from . import chrono
+    t = chrono.tableau()
+    froid = chrono.demarrage_a_froid()
+    with st.expander("⏱️ Temps d'ouverture des pages (objectif < 3 s)", expanded=bool(len(t)) and "⚠️" in set(
+            t["Objectif < 3 s"])):
+        if froid is not None:
+            st.caption(f"Démarrage à froid du serveur (imports et premier affichage) : {froid:.1f} s — payé une seule "
+                       "fois, quand Streamlit Cloud réveille l'application. Les cerveaux sont chargés à la demande, "
+                       "au premier usage de chaque matière.")
+        if len(t):
+            st.dataframe(t, hide_index=True, width="stretch")
+        else:
+            st.caption("Pas encore de mesure depuis le démarrage du serveur.")
 
 
 # ==========================================

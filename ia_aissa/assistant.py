@@ -6,8 +6,6 @@ exacts et sur les cerveaux qu'IA AISSA a formés elle-même à l'école.
 
 import json
 
-import anthropic
-
 from . import connaissances as K
 from .ecole import MATIERES, repondre, repondre_automatiquement
 
@@ -237,6 +235,7 @@ def profil_conversation(utilisateur, niveau, reponse_vocale, souvenirs=()):
 
 
 def client_anthropic(cle_api=None):
+    import anthropic                  # importé à la demande : 1,3 s de moins au démarrage du serveur
     return anthropic.Anthropic(api_key=cle_api) if cle_api else anthropic.Anthropic()
 
 
