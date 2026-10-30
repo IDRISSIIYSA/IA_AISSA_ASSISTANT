@@ -140,7 +140,9 @@ def ce_que_je_paie(forme, ca_annuel_ht, benefice, debut_activite, annee, salarie
                        "Dahir 1-72-184 ; loi 65-00"))
         lignes.append(("IR des salariés (retenu sur leur paie, reversé par vous)", round(K.calculer_paie(brut)["ir"] * salaries * 12, 2),
                        "CGI, art. 156 et 174"))
-    return pd.DataFrame([{"Impôt ou charge": a, "Montant annuel estimé": b, "Base légale": c} for a, b, c in lignes])
+    def montant(v):
+        return "selon votre activité" if v is None else f"{v:,.2f}".replace(",", " ").replace(".", ",").removesuffix(",00") + " DH"
+    return pd.DataFrame([{"Impôt ou charge": a, "Montant annuel estimé": montant(b), "Base légale": c} for a, b, c in lignes])
 
 
 FEUILLE_DE_ROUTE = [
