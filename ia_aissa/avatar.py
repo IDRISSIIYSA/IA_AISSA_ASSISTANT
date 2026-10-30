@@ -6,6 +6,7 @@ On peut aussi le remplacer par une image (ex. un rendu réaliste de l'alien) : e
 
 import base64
 import html
+import re
 
 from functools import lru_cache
 from pathlib import Path
@@ -86,6 +87,8 @@ _STYLE = """
            text-align: center; color: #0f172a; background: rgba(255,255,255,.82); backdrop-filter: blur(10px);
            border: 1px solid rgba(14,165,233,.35); box-shadow: 0 6px 22px rgba(30,64,175,.10); white-space: pre-wrap;
            max-height: 120px; overflow:auto; }
+  .bulle p { margin: 0 0 4px; } .bulle p:last-child { margin-bottom: 0; }
+  @media (max-width: 480px) { .alien:not(.reference) { width: 64vw; } .bulle { font-size: 14.5px; padding: 9px 12px; } }
   .respire { animation: respire 4s ease-in-out infinite; transform-origin: 200px 430px; }
   .flotte { animation: flotte 5s ease-in-out infinite; }
   .holo { animation: scintille 3.2s steps(1) infinite; }
@@ -152,8 +155,16 @@ _STYLE = """
 </style>"""
 
 
+# Premier affichage : Streamlit fait défiler la page vers la barre de conversation ; on la remonte une fois,
+# pour que l'alien soit vu en entier (surtout sur téléphone).
+REMONTER = """<script>
+setTimeout(() => { try { const c = window.parent.document.querySelector('[data-testid="stAppScrollToBottomContainer"]');
+  if (c) c.scrollTo({top: 0}); } catch (e) {} }, 400);
+</script>"""
+
+
 def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
-           bulle=True, etat="normal", indicateur=None, en_3d=True, rendu="3d"):
+           bulle=True, etat="normal", indicateur=None, en_3d=True, rendu="3d", en_haut=False):
     """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur.
     etat = "hyper" : portail en hyper-propulsion (« QUANTUM FUSION ») pendant l'invention.
     indicateur = {"confiance": 0-1, "details": "…"} : indicateur de méta-conscience affiché avant qu'il parle.
@@ -171,7 +182,10 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
                   f'<div id="alien2d">{ALIEN_SVG}</div>'
                   + (scene_3d(etat == "hyper") if en_3d else "") + '</div>')
     son = f"data:audio/mpeg;base64,{base64.b64encode(audio).decode()}" if audio else ""
-    texte_bulle = f'<div class="bulle" dir="auto">{html.escape(texte)}</div>' if texte and bulle else ""
+    # une ligne par langue (« darija — français ») : chacune garde son sens d'écriture et sa ponctuation
+    lignes = [l.strip() for l in re.split(r"\n+| — ", texte or "") if l.strip()]
+    texte_bulle = ('<div class="bulle">' + "".join(f'<p dir="auto">{html.escape(l)}</p>' for l in lignes) + '</div>'
+                   if texte and bulle else "")
     meta = ""
     if indicateur:
         c = max(0.0, min(1.0, float(indicateur.get("confiance", 0))))
@@ -180,6 +194,7 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
                 f'<span>· {html.escape(str(indicateur.get("details", "")))}</span></div>')
     return f"""{_SCRIPT_COMMUN}{_STYLE}
 {meta}<div class="scene">{visage}{texte_bulle}</div>
+{REMONTER if en_haut else ""}
 <div style="margin-top:8px; text-align:center"><button id="ecouter" class="principal" style="display:none; border-radius:999px; padding:8px 18px; background:linear-gradient(180deg,#38bdf8,#0284c7); border:none; color:#fff; font-weight:600; box-shadow:0 4px 0 #075985, 0 8px 18px rgba(2,132,199,.3)">🔊 Écouter IA AISSA</button></div>
 <script>
 const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};

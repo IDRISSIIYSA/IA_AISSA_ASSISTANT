@@ -57,3 +57,9 @@ def test_suivi_de_la_prononciation_en_darija(tmp_path):
     assert [e["score"] for e in suivi_prononciation(mem, "Aissa")] == [62, 81]
     assert suivi_prononciation(mem, "Autre") == []
     assert "setTriggerValue('score'" in ATELIER_JS and len(PHRASES_PRO_DARIJA) >= 10
+
+
+def test_bulle_une_ligne_par_langue_et_remontee_au_premier_affichage():
+    h = avatar("مسا الخير، كيداير؟ — Bon après-midi ! Je suis IA AISSA.", lecture_auto=False, en_haut=True)
+    assert '<p dir="auto">مسا الخير، كيداير؟</p><p dir="auto">Bon après-midi ! Je suis IA AISSA.</p>' in h
+    assert "stAppScrollToBottomContainer" in h and "stAppScrollToBottomContainer" not in avatar("x", lecture_auto=False)

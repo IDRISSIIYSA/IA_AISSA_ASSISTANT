@@ -165,7 +165,17 @@ STYLE = """<style>
   [data-testid="stChatInputMicButton"]:focus-visible, [data-testid="stChatInputSubmitButton"]:focus-visible { outline: 3px solid #fde68a !important; outline-offset: 2px; }
 
   .astuce { font-size: 13px; color: #475569; text-align: center; margin-top: -4px; }
-  @media (max-width: 640px) { .block-container { padding-left: 12px; padding-right: 12px; }
+  @media (max-width: 640px) {
+    /* chiffres clés deux par ligne au lieu d'une longue colonne */
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] [data-testid="stMetric"]) {
+      flex-direction: row !important; flex-wrap: wrap !important; gap: .4rem .8rem !important; }
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] [data-testid="stMetric"]) > [data-testid="stColumn"] {
+      flex: 1 1 calc(50% - .8rem) !important; min-width: calc(50% - .8rem) !important; width: auto !important; }
+    [data-testid="stMetricValue"] { font-size: 1.45rem !important; }
+    h1 { font-size: 1.7rem !important; }
+    [data-testid="stIFrame"] { height: 470px !important; }
+    [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) { height: 470px !important; max-height: 470px !important; min-height: 0 !important; }
+    .block-container { padding-left: 12px; padding-right: 12px; }
     [data-testid="stChatInputTextArea"] { font-size: 15px !important; }
     [data-testid="stChatInputTextArea"]::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
@@ -991,5 +1001,5 @@ def espace_visiteur():
         st.iframe(avatar(parole["texte"][:400] + ("…" if len(parole["texte"]) > 400 else ""), parole.get("audio"),
                          parole.get("voix", "fr-FR"), image, type_image or "image/png",
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),
-                         indicateur=parole.get("meta")), height=590)
+                         indicateur=parole.get("meta"), en_haut=not st.session_state["affichage"]), height=590)
     parole["nouveau"] = False

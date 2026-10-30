@@ -14,7 +14,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Contrôle de gestion : prévision du réalisé du mois suivant par l'agent (tendance + saisonnalité) avec intervalle de confiance
 - [x] Méta-intelligence : afficher pour chaque matière sa « courbe de progrès » (vitesse d'apprentissage) et étudier en priorité les matières où IA AISSA progresse le plus vite (curiosité guidée par le progrès)
 - [x] Langues : atelier de prononciation en darija avec phrases du quotidien professionnel, et score suivi dans le temps
-- [ ] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
+- [x] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
 - [ ] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s)
 
 - [ ] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée
@@ -28,6 +28,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Contrôle de gestion : prévision robuste aux dérives (tendance sur les 12 dernières périodes) et mesure de la couverture réelle de l'intervalle
 - [ ] École : entraînement de l'orientation avec un pas d'apprentissage adaptatif (lr 1e-3 donne 96 % contre 64 % à 2e-3 avec 42 matières)
 - [ ] Langues : choisir dans l'atelier la phrase où le score est le plus faible (répétition espacée) et proposer la version en écriture arabe
+- [ ] Mobile : tester aussi en 360 px (petits Android) et en mode paysage ; bouton « remonter à l'alien » quand la conversation est longue
 
 ## Fait
 
