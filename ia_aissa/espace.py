@@ -51,6 +51,9 @@ MOTIFS = {
 INTENTIONS = {
     "bulletin": re.compile(r"(bulletin(?! de (paie|salaire))|ta croissance|tes progrès|tes notes|ce que tu (as appris|sais)|ton école)", re.I),
     "bibliotheque": re.compile(r"(ta bibliothèque|qu'as[- ]tu lu|ce que tu as lu|tes lectures)", re.I),
+    "livres_libres": re.compile(r"((recommand|conseill|propos|donne)\w*.{0,30}(livres?|sites?|liens?|pdf|e-?books?)|"
+                                r"(livres?|pdf|e-?books?) (gratuits?|libres?)|où (trouver|télécharger) des (livres|pdf))",
+                                re.I),
     "prononciation": re.compile(r"(pronon\w+|apprends?[- ]moi à (dire|parler)|accent)", re.I),
 }
 DOMAINES_GESTION = ("Comptabilité", "Fiscalité", "Finance", "Contrôle de gestion", "Ressources humaines", "Commercial",

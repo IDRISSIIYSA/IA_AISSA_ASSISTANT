@@ -12,6 +12,8 @@ import random
 import re
 import time
 
+from urllib.parse import urlparse
+
 import anthropic
 import openai
 import pandas as pd
@@ -573,9 +575,26 @@ def traiter(r, utilisateur, texte, fichiers):
             except (ValueError, ErreurBroutage) as e:
                 messages.append(f"Je n'ai pas pu lire « {f.name} » : {e}")
         return "\n\n".join(messages), [], [], "lecteur", "hyper"
-    if (lectures or urls(texte)) and not client:
-        return ("🔗 Pour brouter une page web je passe par mon grand moteur (clé API dans ⚙️ Réglages) ; tu peux aussi "
-                "m'envoyer le document en PDF : je le lis seule."), [], [], "lecteur", "normal"
+    if urls(texte) and not client:       # sans moteur : elle va voir seule, si le site l'autorise
+        from .broutage import Brouteur
+        from .livres_libres import manger_livre, recommander, site_refuse
+        from .pensee import confirmation_ingestion
+        brouteur, messages = Brouteur(), []
+        for u in urls(texte):
+            try:
+                if urlparse(u).path.lower().endswith((".pdf", ".epub")):
+                    messages.append(confirmation_ingestion(manger_livre(mem, brouteur, u, utilisateur=utilisateur)))
+                elif site_refuse(u):
+                    raise ErreurBroutage(f"je ne me nourris pas sur ce site ({site_refuse(u)})")
+                else:
+                    page = brouteur.page(u)
+                    b = digerer(mem, None, None, u, page, utilisateur, nb_bouchees=4)
+                    messages.append(f"Le site m'autorise : j'ai lu « {u} » et gardé {b['concepts']} concept(s).")
+            except (ErreurBroutage, ValueError) as e:
+                messages.append(f"« {u} » : {e}\n\n{recommander(texte)}")
+            except Exception as e:
+                messages.append(f"Je n'ai pas pu ouvrir « {u} » ({type(e).__name__}).")
+        return "\n\n".join(messages), [], [], "lecteur", "hyper"
     if lectures or urls(texte):
         bilans = []
         sources = [brouter_fichier(f.name, f.getvalue()) for f in lectures]
@@ -599,6 +618,9 @@ def traiter(r, utilisateur, texte, fichiers):
         return "\n\n".join(bilans), elements, journal, "lecteur", "hyper"
 
     voulu = intention(texte)
+    if voulu == "livres_libres":
+        from .livres_libres import recommander
+        return recommander(texte), [], [], "lecteur", "normal"
     if voulu == "bulletin":
         return ("Voici où j'en suis : mes concepts par famille de sciences, ma vitesse d'apprentissage et mon bulletin "
                 "de notes."), [{"type": "croissance"}, {"type": "bulletin", "titre": "📒 Mon bulletin"}], [], "savant", \
@@ -697,6 +719,9 @@ def pouls_d_ia_aissa():
         broutage = f"broutage autonome actif, nouvel essai bientôt (dernier souci : {etat['erreurs'][-1]})"
     else:
         broutage = "broutage autonome actif, premier repas en cours"
+    livre = etat.get("dernier_livre")
+    if livre and livre.get("source"):
+        broutage += f" · dernier livre lu seule : « {livre['source']} » ({livre['concepts']} concepts)"
     crises = etat.get("crises")
     if crises and crises["resolues"]:
         broutage += f" · crises synthétiques : {crises['justes']}/{crises['resolues']} bien pilotées"

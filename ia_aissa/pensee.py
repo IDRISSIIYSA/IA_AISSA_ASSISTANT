@@ -512,27 +512,42 @@ FICHIER_MEMOIRE = Path(__file__).resolve().parents[1] / "data" / "aissa_memoire.
 MAX_PASSAGES = 60               # au-delà, 60 passages répartis du début à la fin du livre
 
 
-def ingerer_pdf(memoire, nom, contenu, utilisateur="Aissa", fichier_json=None):
-    """Lit un PDF (fichier temporaire supprimé aussitôt avec os.remove), le rumine passage par passage avec sa
-    pensée propre (sans clé API), range les concepts dans sa mémoire durable (base de données) et en garde une copie
-    distillée dans data/aissa_memoire.json. Renvoie le bilan ; lève ValueError si le PDF n'a pas de texte."""
+MAX_PAGES_LUES = 150            # très gros PDF : 150 pages réparties du début à la fin (mémoire vive ménagée)
+
+
+def lire_livre(chemin, nom):
+    """Texte d'un PDF ou d'un EPUB lu sur le disque ; un très gros PDF est lu page par page, sur un échantillon
+    régulier de pages, sans charger tout le fichier en mémoire. Renvoie (titre, texte, pages lues, pages totales)."""
+    from .bibliotheque import texte_epub
+    if nom.lower().endswith(".epub"):
+        with open(chemin, "rb") as f:
+            titre, texte = texte_epub(f.read())
+        return titre, texte, 1, 1
+    from pypdf import PdfReader
+    lecteur = PdfReader(chemin)
+    total = len(lecteur.pages)
+    choisies = sorted({round(i * (total - 1) / max(1, MAX_PAGES_LUES - 1)) for i in range(min(total, MAX_PAGES_LUES))})
+    titre = lecteur.metadata.title if lecteur.metadata and lecteur.metadata.title else ""
+    return titre, "\n".join((lecteur.pages[i].extract_text() or "") for i in choisies), len(choisies), total
+
+
+def ingerer_fichier(memoire, chemin, nom, utilisateur="Aissa", fichier_json=None, source=None):
+    """Lit un livre déjà sur le disque, le rumine avec sa pensée propre (sans clé API), range les concepts dans sa
+    mémoire durable et une copie distillée dans data/aissa_memoire.json, puis SUPPRIME le fichier (os.remove).
+    Renvoie le bilan ; lève ValueError si le livre n'a pas de texte (scan sans OCR)."""
     import os
-    import tempfile
     from datetime import datetime
-    from .bibliotheque import TAILLE_MORCEAU, digerer, texte_epub, texte_pdf
-    temporaire = tempfile.NamedTemporaryFile(suffix=Path(nom).suffix or ".pdf", delete=False)
+    from .bibliotheque import TAILLE_MORCEAU, digerer
     try:
-        temporaire.write(contenu)
-        temporaire.close()
-        with open(temporaire.name, "rb") as f:
-            titre, texte = texte_epub(f.read()) if nom.lower().endswith(".epub") else texte_pdf(f.read())
+        titre, texte, pages_lues, pages_total = lire_livre(chemin, nom)
     finally:
-        os.remove(temporaire.name)                    # le fichier source ne reste jamais sur le disque du serveur
+        if os.path.exists(chemin):
+            os.remove(chemin)                         # le fichier source ne reste jamais sur le disque du serveur
     texte = " ".join(texte.split())
     if len(texte) < 200:
         raise ValueError("ce livre n'a presque pas de texte : c'est sans doute un livre scanné (des images de pages). "
                          "Il faudrait d'abord le passer à la reconnaissance de caractères (OCR).")
-    source = titre or nom
+    source = source or titre or nom
     passages = -(-len(texte) // TAILLE_MORCEAU)
     bilan = digerer(memoire, None, None, source, texte, utilisateur, nb_bouchees=min(passages, MAX_PASSAGES))
     concepts = [c for d in bilan["digestions"] for c in d["concepts"]]
@@ -544,11 +559,22 @@ def ingerer_pdf(memoire, nom, contenu, utilisateur="Aissa", fichier_json=None):
         archive = []
     archive.append({"source": source, "utilisateur": utilisateur, "date": datetime.now(timezone.utc).isoformat(),
                     "caracteres": len(texte), "passages_lus": bilan["bouchees"], "passages_total": passages,
+                    "pages_lues": pages_lues, "pages_total": pages_total,
                     "familles": sorted({d["famille"] for d in bilan["digestions"]}), "concepts": concepts})
     fichier_json.write_text(json.dumps(archive, ensure_ascii=False, indent=1), encoding="utf-8")
     return {"source": source, "caracteres": len(texte), "passages_lus": bilan["bouchees"],
-            "passages_total": passages, "concepts": len(concepts), "entier": bilan["bouchees"] >= passages,
-            "lacunes_comblees": len(bilan["lacunes_comblees"])}
+            "passages_total": passages, "concepts": len(concepts),
+            "entier": bilan["bouchees"] >= passages and pages_lues >= pages_total,
+            "pages_lues": pages_lues, "pages_total": pages_total, "lacunes_comblees": len(bilan["lacunes_comblees"])}
+
+
+def ingerer_pdf(memoire, nom, contenu, utilisateur="Aissa", fichier_json=None):
+    """Un livre reçu en mémoire (dépôt) : écrit dans un fichier temporaire, lu, puis supprimé aussitôt."""
+    import tempfile
+    temporaire = tempfile.NamedTemporaryFile(suffix=Path(nom).suffix or ".pdf", delete=False)
+    temporaire.write(contenu)
+    temporaire.close()
+    return ingerer_fichier(memoire, temporaire.name, nom, utilisateur, fichier_json)
 
 
 def confirmation_ingestion(bilan):
@@ -557,7 +583,9 @@ def confirmation_ingestion(bilan):
         lu = (f"Klit lktab kamel w wssa3t l3alam dyali ! J'ai digéré tout le livre « {bilan['source']} » "
               f"({bilan['passages_lus']} passages, {bilan['concepts']} concepts) et agrandi mon univers.")
     else:
-        lu = (f"Klit l'essentiel dyal lktab ! J'ai lu « {bilan['source']} » et digéré {bilan['passages_lus']} passages "
-              f"répartis du début à la fin (sur {bilan['passages_total']}), soit {bilan['concepts']} concepts : "
+        pages = (f"{bilan['pages_lues']} pages sur {bilan['pages_total']}, " if bilan.get("pages_total", 1) > 1
+                 and bilan.get("pages_lues", 1) < bilan["pages_total"] else "")
+        lu = (f"Klit l'essentiel dyal lktab ! J'ai lu « {bilan['source']} » ({pages}réparties du début à la fin) et digéré "
+              f"{bilan['passages_lus']} passages (sur {bilan['passages_total']}), soit {bilan['concepts']} concepts : "
               "mon univers s'est agrandi.")
     return lu + " Tout est gardé dans ma mémoire : tu peux supprimer le fichier source !"

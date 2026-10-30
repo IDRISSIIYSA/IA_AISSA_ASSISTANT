@@ -71,7 +71,9 @@ class Brouteur:
             raise ErreurBroutage(f"{site} est au repos (trop de visites récentes).")
         if not self.autorise(url):
             raise ErreurBroutage(f"robots.txt de {site} interdit cette page à IA AISSA.")
-        attente = random.uniform(*self.delai) - (time.time() - self.derniere_visite.get(site, 0))
+        regles = self.robots.get(f"{urlparse(url).scheme}://{site}")
+        demande = (regles.crawl_delay(AGENT) if regles else None) or 0      # le délai que le site demande, s'il en fixe un
+        attente = max(random.uniform(*self.delai), float(demande)) - (time.time() - self.derniere_visite.get(site, 0))
         if attente > 0:
             self.dormir(attente)                       # politesse : 2 à 5 s entre deux visites d'un même site
         r = requests.get(url, params=params, headers={"User-Agent": AGENT}, timeout=20)
@@ -83,8 +85,39 @@ class Brouteur:
                 repos = self.repos_429
             self.repos_jusqua[site] = time.time() + repos
             raise ErreurBroutage(f"{site} demande de ralentir (429) : repos de {repos} s.")
+        if r.status_code in (401, 403):
+            raise ErreurBroutage(f"{site} refuse l'accès aux robots ({r.status_code}) : IA AISSA cherche ailleurs.")
         r.raise_for_status()
         return r.text
+
+    def telecharger(self, url, chemin, max_octets=70_000_000):
+        """Télécharge un fichier (PDF, EPUB) vers le disque, par morceaux, avec les mêmes règles de politesse ;
+        refuse au-delà de max_octets (70 Mo) pour ménager le serveur. Renvoie le nombre d'octets."""
+        import requests
+        adresse_publique(url)
+        site = urlparse(url).netloc
+        if time.time() < self.repos_jusqua.get(site, 0):
+            raise ErreurBroutage(f"{site} est au repos (trop de visites récentes).")
+        if not self.autorise(url):
+            raise ErreurBroutage(f"robots.txt de {site} interdit ce fichier à IA AISSA.")
+        attente = random.uniform(*self.delai) - (time.time() - self.derniere_visite.get(site, 0))
+        if attente > 0:
+            self.dormir(attente)
+        with requests.get(url, headers={"User-Agent": AGENT}, timeout=60, stream=True) as r:
+            self.derniere_visite[site] = time.time()
+            if r.status_code in (401, 403):
+                raise ErreurBroutage(f"{site} refuse l'accès aux robots ({r.status_code}) : IA AISSA cherche ailleurs.")
+            r.raise_for_status()
+            if int(r.headers.get("content-length") or 0) > max_octets:
+                raise ErreurBroutage(f"fichier trop lourd ({int(r.headers['content-length']) / 1e6:.0f} Mo).")
+            total = 0
+            with open(chemin, "wb") as f:
+                for morceau in r.iter_content(1 << 20):
+                    total += len(morceau)
+                    if total > max_octets:
+                        raise ErreurBroutage("fichier trop lourd : téléchargement arrêté.")
+                    f.write(morceau)
+        return total
 
     def page(self, url):
         _, texte = texte_html(self.visiter(url))
@@ -192,6 +225,7 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
         brouteur = Brouteur()
         time.sleep(120)                 # laisse l'application démarrer tranquillement avant le premier repas
         prochain_repas = derniere_crise = 0.0
+        dernier_livre = time.time() - 86_400 + 900      # premier livre un quart d'heure après le démarrage
         while True:
             maintenant = time.time()
             jour = datetime.now(timezone.utc).date()
@@ -220,6 +254,15 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
                 except Exception as e:                  # réseau, site au repos, moteur indisponible…
                     ETAT["erreurs"] = (ETAT["erreurs"] + [f"{type(e).__name__} : {str(e)[:120]}"])[-5:]
                     prochain_repas = time.time() + REESSAI   # retenté bientôt, sans entamer le budget
+            if maintenant - dernier_livre >= 86_400:    # un manuel libre par jour (OpenStax…), si le site l'autorise
+                dernier_livre = maintenant
+                try:
+                    from .livres_libres import repas_de_livre
+                    livre = repas_de_livre(memoire, brouteur)
+                    ETAT["dernier_livre"] = {"quand": datetime.now(timezone.utc), "source": livre["source"],
+                                             "concepts": livre["concepts"], "refus": livre["refus"]}
+                except Exception as e:
+                    ETAT["erreurs"] = (ETAT["erreurs"] + [f"livres — {type(e).__name__} : {str(e)[:100]}"])[-5:]
             try:                                       # rester sous le plafond de mémoire vive
                 from .pensee import alleger
                 ETAT["memoire_vive"] = alleger()

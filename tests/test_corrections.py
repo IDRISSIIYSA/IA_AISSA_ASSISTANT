@@ -357,3 +357,52 @@ def test_les_documents_de_chacun_restent_les_siens(labo):
     mem.garder_digestion("IA AISSA", "Wikipédia", "Sciences humaines et gestion", fiche("Marge brute"), "", .5)
     vus = {l["source"] for l in chercher(mem, "marge brute budget", utilisateur="Aissa")}
     assert "bilan société A" in vus and "Wikipédia" in vus and "bilan société B" not in vus
+
+
+class _BrouteurFactice:
+    """Un brouteur sans réseau : chaque URL renvoie le PDF prévu, ou un refus."""
+    def __init__(self, fichiers):
+        self.fichiers = fichiers
+
+    def telecharger(self, url, chemin):
+        from ia_aissa.bibliotheque import ErreurBroutage
+        contenu = self.fichiers[url]
+        if isinstance(contenu, Exception):
+            raise contenu
+        if contenu == "403":
+            raise ErreurBroutage("site.org refuse l'accès aux robots (403) : IA AISSA cherche ailleurs.")
+        open(chemin, "wb").write(contenu)
+        return len(contenu)
+
+
+def test_livres_libres_recommandation_et_droits(labo, monkeypatch):
+    from ia_aissa import livres_libres as LL
+    from ia_aissa.bibliotheque import ErreurBroutage
+    from ia_aissa.espace import intention
+    mem, _ = labo
+    assert intention("recommande moi des sites de livres gratuits en pdf") == "livres_libres"
+    texte = LL.recommander("comptabilité management")
+    assert "OpenStax" in texte and "management.org" in texte and "jamais de sites piratés" in texte
+    assert LL.site_refuse("http://livre21.com/pf613.html") and not LL.site_refuse("https://openstax.org/x.pdf")
+    propre = ARTICLE_LOCAL.replace("ô", "o").replace("é", "e").replace("è", "e")
+    pirate = "Ce document est la propriete exclusive de Quelqu'un - 13 Septembre 2010. " + propre
+    b = _BrouteurFactice({"https://libre.org/cours.pdf": _pdf_de_test(propre),
+                          "https://libre.org/vole.pdf": _pdf_de_test(pirate)})
+    bilan = LL.manger_livre(mem, b, "https://libre.org/cours.pdf", "Cours libre")
+    assert bilan["concepts"] >= 2 and LL.deja_lu(mem, "https://libre.org/cours.pdf")
+    with pytest.raises(ErreurBroutage, match="non autorisée"):
+        LL.manger_livre(mem, b, "https://libre.org/vole.pdf")
+    with pytest.raises(ErreurBroutage, match="ce site"):
+        LL.manger_livre(mem, b, "http://livre21.com/LIVREF/F34/F034040.pdf")
+
+
+def test_si_le_site_refuse_elle_cherche_ailleurs(labo, monkeypatch):
+    from ia_aissa import livres_libres as LL
+    mem, _ = labo
+    propre = ARTICLE_LOCAL.replace("ô", "o").replace("é", "e").replace("è", "e")
+    monkeypatch.setattr(LL, "catalogue_openstax", lambda b: [("Principles of Accounting", "https://a.org/refus.pdf"),
+                                                             ("Principles of Management", "https://a.org/ok.pdf")])
+    b = _BrouteurFactice({"https://a.org/refus.pdf": "403", "https://a.org/ok.pdf": _pdf_de_test(propre)})
+    bilan = LL.repas_de_livre(mem, b)
+    assert bilan["source"] == "OpenStax — Principles of Management" and "403" in bilan["refus"][0]
+    assert LL.repas_de_livre(mem, b)["source"] is None                       # tout est lu ou refusé : rien à refaire

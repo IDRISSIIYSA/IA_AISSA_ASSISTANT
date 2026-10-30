@@ -237,6 +237,19 @@ Déposez un livre ou un cours **PDF ou EPUB** dans « 🌌 Cosmic Knowledge Inge
 Sur Streamlit Cloud, le disque du serveur est effacé à chaque redémarrage : la mémoire qui dure est la base
 (`MEMOIRE_URL`), le fichier JSON n'est qu'une copie.
 
+### Bibliothèques libres : elle va chercher ses livres seule (`ia_aissa/livres_libres.py`)
+- « Recommande-moi des sites de livres gratuits » : liste de bibliothèques **gratuites et légales** (OpenStax,
+  Wikilivres, Wikisource, Free Management Library, Project Gutenberg, OAPEN, HAL, Bank Al-Maghrib, HCP), avec ce
+  qu'elle peut y faire seule ou ce qu'il faut télécharger à la main.
+- Avant d'entrer sur un site, elle lit son robots.txt : s'il l'accepte elle entre, sinon (ou sur un refus 401/403,
+  comme management.org) elle cherche ailleurs ; elle respecte aussi le délai demandé (Crawl-delay).
+- Un manuel libre par jour (OpenStax, gestion et économie d'abord, 70 Mo au plus) : téléchargé, lu (150 pages
+  réparties pour un gros manuel), digéré, puis supprimé.
+- Un lien vers un PDF/EPUB dans la conversation : elle le lit seule, sans clé API.
+- Jamais de livres piratés : les sites repérés (livre21.com : livres commerciaux remis en ligne avec le filigrane
+  de l'acheteur) sont refusés, et tout PDF portant un filigrane ou une fiche de commande d'acheteur est supprimé
+  sans être lu. Vos propres livres achetés, vous pouvez toujours les déposer pour votre usage personnel.
+
 ### Confidentialité entre personnes autorisées
 Les livres et documents déposés par une personne ne servent qu'à elle : la bibliothèque, la pensée propre,
 l'assistante et l'atelier d'invention ne cherchent que dans ses documents et dans le savoir commun lu seule sur le
