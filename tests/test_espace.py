@@ -455,3 +455,20 @@ def test_adresse_de_la_memoire_donnee_par_neon(tmp_path, monkeypatch):
     assert partage.fichier_env() == {}                                  # jamais pendant les tests
     monkeypatch.delenv("IA_AISSA_TESTS")
     assert partage.fichier_env() == {"DATABASE_URL": "postgresql://a:b@h/db", "X": "1"}
+
+
+def test_simulations_dans_une_seule_liste_deroulante(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa.espace_simulations import CATEGORIES
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    liste = at.sidebar.selectbox[0]
+    assert len(at.sidebar.selectbox) == 1 and liste.value is None and not at.sidebar.expander
+    assert len(liste.options) == sum(len(v) for v in CATEGORIES.values())
+    liste.select("👥 RH et paie › Bulletin de paie complet").run()
+    assert not at.exception and at.session_state["simulation"] == "Bulletin de paie complet"
+    assert any(m.value == "### Bulletin de paie complet" for m in at.markdown) and len(at.chat_input) == 0
+    at.sidebar.button[0].click().run()                    # ✖ Fermer : retour au chat
+    assert "simulation" not in at.session_state and len(at.chat_input) == 1

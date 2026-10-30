@@ -55,26 +55,26 @@ def pc(v):
 
 
 def barre_laterale():
-    """La liste des simulations, classées par type, dans la barre latérale. Renvoie la simulation choisie."""
+    """Toutes les simulations, classées par type, dans une seule liste déroulante de la barre latérale (on peut y
+    taper pour chercher). Renvoie la simulation choisie."""
+    toutes = [(categorie, nom) for categorie, noms in CATEGORIES.items() for nom in noms]
+    libelles = [f"{categorie} › {nom}" for categorie, nom in toutes]
+
+    def choisir():
+        choix = st.session_state.get("sim_liste")
+        if choix:
+            st.session_state["simulation"] = toutes[libelles.index(choix)][1]
+            st.session_state["mode_visiteur"] = MODES[1]
+
+    actuelle = st.session_state.get("simulation")
+    st.session_state["sim_liste"] = next((l for l, (_, n) in zip(libelles, toutes) if n == actuelle), None)
     with st.sidebar:
         st.markdown("## 🧮 Simulations")
-        st.caption("Résultats justifiés : méthode, lois et articles, année et taux appliqués. Rapport PDF traçable.")
-        recherche = st.text_input("🔎 Chercher une simulation", key="sim_recherche", label_visibility="collapsed",
-                                  placeholder="🔎 Chercher (paie, crédit, béton…)").strip().lower()
-        for categorie, noms in CATEGORIES.items():
-            visibles = [n for n in noms if not recherche or recherche in n.lower() or recherche in categorie.lower()]
-            if not visibles:
-                continue
-            ouverte = bool(recherche) or st.session_state.get("simulation") in noms
-            with st.expander(f"{categorie} ({len(visibles)})", expanded=ouverte):
-                for nom in visibles:
-                    actif = st.session_state.get("simulation") == nom
-                    if st.button(("▶ " if actif else "") + nom, key=f"sim_{nom}", width="stretch",
-                                 type="primary" if actif else "secondary"):
-                        st.session_state["simulation"] = nom
-                        st.session_state["mode_visiteur"] = MODES[1]
-                        st.rerun()
-        if st.session_state.get("simulation") and st.button("✖ Fermer la simulation", width="stretch"):
+        st.caption(f"{len(toutes)} simulations et guides, classés par type. Résultats justifiés (lois, articles, année, "
+                   "taux) et rapport PDF traçable.")
+        st.selectbox("Choisir une simulation", libelles, key="sim_liste", on_change=choisir,
+                     placeholder="🔎 Choisir ou taper (paie, crédit, TVA…)", label_visibility="collapsed")
+        if actuelle and st.button("✖ Fermer la simulation", width="stretch"):
             st.session_state.pop("simulation")
             st.session_state["mode_visiteur"] = MODES[0]
             st.rerun()
