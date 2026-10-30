@@ -467,7 +467,7 @@ def test_simulations_dans_une_seule_liste_deroulante(tmp_path, monkeypatch):
     liste = at.sidebar.selectbox[0]
     assert len(at.sidebar.selectbox) == 1 and liste.value is None and not at.sidebar.expander
     assert len(liste.options) == sum(len(v) for v in CATEGORIES.values())
-    liste.select("👥 RH et paie › Bulletin de paie complet").run()
+    liste.select("👥 Bulletin de paie complet").run()
     assert not at.exception and at.session_state["simulation"] == "Bulletin de paie complet"
     assert any(m.value == "### Bulletin de paie complet" for m in at.markdown) and len(at.chat_input) == 0
     at.sidebar.button[0].click().run()                    # ✖ Fermer : retour au chat

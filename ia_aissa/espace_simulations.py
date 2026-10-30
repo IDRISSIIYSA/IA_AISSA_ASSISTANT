@@ -58,7 +58,7 @@ def barre_laterale():
     """Toutes les simulations, classées par type, dans une seule liste déroulante de la barre latérale (on peut y
     taper pour chercher). Renvoie la simulation choisie."""
     toutes = [(categorie, nom) for categorie, noms in CATEGORIES.items() for nom in noms]
-    libelles = [f"{categorie} › {nom}" for categorie, nom in toutes]
+    libelles = [f"{categorie.split()[0]} {nom}" for categorie, nom in toutes]     # l'icône dit le type : 👥 Paie…
 
     def choisir():
         choix = st.session_state.get("sim_liste")
@@ -72,6 +72,7 @@ def barre_laterale():
         st.markdown("## 🧮 Simulations")
         st.caption(f"{len(toutes)} simulations et guides, classés par type. Résultats justifiés (lois, articles, année, "
                    "taux) et rapport PDF traçable.")
+        st.caption(" · ".join(categorie for categorie in CATEGORIES))
         st.selectbox("Choisir une simulation", libelles, key="sim_liste", on_change=choisir,
                      placeholder="🔎 Choisir ou taper (paie, crédit, TVA…)", label_visibility="collapsed")
         if actuelle and st.button("✖ Fermer la simulation", width="stretch"):
