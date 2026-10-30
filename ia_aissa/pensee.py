@@ -314,12 +314,12 @@ def calculer(texte):
 # ==========================================
 # Penser
 # ==========================================
-def penser(texte, memoire=None, conclusion=None, precedente=None):
+def penser(texte, memoire=None, conclusion=None, precedente=None, utilisateur=None):
     """Réponse d'IA AISSA avec ses propres cerveaux. Renvoie (réponse en markdown, étapes du raisonnement, confiance).
     conclusion (dict facultatif) reçoit la matière, la réponse retenue et l'accord analogie × école.
     precedente : la question d'avant, pour comprendre « explique plus », « pourquoi »…"""
     if precedente and SUITE.search(texte) and not SUITE.search(precedente):
-        reponse, etapes, confiance = penser(precedente, memoire)
+        reponse, etapes, confiance = penser(precedente, memoire, utilisateur=utilisateur)
         return (f"Je reprends ta question précédente (« {precedente} ») plus en détail :\n\n{reponse}\n\n"
                 "**Comment j'ai raisonné** :\n" + "\n".join(f"{i}. {e}" for i, e in enumerate(etapes, 1)),
                 ["Tu demandes plus de détails : je reprends ta question précédente."] + etapes, confiance)
@@ -366,7 +366,7 @@ def penser(texte, memoire=None, conclusion=None, precedente=None):
     if memoire is not None:
         from .bibliotheque import chercher
         cles = {x for x in mots(texte) if x not in VIDES and len(x) > 3}
-        lectures = [l for l in chercher(memoire, texte, n=2) if l["pertinence"] >= 0.4      # proche ET un vrai mot commun
+        lectures = [l for l in chercher(memoire, texte, n=2, utilisateur=utilisateur) if l["pertinence"] >= 0.4      # proche ET un vrai mot commun
                     and cles & {x for x in mots(f"{l['concept']} {l['explication']}") if len(x) > 3}]
         if lectures:
             etapes.append(f"Ma bibliothèque : {len(lectures)} concept(s) proche(s) dans mes lectures.")

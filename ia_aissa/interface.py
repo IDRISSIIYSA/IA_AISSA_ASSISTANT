@@ -22,7 +22,7 @@ from .acces import verifier_acces
 from .assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, meta_conscience, profil_conversation
 from .autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
 from .avatar import avatar
-from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer
+from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer, visible_par
 from .corrections import corriger, reviser_tout
 from .croissance import afficher as afficher_croissance
 from .croissance import serie as serie_croissance
@@ -520,7 +520,7 @@ def converser_avec_moteur(r, utilisateur, question, role, journal):
                                 journal=journal, profil=profil,
                                 memoriser=lambda fait: mem.memoriser(utilisateur, fait),
                                 corriger=lambda cle, q, rep: corriger(mem, utilisateur, cle, q, rep),
-                                bibliotheque=lambda q: chercher(mem, q),
+                                bibliotheque=lambda q: chercher(mem, q, utilisateur=utilisateur),
                                 execution_code=role == "programmeur" and r["config"]["type"] == "anthropic")
     except (anthropic.AuthenticationError, openai.AuthenticationError):
         st.session_state["messages_api"].pop()
@@ -605,7 +605,7 @@ def traiter(r, utilisateur, texte, fichiers):
             "normal"
     if voulu == "bibliotheque":
         lignes = [f"{d['source']} — {d['famille']} ({len(json.loads(d['concepts']))} concept(s))"
-                  for d in mem.digestions(30)]
+                  for d in mem.digestions(200) if visible_par(d, utilisateur)][:30]
         return ("Voici ce que j'ai lu et digéré." if lignes else "Je n'ai encore rien lu : donne-moi un lien ou un livre !"), \
             [{"type": "liste", "titre": "📚 Ma bibliothèque", "lignes": lignes}], [], "lecteur", "normal"
     if voulu == "prononciation":
@@ -621,7 +621,7 @@ def traiter(r, utilisateur, texte, fichiers):
 
     if role == "inventeur" and client:
         historique, meilleure = evoluer(r["config"], client, texte, generations=2, taille=4,
-                                        inspirations=chercher(mem, texte, n=4))
+                                        inspirations=chercher(mem, texte, n=4, utilisateur=utilisateur))
         finale, debat, meta = debattre(r["config"], client, texte, meilleure, 3)
         mem.garder_idee(utilisateur, texte, finale["titre"], finale.get("description", ""), meta["confiance"],
                         meta["faisabilite"], json.dumps({"debat": debat, "meta": meta}, ensure_ascii=False))
@@ -644,7 +644,7 @@ def traiter(r, utilisateur, texte, fichiers):
     if merci:
         return merci, [], [], "compagnon", "normal"
     conclusion = {}
-    reponse, etapes, confiance = reponse_locale(texte, mem, conclusion, precedente)
+    reponse, etapes, confiance = reponse_locale(texte, mem, conclusion, precedente, utilisateur)
     st.session_state["conclusion_locale"] = conclusion
     st.session_state["derniere_conclusion"] = dict(conclusion) or st.session_state.get("derniere_conclusion")
     if not re.search(r"^\s*(ex\w*li\w*|détaill|pourquoi|non\b|oui\b|ok\b)", texte, re.I):
@@ -710,6 +710,25 @@ def pouls_d_ia_aissa():
 # ==========================================
 # L'espace unique
 # ==========================================
+def simulateur_de_paie():
+    """Simulateur de paie simple pour les clients : brut ou net, et l'essentiel en un coup d'œil (barème 2026)."""
+    from . import connaissances as K
+    from .pensee import bulletin
+    with st.expander("💼 Simulateur de paie (CNSS · AMO · IR · Net)"):
+        c1, c2 = st.columns([1.2, 1])
+        sens = c1.radio("Je connais", ["le salaire brut", "le salaire net"], horizontal=True, key="paie_sens")
+        montant = c2.number_input("Montant mensuel (DH)", min_value=0.0, value=8000.0, step=500.0, key="paie_montant")
+        brut = K.brut_pour_net(montant) if sens == "le salaire net" else montant
+        p = K.calculer_paie(brut)
+        colonnes = st.columns(5)
+        for col, (libelle, valeur) in zip(colonnes, [("Brut", brut), ("CNSS", p["cnss_salarie"]), ("AMO", p["amo_salarie"]),
+                                                     ("IR", p["ir"]), ("Net", p["salaire_net"])]):
+            col.metric(libelle, f"{valeur:,.0f} DH".replace(",", " "))
+        st.caption(f"Coût pour l'employeur : {brut + p['charges_patronales']:,.0f} DH par mois".replace(",", " "))
+        with st.popover("📄 Bulletin détaillé"):
+            st.markdown(bulletin(brut))
+
+
 def ingestion_de_livres(utilisateur):
     """Dépôt de livres PDF : IA AISSA les lit seule (sans clé API), garde l'essentiel, et le fichier ne reste pas."""
     from .pensee import confirmation_ingestion, ingerer_pdf
@@ -764,6 +783,7 @@ def espace_unique():
                                       "nouveau": True}
 
     ingestion_de_livres(utilisateur)
+    simulateur_de_paie()
 
     if not st.session_state["affichage"]:
         st.markdown('<p class="astuce">🎙️ Appuie sur le micro bleu pour parler · ✅ pour envoyer ta voix · '

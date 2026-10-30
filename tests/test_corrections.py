@@ -345,3 +345,15 @@ def test_ingestion_d_un_livre_pdf_sans_cle_api(labo, tmp_path, monkeypatch):
     assert ingerer_pdf(mem, "livre.epub", epub.getvalue(), fichier_json=tmp_path / "e.json")["concepts"] >= 2
     with pytest.raises(ValueError, match="scanné"):
         ingerer_pdf(mem, "scan.pdf", _pdf_de_test(" "), fichier_json=tmp_path / "x.json")
+
+
+def test_les_documents_de_chacun_restent_les_siens(labo):
+    import json
+    from ia_aissa.bibliotheque import chercher
+    mem, _ = labo
+    fiche = lambda nom: json.dumps([{"nom": nom, "explication": f"{nom} : marge brute et budget de l'entreprise"}])
+    mem.garder_digestion("Aissa", "bilan société A", "Sciences humaines et gestion", fiche("Marge confidentielle A"), "", .5)
+    mem.garder_digestion("Karim", "bilan société B", "Sciences humaines et gestion", fiche("Marge confidentielle B"), "", .5)
+    mem.garder_digestion("IA AISSA", "Wikipédia", "Sciences humaines et gestion", fiche("Marge brute"), "", .5)
+    vus = {l["source"] for l in chercher(mem, "marge brute budget", utilisateur="Aissa")}
+    assert "bilan société A" in vus and "Wikipédia" in vus and "bilan société B" not in vus

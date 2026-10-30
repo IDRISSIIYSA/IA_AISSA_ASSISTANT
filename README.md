@@ -237,6 +237,15 @@ Déposez un livre ou un cours **PDF ou EPUB** dans « 🌌 Cosmic Knowledge Inge
 Sur Streamlit Cloud, le disque du serveur est effacé à chaque redémarrage : la mémoire qui dure est la base
 (`MEMOIRE_URL`), le fichier JSON n'est qu'une copie.
 
+### Confidentialité entre personnes autorisées
+Les livres et documents déposés par une personne ne servent qu'à elle : la bibliothèque, la pensée propre,
+l'assistante et l'atelier d'invention ne cherchent que dans ses documents et dans le savoir commun lu seule sur le
+web. (Les données sont dans la base `MEMOIRE_URL` ; leur chiffrement au repos dépend de l'hébergeur de la base.)
+
+### Simulateur de paie
+« 💼 Simulateur de paie » : brut ou net, et en un coup d'œil brut, CNSS, AMO, IR, net, coût employeur
+(barème IR 2026, frais professionnels 35 % / 25 %), avec le bulletin détaillé.
+
 ### Pensée propre : conversation
 « explique plus », « pourquoi » reprennent la question précédente en détail ; « non, c'est … » devient une
 correction révisée aussitôt ; « non », « ok », « tu dois apprendre » ont une vraie réponse ; sous 50 % de

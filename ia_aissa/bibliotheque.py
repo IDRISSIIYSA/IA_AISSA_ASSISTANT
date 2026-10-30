@@ -243,9 +243,18 @@ def combler_lacunes(memoire, concepts):
     return comblees
 
 
-def chercher(memoire, requete, n=5):
-    """Les concepts de la bibliothèque les plus proches d'une question (similarité des mots et des lettres)."""
-    fiches = [(d, c) for d in memoire.digestions() for c in json.loads(d["concepts"])]
+AUTONOME = "IA AISSA"            # ce qu'elle a lu seule sur le web : savoir commun à tous
+
+
+def visible_par(d, utilisateur):
+    """Les documents d'une personne restent les siens : elle ne voit que ses lectures et le savoir commun."""
+    return utilisateur is None or d["utilisateur"] in (utilisateur, AUTONOME)
+
+
+def chercher(memoire, requete, n=5, utilisateur=None):
+    """Les concepts de la bibliothèque les plus proches d'une question (similarité des mots et des lettres).
+    utilisateur : ne cherche que dans ses documents à lui et dans le savoir commun (lu seule sur le web)."""
+    fiches = [(d, c) for d in memoire.digestions() if visible_par(d, utilisateur) for c in json.loads(d["concepts"])]
     if not fiches:
         return []
     q = vectoriser_mixte(requete)
