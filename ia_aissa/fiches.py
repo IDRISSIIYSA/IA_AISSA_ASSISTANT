@@ -12,7 +12,7 @@ import re
 from . import connaissances as K
 from .ecole import MATIERES, PAR_CLE, mots
 
-PARLER = re.compile(r"(\b(parle|parlez|parler|explique|expliquer|expliquez|présente|presente|définition|definition|"
+PARLER = re.compile(r"(\b(p?arle[rz]?|parle-moi|explique|expliquer|expliquez|présente|presente|définition|definition|"
                     r"définis|resume|résume|c'?est quoi|qu'?est[- ]ce (que|qu)|dis[- ]moi (tout )?(sur|de)|"
                     r"tout sur|3tini 3la|hdar 3la|chno hiya|chno howa|chnou)\b|ما هو|ما هي|اشرح|عرف|تكلم)", re.I)
 
@@ -75,10 +75,56 @@ def _paie():
             "6000 → brut » pour le détail ligne par ligne.")
 
 
+def _impots():
+    lignes = "\n".join(f"- **{impot}** : par exemple {exemples[0]}" for impot, exemples in K.QUEL_IMPOT.items())
+    return ("## 🏛️ Les impôts au Maroc\n\n"
+            "**Impôts de l'État** (Code général des impôts) : IS sur le bénéfice des sociétés (20 % / 35 %), IR sur les "
+            "revenus des personnes (barème 0 à 37 %), TVA sur la consommation (20 % et 10 % depuis 2026), droits "
+            "d'enregistrement et de timbre ; **impôts locaux** : taxe professionnelle, taxe d'habitation, taxe de "
+            "services communaux ; **douane** : droits d'importation et taxes intérieures de consommation (TIC).\n\n"
+            f"**À quel impôt s'attendre ?**\n{lignes}\n\nDemande-moi « parle de la TVA », « de l'IS » ou « de l'IR » "
+            "pour le détail, ou donne-moi un montant à calculer.")
+
+
+def _budget():
+    b = K.BUDGET_ETAT_2026
+    return ("## 🏦 Recettes et dépenses de l'État (loi de finances 2026)\n\n"
+            f"- **Recettes ordinaires prévues** : {b['recettes_ordinaires']} milliards de DH, dont {b['recettes_non_fiscales']} "
+            "de recettes non fiscales (le reste : impôts — TVA, IS, IR — et droits de douane).\n"
+            f"- **Dépenses totales prévues** : {b['depenses_totales']} milliards de DH, dont {b['masse_salariale']} de masse "
+            f"salariale et {b['investissement']} d'investissement.\n"
+            f"- **Déficit prévu** : {b['deficit_prevu']} milliards de DH, soit **{b['deficit_pib']:.0f} % du PIB**.\n"
+            f"- **Exécution à fin août 2026** (TGR) : recettes ordinaires {b['fin_aout_recettes']} milliards "
+            f"(+{b['fin_aout_recettes_hausse']} %), déficit {b['fin_aout_deficit']} milliards (contre "
+            f"{b['fin_aout_deficit_2025']} un an plus tôt).\n\n"
+            "_Chiffres de la presse économique citant la TGR et le ministère des Finances, vérifiés le 30/10/2026._")
+
+
+def _balance():
+    c = K.BALANCE_COMMERCIALE_2025
+    return ("## 🚢 La balance commerciale du Maroc (2025)\n\n"
+            f"- **Importations** : {c['importations']} milliards de DH ; **exportations** : {c['exportations']} milliards.\n"
+            f"- **Déficit commercial** : environ **{c['deficit']} milliards de DH** (+{c['deficit_hausse']} % sur un an, "
+            f"contre {c['deficit_2024']} en 2024), soit {c['deficit_pib']} % du PIB.\n"
+            f"- **Taux de couverture** (exportations / importations) : **{c['couverture']} %** (contre "
+            f"{c['couverture_2024']} % en 2024).\n"
+            "- **Ce qui progresse** : phosphates et dérivés (+13,8 %), aéronautique (+8,5 %) ; **ce qui recule** : "
+            "automobile, textile, électronique ; le déficit vient surtout de la hausse des importations.\n"
+            f"- **Compte courant** : environ {c['compte_courant']:.0f} milliards de DH (les transferts des Marocains du "
+            "monde, le tourisme et les investissements étrangers compensent une partie du déficit commercial).\n\n"
+            "_Chiffres de l'Office des changes repris par la presse économique, vérifiés le 30/10/2026._")
+
+
 FICHES = [(re.compile(r"\btva\b|taxe sur la valeur|الضريبة على القيمة", re.I), _tva),
           (re.compile(r"\bis\b|impôt sur les sociétés|impot sur les societes|الضريبة على الشركات", re.I), _is),
           (re.compile(r"\bir\b|impôt sur le revenu|impot sur le revenu|الضريبة على الدخل", re.I), _ir),
-          (re.compile(r"\b(paie|cnss|amo|bulletin de salaire|charges sociales)\b", re.I), _paie)]
+          (re.compile(r"\b(paie|cnss|amo|bulletin de salaire|charges sociales)\b", re.I), _paie),
+          (re.compile(r"(\bimp[ôo]ts?\b|fiscalit\w*|\btaxes\b|الضرائب)", re.I), _impots),
+          (re.compile(r"(rec+et+es|d[ée]penses?\b.{0,25}([ée]tat|public)|budget de l.?[ée]tat|finances publiques|"
+                      r"d[ée]ficit budg\w*|loi de finances|الميزانية)", re.I), _budget),
+          (re.compile(r"(balance comm\w*|commerce ext[ée]rieur|importations|exportations|d[ée]ficit commercial|"
+                      r"taux de couverture|الميزان التجاري)", re.I), _balance)]
+GENERIQUES = set(mots("maroc marocain marocaine marocains etat general generale plan brievement bievement moi"))
 
 
 MOTS_DES_SUJETS = set(mots("tva is ir paie cnss amo impot impots sur les societes revenu taxe la valeur ajoutee "
@@ -87,12 +133,13 @@ MOTS_DES_SUJETS = set(mots("tva is ir paie cnss amo impot impots sur les societe
 
 def fiche_matiere(texte):
     """La matière dont parle la question (par son nom), présentée avec un exemple de chaque réponse."""
-    q = {m for m in mots(texte) if len(m) > 3} - {"parle", "explique", "presente", "maroc", "moroccan"}
+    q = {m for m in mots(texte) if len(m) > 3} - {"parle", "arle", "explique", "presente"} - GENERIQUES
     if not q:
         return None
     meilleure = max((m for m in MATIERES if m.exemples and m.cle != "orientation"),
                     key=lambda m: len(q & set(mots(f"{m.nom} {m.domaine}"))), default=None)
-    if not meilleure or not q & set(mots(f"{meilleure.nom} {meilleure.domaine}")):
+    communs = q & set(mots(f"{meilleure.nom} {meilleure.domaine}")) if meilleure else set()
+    if not communs or len(communs) < min(2, len(q)):      # un seul mot vague (« marocain ») ne suffit pas
         return None
     lignes = "\n".join(f"- **{a}** : par exemple « {ex[0]} »" for a, ex in zip(meilleure.actions, meilleure.exemples) if ex)
     return f"## 🎓 {meilleure.nom} ({meilleure.domaine})\n\n{meilleure.note}\n\n{lignes}"
@@ -104,13 +151,16 @@ def fiche(texte, memoire=None, utilisateur=None):
     seul_le_sujet = not (set(mots(texte)) - MOTS_DES_SUJETS)    # « TVA ? », « la TVA au Maroc »
     if not (demande or seul_le_sujet):
         return None
-    contenu = next((f() for motif, f in FICHES if motif.search(texte)), None) or (fiche_matiere(texte) if demande else None)
+    trouvees = [f for motif, f in FICHES if motif.search(texte)]
+    if _impots in trouvees and len(trouvees) > 1 and any(f in trouvees for f in (_tva, _is, _ir)):
+        trouvees.remove(_impots)                          # « la TVA » : la fiche précise suffit
+    contenu = "\n\n".join(f() for f in trouvees) or (fiche_matiere(texte) if demande else None)
     if contenu is None:
         return None
     sources = ["base de connaissances marocaine (vérifiée le " + K.MISE_A_JOUR + ")"]
     if memoire is not None:
         from .lecture import repondre_par_lecture
-        lu = repondre_par_lecture(texte, memoire, utilisateur, n=3)
+        lu = repondre_par_lecture(texte, memoire, utilisateur, n=3, strict=True)
         if lu:
             contenu += "\n\n### 📚 Ce que disent mes lectures\n\n" + lu["reponse"]
             sources += lu["sources"]

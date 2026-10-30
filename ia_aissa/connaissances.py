@@ -1008,3 +1008,18 @@ EVOLUTIONS = {
            "20 %, 30 %, 34 % et **37 %** au-delà de 180 000 DH (au lieu de 38 % avant) ; les frais professionnels sont de "
            "35 % jusqu'à 78 000 DH de revenu brut annuel, 25 % au-delà, plafonnés à 35 000 DH par an."),
 }
+
+
+# ==========================================
+# Économie de l'État marocain (vérifié le 30/10/2026 ; presse économique citant la TGR, le ministère de l'Économie et
+# des Finances et l'Office des changes — chiffres arrondis, à confirmer dans les publications officielles)
+# ==========================================
+BUDGET_ETAT_2026 = {
+    "recettes_ordinaires": 432.8, "depenses_totales": 488.2, "deficit_prevu": 55.4, "deficit_pib": 3.0,
+    "recettes_non_fiscales": 62.7, "masse_salariale": 195.3, "investissement": 114.8,
+    "fin_aout_recettes": 286.6, "fin_aout_recettes_hausse": 5.5, "fin_aout_deficit": 56.9, "fin_aout_deficit_2025": 54.1,
+}
+BALANCE_COMMERCIALE_2025 = {
+    "importations": 822.2, "exportations": 469.1, "deficit": 353.2, "deficit_hausse": 15.8, "deficit_2024": 304.9,
+    "couverture": 57.2, "couverture_2024": 59.9, "deficit_pib": 22.7, "compte_courant": -42.0,
+}

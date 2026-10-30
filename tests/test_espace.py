@@ -237,3 +237,23 @@ def test_parle_de_tva_au_maroc_donne_une_vraie_fiche():
     assert "TVA 200 DH" in penser("tva sur 1000 dh")[0]                           # aucun produit : taux normal
     assert nombres("dariba 3la rb7 dyal charika") == [] and nombres("khlast 3000dh") == [3000.0]
     assert "IS (impôt sur les sociétés)" in penser("dariba 3la rb7 dyal charika")[0]
+
+
+def test_impots_budget_de_l_etat_et_balance_commerciale():
+    from ia_aissa.pensee import penser
+    q = ("ARLE MOI BIEVEMENT DES IMPOTS AU MAROC ET SUR LES RECTTES ET DEPENSE DE LETAT MAROCAIN ET LA BALANCE "
+         "COMMERICALE")
+    r = penser(q)[0]
+    assert "Les impôts au Maroc" in r and "Recettes et dépenses de l'État" in r and "balance commerciale" in r
+    assert "432.8" in r and "57.2 %" in r and "Plan Comptable" not in r                  # plus la mauvaise fiche
+    assert "## 🎓 Imputation" not in penser("parle du maroc")[0]                       # pas la fiche du plan comptable
+    assert "La TVA au Maroc" in penser("parle des impôts : la TVA")[0]
+
+
+def test_un_extrait_de_lecture_doit_partager_plusieurs_vrais_mots(tmp_path):
+    from ia_aissa.lecture import repondre_par_lecture
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.garder_passages("IA AISSA", "OpenStax — Principles of Management", [
+        "Finding the optimal balance between organizational and personal control is not an easy task for managers."])
+    assert repondre_par_lecture("la balance commerciale du Maroc", mem) is None             # « balance » seul : non

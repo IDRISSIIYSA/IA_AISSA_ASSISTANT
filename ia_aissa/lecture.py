@@ -77,8 +77,12 @@ class Index:
                 scores[i] += self.idf[t] * f * (self.k1 + 1) / (f + self.k1 * (1 - self.b + self.b * self.longueurs[i] / self.moyenne))
         maximum = sum(self.idf[t] for t in q) * (self.k1 + 1) or 1
         meilleurs = sorted(scores.items(), key=lambda e: -e[1])[:n]
+        entiers = [t for t in q if not t.startswith("<")]
         return [{**self.lignes[i], "score": round(s, 3), "couverture": round(s / maximum, 3),
-                 "mots_trouves": sum(1 for t in q if t in self.docs[i]) / max(1, len(q))} for i, s in meilleurs]
+                 "mots_trouves": sum(1 for t in q if t in self.docs[i]) / max(1, len(q)),
+                 "mots_entiers": sum(1 for t in entiers if t in self.docs[i]),
+                 "part_entiers": sum(1 for t in entiers if t in self.docs[i]) / max(1, len(entiers))}
+                for i, s in meilleurs]
 
 
 _INDEX = {}
@@ -111,13 +115,15 @@ def phrases_utiles(passage, question, n=3):
 SEUIL_LECTURE = 0.45            # part des mots de la question retrouvés dans le meilleur passage
 
 
-def repondre_par_lecture(question, memoire, utilisateur=None, n=6):
+def repondre_par_lecture(question, memoire, utilisateur=None, n=6, strict=False):
     """Réponse tirée de ses lectures : un extrait par document (comparaison entre éditions), avec la source.
     Renvoie None si rien d'assez proche n'a été lu."""
     if memoire is None:
         return None
     resultats = index(memoire, utilisateur).chercher(question, n=n * 6)
-    resultats = [r for r in resultats if r["mots_trouves"] >= SEUIL_LECTURE]
+    seuil = 0.6 if strict else SEUIL_LECTURE
+    resultats = [r for r in resultats if r["mots_trouves"] >= seuil and r["part_entiers"] >= seuil
+                 and r["mots_entiers"] >= 2]          # au moins deux vrais mots de la question, pas une racine seule
     if not resultats:
         return None
     par_source = {}
