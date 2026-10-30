@@ -205,3 +205,23 @@ def test_espace_administrateur_s_affiche(tmp_path, monkeypatch):
     assert [t.label for t in at.tabs] == ["📊 Tableau de bord", "📈 Apprentissage", "📚 Livres", "🕹️ Commandes",
                                           "👥 Visiteurs et accès", "🔑 Clés et sécurité"]
     assert any(m.label == "Corrections à valider" for m in at.metric)
+
+
+def test_creation_de_l_admin_exige_le_code_des_secrets(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    monkeypatch.delenv("ADMIN_CODE", raising=False)
+
+    def page():
+        from ia_aissa.espace_admin import espace_admin
+        espace_admin()
+
+    at = AppTest.from_function(page, default_timeout=300).run()
+    assert not at.exception and "ADMIN_CODE" in at.error[0].value and not at.button      # bloqué sans code
+    monkeypatch.setenv("ADMIN_CODE", "code-secret-123")
+    at = AppTest.from_function(page, default_timeout=300).run()
+    at.text_input(key="adm_code").set_value("mauvais")
+    at.text_input(key="adm_new").set_value("motdepasse-solide")
+    at.text_input(key="adm_new2").set_value("motdepasse-solide")
+    at.button[0].click().run()
+    assert "incorrect" in at.error[-1].value

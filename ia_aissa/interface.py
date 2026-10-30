@@ -242,14 +242,27 @@ def admin_connexion():
     mem = memoire()
     if est_admin():
         return True
+    if not mem.persistante:
+        st.warning("⚠️ Mémoire temporaire : sans `MEMOIRE_URL` dans les Secrets de Streamlit, tout (compte administrateur "
+                   "compris) est effacé à chaque redémarrage du serveur.")
     if not admin.admin_existe(mem):
+        code_attendu = secret("ADMIN_CODE")
+        if not code_attendu:
+            st.error("🔒 Création de l'administrateur bloquée : ajoutez d'abord `ADMIN_CODE = \"un code secret\"` dans les "
+                     "Secrets de Streamlit Cloud (Settings → Secrets). Sans ce code, le premier visiteur venu pourrait "
+                     "se déclarer administrateur.")
+            return False
         st.caption("Aucun administrateur : créez votre compte, il sera le compte administrateur de l'application.")
+        code = st.text_input("Code de création (ADMIN_CODE des Secrets)", type="password", key="adm_code")
         prenom_admin = st.text_input("Votre prénom", value=st.session_state.get("utilisateur") or "Aissa",
                                      key="adm_prenom")
         mdp = st.text_input("Nouveau mot de passe admin (8 caractères au moins)", type="password", key="adm_new")
         mdp2 = st.text_input("Confirmer", type="password", key="adm_new2")
         if st.button("Créer l'administrateur") and mdp:
-            if mdp != mdp2:
+            import hmac
+            if not hmac.compare_digest(code, str(code_attendu)):
+                st.error("Code de création incorrect.")
+            elif mdp != mdp2:
                 st.error("Les deux mots de passe diffèrent.")
             else:
                 try:

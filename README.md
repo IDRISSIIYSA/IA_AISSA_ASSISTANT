@@ -17,6 +17,10 @@ et espagnol, à l'écrit comme à l'oral.
 | Grand moteur dans la limite du quota quotidien, sinon sa pensée propre | 👥 Accès : espace ouvert ou réservé, grand moteur et quota des visiteurs, comptes |
 | Conversations et documents privés (identifiant anonyme gardé sur l'appareil) | 🔑 Clés API de l'application, déconnexion |
 
+**Créer le compte administrateur** : ajoutez d'abord dans Streamlit Cloud (Settings → Secrets) `ADMIN_CODE = "…"`
+(un code secret à vous) et `MEMOIRE_URL = "postgresql://…"` (sinon tout est effacé à chaque redémarrage), puis
+ouvrez `/admin` : le code est demandé à la création, pour que personne d'autre ne puisse se déclarer administrateur.
+
 L'administration ne montre jamais le contenu des conversations des visiteurs, seulement des comptes. Les corrections
 d'un visiteur (« non, c'est … ») n'entrent dans les cerveaux qu'après validation, pour qu'on ne puisse pas lui
 apprendre des erreurs. Les rôles de conseil rappellent leurs limites (avocat, expert-comptable, médecin).
