@@ -25,6 +25,9 @@ BAREME_IR = [
 # IS proportionnel (convergence LF 2023 achevée en 2026), hors établissements de crédit et assurances
 SEUIL_IS = 100_000_000
 TAUX_IS_NORMAL, TAUX_IS_GRANDES = 0.20, 0.35
+# Cotisation minimale (CGI art. 144) : 0,25 % des produits (CA HT, produits financiers, subventions), au moins
+# 3 000 DH ; vérifié le 30/10/2026 auprès de cabinets marocains (Upsilon Consulting, ClicPaie), inchangé en 2026.
+TAUX_CM, MINIMUM_CM = 0.0025, 3000
 
 # TVA 2026 : deux taux (20 % et 10 %) + exonérations
 TAUX_TVA = {"20 %": 0.20, "10 %": 0.10, "Exonéré": 0.0}
@@ -65,6 +68,23 @@ def calculer_is(benefice_fiscal):
     taux = TAUX_IS_GRANDES if b >= SEUIL_IS else TAUX_IS_NORMAL
     return {"benefice_fiscal": b, "taux": taux, "is": round(b * taux, 2),
             "remarque": "Taux proportionnel appliqué à tout le bénéfice (hors banques et assurances)."}
+
+
+def calculer_is_du(benefice_fiscal, produits):
+    """IS réellement dû : le plus élevé de l'IS proportionnel et de la cotisation minimale (0,25 % des produits,
+    au moins 3 000 DH). La part de cotisation minimale qui dépasse l'IS reste acquise au Trésor."""
+    calcul = calculer_is(benefice_fiscal)
+    cm = max(MINIMUM_CM, round(float(produits) * TAUX_CM, 2))
+    du = max(calcul["is"], cm)
+    return {**calcul, "produits": float(produits), "cotisation_minimale": cm, "is_du": du,
+            "retenu": "cotisation minimale" if cm > calcul["is"] else "IS proportionnel"}
+
+
+def calculer_tva_due(tva_collectee, tva_deductible):
+    """TVA du mois : collectée sur les ventes moins déductible sur les achats ; négatif = crédit de TVA reportable."""
+    solde = round(float(tva_collectee) - float(tva_deductible), 2)
+    return {"tva_collectee": float(tva_collectee), "tva_deductible": float(tva_deductible),
+            "tva_due": max(0.0, solde), "credit_de_tva": max(0.0, -solde)}
 
 
 def calculer_tva(montant, taux, montant_est_ttc=False):

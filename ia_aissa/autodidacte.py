@@ -127,3 +127,132 @@ def apprendre_du_programme(memoire, sujet, famille):
         return False                                  # elle le savait déjà
     memoire.ajouter_correction("IA AISSA", "familles_sciences", sujet, reponse, SOURCE_AUTO)   # pas l'aiguilleur :
     return True                                                                           # trop lourd à chaque repas
+
+
+# ==========================================
+# Quarantaine thématique : ne digérer que ce qui touche son programme
+# ==========================================
+SEUIL_PERTINENCE = 0.15         # part minimale des mots-clés du texte présents dans le vocabulaire du programme
+_VOCABULAIRE = {}
+
+
+def vocabulaire_programme():
+    """Les mots de ses 74 matières (noms, notes, réponses, formulations) et des sujets de broutage."""
+    if not _VOCABULAIRE:
+        from . import connaissances as K
+        from .broutage import SUJETS
+        textes = [f"{m.nom} {m.domaine} {m.note} {' '.join(m.actions)}" for m in PAR_CLE.values()]
+        textes += [f for m in PAR_CLE.values() if m.exemples for formes in m.exemples for f in formes]
+        textes += [s for sujets in SUJETS.values() for s in sujets]
+        textes += [f for formes in K.FAMILLES_SCIENCES.values() for f in formes]
+        _VOCABULAIRE["mots"] = {m for t in textes for m in mots(t) if len(m) > 4 and m not in VIDES}
+    return _VOCABULAIRE["mots"]
+
+
+def pertinence_programme(texte, n=30):
+    """Part des 30 mots-clés du texte (mots de plus de 4 lettres) qui appartiennent au vocabulaire du programme."""
+    frequences = collections.Counter(m for m in mots(texte) if len(m) > 4 and m not in VIDES and not m.isdigit())
+    cles = [m for m, _ in frequences.most_common(n)]
+    if not cles:
+        return 0.0
+    vocabulaire = vocabulaire_programme()
+    return round(sum(c in vocabulaire for c in cles) / len(cles), 3)
+
+
+def mettre_en_quarantaine(memoire, source, sujet, taux):
+    import json
+    import time
+    memoire.definir_reglage(f"quarantaine:{int(time.time() * 1000)}",
+                            json.dumps({"source": source, "sujet": sujet, "pertinence": taux}, ensure_ascii=False))
+
+
+def quarantaine(memoire):
+    import json
+    return [json.loads(v) for _, v in sorted(memoire.reglages("quarantaine:").items())]
+
+
+# ==========================================
+# Rumination récursive : sous 75 % de confiance, trois autres façons de digérer
+# ==========================================
+SEUIL_ASSIMILATION = 0.75
+
+
+def ruminer_recursif(texte, morceau, source="", famille=None):
+    """Rumine le morceau ; si la confiance est sous 75 %, essaie aussitôt trois reformulations internes
+    (un autre passage du texte, le texte entier, et les mots-clés de tout le texte appliqués au morceau)
+    et garde la meilleure digestion. Renvoie (digestion, nombre d'essais)."""
+    essais = [ruminer_local(morceau, source, famille)]
+    if essais[0]["confiance"] < SEUIL_ASSIMILATION:
+        milieu = len(texte) // 2
+        alternatives = [texte[milieu:milieu + len(morceau)], texte[:3 * len(morceau)], morceau + "\n" + texte[:1500]]
+        essais += [ruminer_local(a, source, famille) for a in alternatives if len(a.strip()) > 200]
+    meilleure = max(essais, key=lambda d: (d["confiance"], len(d["concepts"])))
+    return meilleure, len(essais)
+
+
+# ==========================================
+# Pollinisation croisée : trois analogies mathématiques avec le contrôle de gestion
+# ==========================================
+GABARITS_ANALOGIES = [
+    ("Écart relatif", "Mesurer « {c} » comme un écart budgétaire : e = (réel − prévu) / prévu ; "
+                      "alerte au-delà de |e| > 10 %, analyse de la cause dès |e| > 5 %."),
+    ("Conservation stock-flux", "Bilan de « {c} » : stock final = stock initial + entrées − sorties, la même "
+                                "équation que la trésorerie (solde final = solde initial + encaissements − décaissements)."),
+    ("Régulation par rétroaction", "Piloter « {c} » par rétroaction : correction(t) = k × écart(t), avec 0 < k < 1 ; "
+                                   "l'écart décroît comme (1 − k)^t, comme une action corrective budgétaire répétée."),
+]
+
+
+def analogies_mathematiques(memoire, concept, source):
+    """Trois analogies par gabarit (à valider : confiance 0,3), gardées dans la galerie d'inventions."""
+    import json
+    for titre, gabarit in GABARITS_ANALOGIES:
+        memoire.garder_idee("IA AISSA", f"Contrôle de gestion × {concept}", f"{titre} : {concept}",
+                            gabarit.format(c=concept), 0.3, 0.0,
+                            json.dumps({"source": source, "type": "analogie mathématique (gabarit)"}, ensure_ascii=False))
+    return len(GABARITS_ANALOGIES)
+
+
+# ==========================================
+# Crises financières synthétiques (contexte marocain) : s'entraîner sans qu'on lui demande
+# ==========================================
+SECTEURS = ["Textile Fès", "Agroalimentaire Agadir", "Tech Casablanca", "Automobile Tanger", "Phosphates Khouribga",
+            "Tourisme Marrakech", "Pêche Dakhla", "BTP Rabat"]
+CRISES_PAR_HEURE = 5
+
+
+def generer_crise(rng):
+    """Une crise budgétaire synthétique : la moitié du temps une dérive grave (+25 à +60 %), sinon un mois plus
+    calme, pour qu'elle apprenne aussi à ne pas crier au loup."""
+    prevu = float(rng.uniform(500_000, 2_000_000))
+    facteur = float(rng.uniform(1.25, 1.60)) if rng.random() < 0.5 else float(rng.normal(1.03, 0.06))
+    tendance = float(rng.normal(0, 0.03))
+    return {"secteur": SECTEURS[int(rng.integers(len(SECTEURS)))], "prevu": prevu, "reel": prevu * facteur,
+            "ecart_pct": facteur - 1, "tendance": tendance}
+
+
+def resoudre_crises(memoire, n=CRISES_PAR_HEURE, rng=None):
+    """Elle résout n crises avec son propre cerveau « pilotage des écarts », se corrige avec la règle du contrôleur
+    (classer_situation), et, si elle s'est trompée, s'exerce aussitôt sur cette matière (adopté seulement si
+    l'examen progresse). Renvoie le bilan réel : crises, justes, pratique."""
+    import json
+    import time
+
+    import numpy as np
+    from controle_gestion_ia import DECISION_IDEALE, classer_situation
+    rng = rng or np.random.default_rng()
+    justes, details = 0, []
+    for _ in range(n):
+        c = generer_crise(rng)
+        x = np.array([c["ecart_pct"] * 5, c["tendance"] * 20], np.float32)
+        choix = repondre("controle_gestion", x, top=1)[0]
+        attendu = PAR_CLE["controle_gestion"].actions[DECISION_IDEALE[classer_situation(c)]]
+        juste = choix["reponse"] == attendu
+        justes += juste
+        details.append({**{k: round(v, 4) if isinstance(v, float) else v for k, v in c.items()},
+                        "decision": choix["reponse"], "attendu": attendu, "juste": juste})
+    memoire.definir_reglage(f"crises:{int(time.time() * 1000)}", json.dumps(details, ensure_ascii=False))
+    bilan = {"crises": n, "justes": justes, "pratique": None}
+    if justes < n:
+        bilan["pratique"] = pratiquer(memoire, cle="controle_gestion", pas=800)
+    return bilan

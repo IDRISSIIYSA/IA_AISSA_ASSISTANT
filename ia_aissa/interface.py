@@ -663,6 +663,9 @@ def pouls_d_ia_aissa():
     elif repas:
         broutage = (f"dernier repas : « {repas['sujet']} » ({repas['source']}), {repas['concepts']} concept(s), "
                     f"{repas['injections']} analogie(s) injectée(s) dans l'atelier d'invention")
+        if repas.get("quarantaine") is not None:
+            broutage = (f"dernier repas : « {repas['sujet']} » mis en quarantaine (seulement "
+                        f"{repas['quarantaine']:.0%} de mots de son programme)")
         pratique = repas.get("pratique") or {}
         if pratique.get("nom"):
             broutage += (f" · pratique seule en « {pratique['nom']} » : {pratique['avant']:.0%} → {pratique['apres']:.0%}"
@@ -671,6 +674,13 @@ def pouls_d_ia_aissa():
         broutage = f"broutage autonome actif, nouvel essai bientôt (dernier souci : {etat['erreurs'][-1]})"
     else:
         broutage = "broutage autonome actif, premier repas en cours"
+    crises = etat.get("crises")
+    if crises and crises["resolues"]:
+        broutage += f" · crises synthétiques : {crises['justes']}/{crises['resolues']} bien pilotées"
+    from .pensee import memoire_vive_mo
+    ram = memoire_vive_mo()
+    if ram is not None:
+        broutage += f" · mémoire vive {ram:.0f} Mo"
     st.caption(f"🌱 {total} concepts maîtrisés · {broutage}")
 
 

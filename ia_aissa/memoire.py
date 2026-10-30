@@ -327,6 +327,14 @@ class Memoire:
                                                 concepts=concepts, analogie=analogie, confiance=confiance,
                                                 cree_le=maintenant()))
 
+    def modifier_concepts(self, digestion_id, concepts):
+        with self.moteur.begin() as c:
+            c.execute(update(digestions).where(digestions.c.id == digestion_id).values(concepts=concepts))
+
+    def supprimer_digestion(self, digestion_id):
+        with self.moteur.begin() as c:
+            c.execute(delete(digestions).where(digestions.c.id == digestion_id))
+
     def digestions(self, limite=2000):
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(select(digestions).order_by(digestions.c.id.desc())

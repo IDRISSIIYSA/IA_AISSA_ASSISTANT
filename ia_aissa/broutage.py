@@ -141,7 +141,14 @@ def cycle(memoire, moteur_config, client, brouteur=None, rng=random):
             famille = rng.choice(list(SUJETS))
             sujet = rng.choice(SUJETS[famille])
         source, texte = brouteur.wikipedia(sujet)
+    from .autodidacte import SEUIL_PERTINENCE, analogies_mathematiques, mettre_en_quarantaine, pertinence_programme
+    taux = pertinence_programme(texte)
+    if taux < SEUIL_PERTINENCE:                     # hors de son programme : en quarantaine, pas digéré
+        mettre_en_quarantaine(memoire, source, sujet, taux)
+        return {"source": source, "sujet": sujet, "concepts": 0, "injections": 0, "quarantaine": taux,
+                "digestions": [], "pratique": None}
     bilan = digerer(memoire, moteur_config, client, source, texte, nb_bouchees=1, famille=famille)
+    bilan["pertinence"] = taux
     if famille:                                     # un sujet de son programme : elle connaît sa famille
         from .autodidacte import apprendre_du_programme
         from .corrections import reviser
@@ -155,7 +162,14 @@ def cycle(memoire, moteur_config, client, brouteur=None, rng=random):
                                 f"Analogie : {concepts} × contrôle de gestion", d["analogie"],
                                 d["confiance"], 0.0, f'{{"source": "{source}"}}')
             injections += 1
+    if source.startswith("Wikipédia") and bilan["concepts"]:     # pollinisation croisée : 3 analogies mathématiques
+        injections += analogies_mathematiques(memoire, source.split("—", 1)[-1].strip(), source)
     bilan.update(sujet=sujet, injections=injections)
+    try:                                            # hygiène : compresser la bibliothèque si elle devient dense
+        from .pensee import elaguer
+        bilan["elagage"] = elaguer(memoire)
+    except Exception:
+        pass
     try:                                            # puis une séance de pratique délibérée dans une matière
         from .autodidacte import pratiquer
         from .corrections import reviser_tout
@@ -177,23 +191,42 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
     def boucle():
         brouteur = Brouteur()
         time.sleep(120)                 # laisse l'application démarrer tranquillement avant le premier repas
+        prochain_repas = derniere_crise = 0.0
         while True:
+            maintenant = time.time()
             jour = datetime.now(timezone.utc).date()
             if ETAT["jour"] != jour:
                 ETAT.update(jour=jour, repas_du_jour=0)
-            attente = intervalle
-            if ETAT["repas_du_jour"] < par_jour:
+            if maintenant - derniere_crise >= 3600:     # 5 crises synthétiques par heure
+                derniere_crise = maintenant
+                try:
+                    from .autodidacte import resoudre_crises
+                    bilan = resoudre_crises(memoire)
+                    total = ETAT.setdefault("crises", {"resolues": 0, "justes": 0})
+                    total["resolues"] += bilan["crises"]
+                    total["justes"] += bilan["justes"]
+                    total["derniere"] = bilan
+                except Exception as e:
+                    ETAT["erreurs"] = (ETAT["erreurs"] + [f"crises — {type(e).__name__} : {str(e)[:100]}"])[-5:]
+            if maintenant >= prochain_repas and ETAT["repas_du_jour"] < par_jour:
                 try:
                     bilan = cycle(memoire, moteur_config, fabrique_client(), brouteur)
                     ETAT["dernier_repas"] = {"quand": datetime.now(timezone.utc), "sujet": bilan["sujet"],
                                              "source": bilan["source"], "concepts": bilan["concepts"],
-                                             "injections": bilan["injections"], "pratique": bilan.get("pratique")}
+                                             "injections": bilan["injections"], "pratique": bilan.get("pratique"),
+                                             "quarantaine": bilan.get("quarantaine")}
                     ETAT["repas_du_jour"] += 1
+                    prochain_repas = time.time() + intervalle
                 except Exception as e:                  # réseau, site au repos, moteur indisponible…
                     ETAT["erreurs"] = (ETAT["erreurs"] + [f"{type(e).__name__} : {str(e)[:120]}"])[-5:]
-                    attente = REESSAI                   # un repas raté est retenté bientôt, sans entamer le budget
-            ETAT["prochain"] = datetime.now(timezone.utc).timestamp() + attente
-            time.sleep(attente)
+                    prochain_repas = time.time() + REESSAI   # retenté bientôt, sans entamer le budget
+            try:                                       # rester sous le plafond de mémoire vive
+                from .pensee import alleger
+                ETAT["memoire_vive"] = alleger()
+            except Exception:
+                pass
+            ETAT["prochain"] = prochain_repas
+            time.sleep(max(60.0, min(prochain_repas, derniere_crise + 3600) - time.time()))
 
     threading.Thread(target=boucle, name="ia-aissa-broutage", daemon=True).start()
     return ETAT

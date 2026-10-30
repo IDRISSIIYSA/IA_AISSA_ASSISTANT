@@ -97,7 +97,7 @@ def test_cycle_complet_rumination_et_injection(reseau, tmp_path, monkeypatch):
     monkeypatch.setattr(BR, "choisir_sujet", lambda m, rng=None: ("contrôle de gestion", "Sciences humaines et gestion"))
     bilan = BR.cycle(mem, {"type": "anthropic", "modele": "x"}, NS(messages=NS(create=moteur)),
                      BR.Brouteur(dormir=lambda s: None))
-    assert bilan["concepts"] == 1 and bilan["injections"] == 1 and bilan["source"].startswith("Wikipédia")
-    assert mem.idees_de("IA AISSA")[0]["description"].startswith("Réallouer")
+    assert bilan["concepts"] == 1 and bilan["injections"] == 1 + 3 and bilan["source"].startswith("Wikipédia")
+    assert any(i["description"].startswith("Réallouer") for i in mem.idees_de("IA AISSA"))
     ecole.STOCKAGE = None
     ecole._CACHE.clear()

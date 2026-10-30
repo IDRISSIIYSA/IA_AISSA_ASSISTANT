@@ -205,6 +205,25 @@ Elle développe seule ses connaissances et ses compétences, **même sans clé A
   sûrs (90 % et plus), la question devient un exemple de plus (source « auto-apprentissage »).
 Avec une clé API, la rumination et l'étude des lacunes passent par le grand moteur, plus fin.
 
+### Évolution accélérée, sous contrôle
+
+- **Quarantaine thématique** : un article n'est digéré que si au moins 15 % de ses 30 mots-clés appartiennent au
+  vocabulaire de ses 74 matières ; sinon il part en quarantaine (mesures : Photosynthèse 27 %, Contrôle de gestion
+  67 %, Thermodynamique 70 % ; seuil volontairement bas, une biographie peut encore passer).
+- **Rumination récursive** : sans moteur, sous 75 % de confiance, trois reformulations internes aussitôt
+  (autre passage, texte entier, mots-clés globaux) ; la meilleure digestion est gardée.
+- **Pollinisation croisée** : chaque article de Wikipédia digéré donne 3 analogies mathématiques avec le contrôle de
+  gestion (écart relatif, conservation stock-flux, rétroaction), rangées dans la galerie, confiance 0,3 (à valider).
+- **Crises synthétiques** : 5 crises budgétaires marocaines par heure (Textile Fès, Tourisme Marrakech…), pilotées
+  par son cerveau « pilotage des écarts », corrigées par la règle du contrôleur ; une erreur déclenche une séance de
+  pratique (adoptée seulement si l'examen progresse). Le score réel s'affiche sous l'alien.
+- **Hygiène de la mémoire** (`pensee.elaguer`) : au-delà de 1 500 concepts lus, les doublons sont fusionnés et les
+  faits lus seule sur le web, jamais utilisés pour répondre depuis 7 jours, sont oubliés (jamais vos livres).
+- **Mémoire vive** : le savoir vit dans la base (SQLite ou PostgreSQL), pas en mémoire vive ; la jauge s'affiche
+  sous l'alien, et au-delà de 400 Mo elle vide les caches qui se reconstruisent seuls.
+- **Fiscalité locale** : IS dû = max(IS proportionnel, cotisation minimale 0,25 % des produits, au moins
+  3 000 DH) ; TVA due = collectée − déductible (ou crédit de TVA).
+
 ## Atelier de prononciation en darija (`ia_aissa/voix.py`)
 
 « Apprends-moi à dire… en darija » ouvre l'atelier : IA AISSA prononce une phrase du quotidien professionnel

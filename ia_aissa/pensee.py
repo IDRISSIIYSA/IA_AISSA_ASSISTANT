@@ -15,6 +15,9 @@ Elle raisonne en plusieurs étapes, et montre son raisonnement :
 
 import ast
 import collections
+import json
+import time
+from datetime import timezone
 import math
 import operator
 import re
@@ -93,6 +96,7 @@ def memoire_associative(memoire=None):
         souvenirs += [(c["question"], c["matiere"], c["bonne_reponse"]) for c in corrections
                       if c["matiere"] in PAR_CLE and c["matiere"] not in HORS_ANALOGIE
                       and c["bonne_reponse"] in PAR_CLE[c["matiere"]].actions]
+        souvenirs = list(dict.fromkeys(souvenirs))       # souvenirs identiques fusionnés
         _CACHE.update(cle=cle_cache, memoire=MemoireAssociative(souvenirs))
     return _CACHE["memoire"]
 
@@ -156,6 +160,15 @@ def montant(v):
     return f"{v:,.2f}".replace(",", " ").replace(".00", "") + " DH"
 
 
+def valeur_apres(texte, motif, portee=40):
+    """Le premier nombre qui suit un mot-clé (à moins de 40 caractères) : « bénéfice de 500 000 dh » -> 500000."""
+    m = re.search(motif, texte, re.I)
+    if not m:
+        return None
+    suite = nombres(texte[m.end():m.end() + portee])
+    return suite[0] if suite else None
+
+
 def calculer(texte):
     """Renvoie (réponse, étapes) si la question est un calcul qu'IA AISSA sait faire, sinon None."""
     t = texte.lower()
@@ -187,11 +200,33 @@ def calculer(texte):
                 f"({montant(r['ir_mensuel'])} par mois, taux moyen {r['taux_moyen']:.1%}).",
                 ["Chiffre trouvé : revenu" + (" mensuel, multiplié par 12." if annuel != v else " annuel."),
                  "Barème IR marocain (tranche, taux marginal, somme à déduire)."])
+    if re.search(r"(\bis\b|impôt sur les sociétés|bénéfice|benefice|rb7|déficit|deficit|perte|cotisation minimale)", t):
+        resultat = valeur_apres(t, r"(bénéfice|benefice|résultat fiscal|resultat fiscal|rb7)")
+        perte = valeur_apres(t, r"(déficit|deficit|perte|khsara)")
+        produits = valeur_apres(t, r"(chiffre d['’ ]?\s*affaires|\bca\b|produits|ventes|recettes|rqm)")
+        if produits is not None and (resultat is not None or perte is not None):
+            benefice = -perte if perte is not None else resultat
+            r = K.calculer_is_du(benefice, produits)
+            return (f"Résultat fiscal **{montant(benefice)}**, produits {montant(produits)} : IS proportionnel "
+                    f"{montant(r['is'])} ({r['taux']:.0%}), cotisation minimale {montant(r['cotisation_minimale'])} "
+                    f"(0,25 % des produits, au moins 3 000 DH) → **IS dû {montant(r['is_du'])}** ({r['retenu']}).",
+                    ["Chiffres trouvés : résultat fiscal et produits (chiffre d'affaires).",
+                     "IS proportionnel (20 %, 35 % au-delà de 100 MDH) comparé à la cotisation minimale.",
+                     "Le plus élevé des deux est dû (CGI, art. 144)."])
     if re.search(r"(\bis\b|impôt sur les sociétés|bénéfice|benefice|rb7)", t):
         v = max(valeurs)
         r = K.calculer_is(v)
         return (f"Bénéfice fiscal **{montant(v)}** → **IS {montant(r['is'])}** (taux {r['taux']:.0%}). _{r['remarque']}_",
                 ["Chiffre trouvé : bénéfice fiscal.", "Taux d'IS marocain."])
+    collectee = valeur_apres(t, r"collect[ée]e")
+    deductible = valeur_apres(t, r"(d[ée]ductible|r[ée]cup[ée]rable)")
+    if re.search(r"\btva\b", t) and collectee is not None and deductible is not None:
+        r = K.calculer_tva_due(collectee, deductible)
+        conclusion = (f"**TVA due {montant(r['tva_due'])}**" if r["tva_due"] else
+                      f"**crédit de TVA {montant(r['credit_de_tva'])}**, reportable sur les déclarations suivantes")
+        return (f"TVA collectée {montant(collectee)} − TVA déductible {montant(deductible)} → {conclusion}.",
+                ["Chiffres trouvés : TVA collectée sur les ventes et TVA déductible sur les achats.",
+                 "TVA due = collectée − déductible ; si négatif, crédit de TVA."])
     if re.search(r"\b(tva|ttc|ht)\b", t):
         v = max(valeurs)
         taux = next((x / 100 for x in valeurs if x in (7, 10, 14, 20) and x != v), None)
@@ -286,6 +321,90 @@ def penser(texte, memoire=None, conclusion=None):
                       and x.get("score", 1) >= SEUIL_PISTE), None)
         if autre and confiance < 0.8:
             reponse += f"\n\nAutre hypothèse : {PAR_CLE[autre['cle']].nom} → {autre['reponse']}."
+    if memoire is not None:
+        for l in lectures:                       # une lecture utile est gardée (l'élagage oublie les autres)
+            memoire.definir_reglage(f"lecture_utilisee:{l['id']}", str(int(time.time())))
     for l in lectures:
         reponse += f"\n\n📚 {l['concept']} : {l['explication']} _(lu dans {l['source']})_"
     return reponse, etapes, round(confiance, 3)
+
+
+# ==========================================
+# Hygiène de la mémoire : compresser quand elle devient dense
+# ==========================================
+SEUIL_DENSITE = 1500            # concepts lus au-delà desquels la bibliothèque est élaguée
+OUBLI_JOURS = 7                 # un fait lu seule sur le web et jamais utilisé depuis 7 jours est oublié
+
+
+def cle_concept(nom):
+    return " ".join(sorted(set(mots(nom))))
+
+
+def elaguer(memoire, seuil=SEUIL_DENSITE, jours=OUBLI_JOURS, maintenant=None, forcer=False):
+    """Si la bibliothèque est dense : fusionne les concepts redondants (même nom, à l'accent et à l'ordre des mots
+    près ; on garde le plus ancien) et oublie les faits lus seule sur le web, jamais utilisés pour répondre,
+    et plus vieux que 7 jours. Les livres et pages donnés par une personne ne sont jamais oubliés.
+    Renvoie le bilan."""
+    digestions = memoire.digestions(100_000)
+    total = sum(len(json.loads(d["concepts"])) for d in digestions)
+    bilan = {"concepts_avant": total, "fusionnes": 0, "oublies": 0, "dense": total > seuil}
+    if not (bilan["dense"] or forcer):
+        bilan["concepts_apres"] = total
+        return bilan
+    utilisees = {int(k.split(":", 1)[1]) for k in memoire.reglages("lecture_utilisee:")}
+    limite = (maintenant or time.time()) - jours * 86_400
+    vus = set()
+    for d in sorted(digestions, key=lambda d: d["id"]):              # du plus ancien au plus récent
+        date = d["cree_le"]
+        quand = (date if date.tzinfo else date.replace(tzinfo=timezone.utc)).timestamp()
+        if d["utilisateur"] == "IA AISSA" and d["id"] not in utilisees and quand < limite:
+            bilan["oublies"] += len(json.loads(d["concepts"]))
+            memoire.supprimer_digestion(d["id"])
+            continue
+        concepts = json.loads(d["concepts"])
+        gardes = []
+        for c in concepts:
+            cle = cle_concept(c.get("nom", ""))
+            if cle and cle in vus:
+                bilan["fusionnes"] += 1
+            else:
+                vus.add(cle)
+                gardes.append(c)
+        if len(gardes) != len(concepts):
+            if gardes:
+                memoire.modifier_concepts(d["id"], json.dumps(gardes, ensure_ascii=False))
+            else:
+                memoire.supprimer_digestion(d["id"])
+    bilan["concepts_apres"] = total - bilan["fusionnes"] - bilan["oublies"]
+    return bilan
+
+
+# ==========================================
+# Mémoire vive : rester loin de la limite de Streamlit Cloud
+# ==========================================
+PLAFOND_RAM_MO = 400            # au-delà, elle s'allège (la limite gratuite de Streamlit Cloud est d'environ 1 Go)
+
+
+def memoire_vive_mo():
+    """Mémoire vive occupée par le serveur (Mo), lue dans /proc (Linux, comme Streamlit Cloud) ; None ailleurs."""
+    try:
+        with open("/proc/self/status") as f:
+            ligne = next(l for l in f if l.startswith("VmRSS:"))
+        return round(int(ligne.split()[1]) / 1024, 1)
+    except (OSError, StopIteration, ValueError):
+        return None
+
+
+def alleger(plafond=PLAFOND_RAM_MO):
+    """Au-dessus du plafond : vide les caches qui se reconstruisent seuls (cerveaux chargés, mémoire associative,
+    vocabulaire). Le savoir lui-même ne vit pas en mémoire vive : il est dans la base (SQLite ou PostgreSQL)."""
+    import gc
+    avant = memoire_vive_mo()
+    if avant is None or avant < plafond:
+        return {"avant": avant, "apres": avant, "allege": False}
+    from . import autodidacte, ecole
+    ecole._CACHE.clear()
+    _CACHE.clear()
+    autodidacte._VOCABULAIRE.clear()
+    gc.collect()
+    return {"avant": avant, "apres": memoire_vive_mo(), "allege": True}

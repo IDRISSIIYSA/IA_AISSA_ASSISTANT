@@ -194,3 +194,76 @@ def test_elle_se_corrige_avec_son_programme(labo):
     assert apprendre_du_programme(mem, "photosynthèse", "Sciences naturelles")
     assert mem.corrections_de("familles_sciences")[0]["bonne_reponse"] == "Sciences naturelles"
     assert not apprendre_du_programme(mem, "théorie des graphes", "Sciences formelles")     # déjà su
+
+
+def test_fiscalite_locale_is_cotisation_minimale_et_tva_due():
+    from ia_aissa import connaissances as K
+    from ia_aissa.pensee import penser
+    assert K.calculer_is_du(500_000, 2_000_000)["is_du"] == 100_000                      # IS 20 % > CM
+    assert K.calculer_is_du(-50_000, 3_000_000)["is_du"] == 7_500                        # déficit : CM 0,25 %
+    assert K.calculer_is_du(10_000, 100_000)["is_du"] == 3_000                           # plancher de 3 000 DH
+    assert K.calculer_tva_due(50_000, 30_000)["tva_due"] == 20_000
+    assert K.calculer_tva_due(20_000, 26_000)["credit_de_tva"] == 6_000
+    assert "IS dû 7 500" in penser("déficit de 50 000 dh avec un chiffre d'affaires de 3 000 000 dh")[0]
+    assert "IS dû 100 000" in penser("IS pour un bénéfice de 500 000 dh et un chiffre d affaires de 2 000 000 dh")[0]
+    assert "crédit de TVA 6 000" in penser("tva collectée 20 000 dh, tva déductible 26 000 dh")[0]
+
+
+def test_hygiene_de_la_memoire(labo):
+    import json
+    import time
+    from ia_aissa.pensee import elaguer
+    mem, _ = labo
+    concept = lambda nom: json.dumps([{"nom": nom, "explication": "x"}])
+    mem.garder_digestion("IA AISSA", "web", "Sciences naturelles", concept("Photosynthèse"), "", 0.5)
+    mem.garder_digestion("IA AISSA", "web", "Sciences naturelles", concept("photosynthese"), "", 0.5)   # doublon
+    mem.garder_digestion("Aissa", "mon livre", "Sciences humaines et gestion", concept("Budget"), "", 0.9)
+    assert elaguer(mem)["dense"] is False and len(mem.digestions()) == 3                 # pas dense : rien ne bouge
+    bilan = elaguer(mem, forcer=True)
+    assert bilan["fusionnes"] == 1 and len(mem.digestions()) == 2
+    premiere = min(d["id"] for d in mem.digestions())
+    mem.definir_reglage(f"lecture_utilisee:{premiere}", "1")                             # utilisée pour répondre
+    bilan = elaguer(mem, forcer=True, maintenant=time.time() + 8 * 86_400)              # 8 jours plus tard
+    assert bilan["oublies"] == 0 and {d["source"] for d in mem.digestions()} == {"web", "mon livre"}
+    mem.garder_digestion("IA AISSA", "web2", "Sciences naturelles", concept("Volcan"), "", 0.5)
+    bilan = elaguer(mem, forcer=True, maintenant=time.time() + 8 * 86_400)
+    assert bilan["oublies"] == 1 and "web2" not in {d["source"] for d in mem.digestions()}  # jamais utilisée : oubliée
+
+
+def test_quarantaine_rumination_recursive_et_analogies(labo):
+    from ia_aissa.autodidacte import (analogies_mathematiques, mettre_en_quarantaine, pertinence_programme,
+                                      quarantaine, ruminer_recursif)
+    mem, _ = labo
+    assert pertinence_programme(ARTICLE_LOCAL) >= 0.15
+    assert pertinence_programme("Zorglub frimousse zorglub frimousse quibble wobble quibble wobble") < 0.15
+    mettre_en_quarantaine(mem, "Wikipédia — Zorglub", "zorglub", 0.02)
+    assert quarantaine(mem)[0]["sujet"] == "zorglub"
+    d, essais = ruminer_recursif(ARTICLE_LOCAL * 2, ARTICLE_LOCAL[:600])
+    assert essais == 4 and d["concepts"]                                                 # 3 reformulations sous 75 %
+    assert analogies_mathematiques(mem, "Photosynthèse", "Wikipédia — Photosynthèse") == 3
+    titres = [i["titre"] for i in mem.idees_de("IA AISSA")]
+    assert len(titres) == 3 and all("Photosynthèse" in t for t in titres)
+
+
+def test_crises_financieres_synthetiques(labo):
+    import numpy as np
+    from ia_aissa.autodidacte import generer_crise, resoudre_crises
+    mem, _ = labo
+    rng = np.random.default_rng(3)
+    crises = [generer_crise(rng) for _ in range(200)]
+    assert any(c["ecart_pct"] >= 0.25 for c in crises) and any(c["ecart_pct"] < 0.1 for c in crises)
+    bilan = resoudre_crises(mem, n=5, rng=np.random.default_rng(4))
+    assert bilan["crises"] == 5 and 0 <= bilan["justes"] <= 5
+    assert (bilan["pratique"] is None) == (bilan["justes"] == 5)                         # une erreur = s'exercer
+    assert mem.reglages("crises:")
+
+
+def test_memoire_vive_mesuree_et_allegee():
+    from ia_aissa import ecole
+    from ia_aissa.pensee import alleger, memoire_vive_mo
+    ram = memoire_vive_mo()
+    assert ram is None or ram > 10
+    ecole.charger("tva")
+    bilan = alleger(plafond=1)                       # plafond minuscule : elle doit s'alléger
+    assert bilan["allege"] and not ecole._CACHE
+    assert not alleger(plafond=10**9)["allege"]

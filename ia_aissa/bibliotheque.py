@@ -189,9 +189,9 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
     morceaux = bouchees(texte, nb_bouchees)
     digestions = []
     for k, morceau in enumerate(morceaux, 1):
-        if client is None:                          # sans moteur : IA AISSA rumine seule
-            from .autodidacte import ruminer_local
-            d = ruminer_local(morceau, source, famille)
+        if client is None:                          # sans moteur : IA AISSA rumine seule, et recommence sous 75 %
+            from .autodidacte import ruminer_recursif
+            d, _ = ruminer_recursif(texte, morceau, source, famille)
         else:
             d = ruminer(moteur, client, morceau, source)
         if d["concepts"]:
@@ -241,7 +241,7 @@ def chercher(memoire, requete, n=5):
     scores = [float(np.dot(q, vectoriser_mixte(f"{c['nom']} {c.get('explication', '')}"))) for _, c in fiches]
     meilleurs = sorted(zip(scores, fiches), key=lambda x: -x[0])[:n]
     return [{"concept": c["nom"], "explication": c.get("explication", ""), "source": d["source"],
-             "famille": d["famille"], "pertinence": round(s, 3)} for s, (d, c) in meilleurs if s > 0.05]
+             "famille": d["famille"], "pertinence": round(s, 3), "id": d["id"]} for s, (d, c) in meilleurs if s > 0.05]
 
 
 def explorer_lacunes(memoire, moteur, client, nb_sujets=2, callback=None, sujets=None):
