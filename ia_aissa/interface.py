@@ -9,6 +9,7 @@ calcule, exécute du code (avec Claude, dans le bac à sable d'Anthropic), lit, 
 
 import json
 import random
+import re
 import time
 
 import anthropic
@@ -558,10 +559,24 @@ def traiter(r, utilisateur, texte, fichiers):
             reponse = "📊 " + "\n\n".join(resumes)
         return reponse, elements, journal, "controleur", "normal"
 
+    if lectures and not client:          # sans moteur : elle lit elle-même le livre entier
+        from .pensee import confirmation_ingestion, ingerer_pdf
+        messages = []
+        for f in lectures:
+            try:
+                if f.name.lower().endswith((".pdf", ".epub")):
+                    messages.append(confirmation_ingestion(ingerer_pdf(mem, f.name, f.getvalue(), utilisateur)))
+                else:
+                    source, contenu = brouter_fichier(f.name, f.getvalue())
+                    b = digerer(mem, None, None, source, contenu, utilisateur, nb_bouchees=20)
+                    messages.append(f"J'ai lu « {source} » : {b['concepts']} concept(s) gardés dans ma mémoire.")
+            except (ValueError, ErreurBroutage) as e:
+                messages.append(f"Je n'ai pas pu lire « {f.name} » : {e}")
+        return "\n\n".join(messages), [], [], "lecteur", "hyper"
+    if (lectures or urls(texte)) and not client:
+        return ("🔗 Pour brouter une page web je passe par mon grand moteur (clé API dans ⚙️ Réglages) ; tu peux aussi "
+                "m'envoyer le document en PDF : je le lis seule."), [], [], "lecteur", "normal"
     if lectures or urls(texte):
-        if not client:
-            return ("📚 Pour manger et ruminer un document, j'ai besoin de mon grand moteur : ajoute une clé API dans "
-                    "⚙️ Réglages."), [], [], "lecteur", "normal"
         bilans = []
         sources = [brouter_fichier(f.name, f.getvalue()) for f in lectures]
         for u in urls(texte):
@@ -623,9 +638,17 @@ def traiter(r, utilisateur, texte, fichiers):
     if client:
         return converser_avec_moteur(r, utilisateur, texte, role, journal), [], journal, role, \
             "hyper" if role == "inventeur" else "normal"
+    from .pensee import correction_dans_la_conversation
+    precedente = st.session_state.get("question_locale")
+    merci = correction_dans_la_conversation(texte, mem, st.session_state.get("derniere_conclusion"), precedente)
+    if merci:
+        return merci, [], [], "compagnon", "normal"
     conclusion = {}
-    reponse, etapes, confiance = reponse_locale(texte, mem, conclusion)
+    reponse, etapes, confiance = reponse_locale(texte, mem, conclusion, precedente)
     st.session_state["conclusion_locale"] = conclusion
+    st.session_state["derniere_conclusion"] = dict(conclusion) or st.session_state.get("derniere_conclusion")
+    if not re.search(r"^\s*(ex\w*li\w*|détaill|pourquoi|non\b|oui\b|ok\b)", texte, re.I):
+        st.session_state["question_locale"] = texte
     st.session_state["meta_locale"] = {"confiance": confiance, "details": f"{len(etapes)} étape(s) · mon propre cerveau"}
     return reponse, [{"type": "liste", "titre": "🧠 Mon raisonnement", "lignes": etapes}], [], role, "normal"
 
@@ -687,6 +710,34 @@ def pouls_d_ia_aissa():
 # ==========================================
 # L'espace unique
 # ==========================================
+def ingestion_de_livres(utilisateur):
+    """Dépôt de livres PDF : IA AISSA les lit seule (sans clé API), garde l'essentiel, et le fichier ne reste pas."""
+    from .pensee import confirmation_ingestion, ingerer_pdf
+    with st.expander("🌌 Cosmic Knowledge Ingestion (Upload PDF/Scanner Books)"):
+        st.caption("Dépose des livres ou des cours (PDF, EPUB) : je les lis en entier, sans clé API, je garde l'essentiel "
+                   "dans ma mémoire, puis je te dis quand tu peux supprimer le fichier pour gagner de la place. "
+                   "Les PDF scannés (images de pages) n'ont pas de texte lisible sans OCR.")
+        cle = f"livres_{st.session_state.get('livres_tour', 0)}"
+        livres = st.file_uploader("Livres PDF ou EPUB", type=["pdf", "epub"], accept_multiple_files=True, key=cle,
+                                  label_visibility="collapsed")
+        if livres:
+            messages = []
+            for livre in livres:
+                with st.spinner(f"📖 Je mange « {livre.name} »…"):
+                    try:
+                        messages.append(confirmation_ingestion(ingerer_pdf(memoire(), livre.name, livre.getvalue(),
+                                                                           utilisateur)))
+                    except Exception as e:
+                        messages.append(f"Je n'ai pas pu lire « {livre.name} » : {e}")
+            del livres                                   # le livre quitte aussi la mémoire vive
+            st.session_state["livres_tour"] = st.session_state.get("livres_tour", 0) + 1   # vide le dépôt
+            texte = "\n\n".join(messages)
+            st.session_state["affichage"].append({"role": "assistant", "texte": "📚 " + texte, "role_ia": "lecteur"})
+            st.session_state["parole"] = {"texte": texte, "audio": None, "voix": "fr-FR", "nouveau": True,
+                                          "etat": "hyper"}
+            st.rerun()
+
+
 def espace_unique():
     st.set_page_config(page_title="IA AISSA", page_icon="👽", layout="centered", initial_sidebar_state="collapsed")
     st.markdown(STYLE, unsafe_allow_html=True)
@@ -712,6 +763,8 @@ def espace_unique():
         st.session_state["parole"] = {"texte": texte, "audio": _dire(salut, "Darija"), "voix": "ar-MA",
                                       "nouveau": True}
 
+    ingestion_de_livres(utilisateur)
+
     if not st.session_state["affichage"]:
         st.markdown('<p class="astuce">🎙️ Appuie sur le micro bleu pour parler · ✅ pour envoyer ta voix · '
                     '📎 pour déposer un fichier · ou écris simplement</p>', unsafe_allow_html=True)
@@ -720,7 +773,7 @@ def espace_unique():
 
     saisie = st.chat_input("Parle-moi, écris, ou dépose un fichier (chiffres, livre, image)…",
                            accept_file="multiple", accept_audio=True, submit_mode="disable",
-                           file_type=["csv", "xlsx", "xlsm", "xls", "pdf", "txt", "md", "html"])
+                           file_type=["csv", "xlsx", "xlsm", "xls", "pdf", "epub", "txt", "md", "html"])
     if saisie:
         texte = saisie.text or ""
         fichiers = list(saisie.files or [])

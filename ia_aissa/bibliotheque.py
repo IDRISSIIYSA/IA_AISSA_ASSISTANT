@@ -97,9 +97,20 @@ def brouter_lien(url):
     return titre or url, texte
 
 
+def texte_epub(contenu):
+    """Un livre numérique EPUB : une archive zip de pages XHTML, lues dans l'ordre de l'archive."""
+    import zipfile
+    with zipfile.ZipFile(io.BytesIO(contenu)) as archive:
+        pages = sorted(n for n in archive.namelist() if n.lower().endswith((".xhtml", ".html", ".htm")))
+        morceaux = [texte_html(archive.read(n))[1] for n in pages]
+    return "", "\n".join(morceaux)
+
+
 def brouter_fichier(nom, contenu):
     if nom.lower().endswith(".pdf"):
         titre, texte = texte_pdf(contenu)
+    elif nom.lower().endswith(".epub"):
+        titre, texte = texte_epub(contenu)
     elif nom.lower().endswith((".html", ".htm")):
         titre, texte = texte_html(contenu)
     else:

@@ -74,7 +74,7 @@ def pratiquer(memoire, cle=None, pas=1500):
     from .croissance import vitesse_apprentissage
     if cle is None:
         vitesses = vitesse_apprentissage(memoire)
-        candidates = [c for c in vitesses["matiere"] if c != "orientation"]
+        candidates = [l.matiere for l in vitesses.itertuples() if l.matiere != "orientation" and l.note < 0.99]  # rien à gagner à 100 %
         if not candidates:
             return None
         cle = candidates[0]

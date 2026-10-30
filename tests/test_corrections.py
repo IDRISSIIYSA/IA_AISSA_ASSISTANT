@@ -267,3 +267,81 @@ def test_memoire_vive_mesuree_et_allegee():
     bilan = alleger(plafond=1)                       # plafond minuscule : elle doit s'alléger
     assert bilan["allege"] and not ecole._CACHE
     assert not alleger(plafond=10**9)["allege"]
+
+
+def test_la_conversation_d_aissa_rejouee():
+    """Les messages réels d'Aissa qui avaient mis IA AISSA en défaut."""
+    from ia_aissa import connaissances as K
+    from ia_aissa.espace import intention
+    from ia_aissa.pensee import penser
+    assert K.calculer_paie(K.brut_pour_net(6000))["salaire_net"] == 6000
+    o = K.optimiser_salaire(6000)
+    assert o["avec_indemnites"]["cout_employeur"] < o["tout_salaire"]["cout_employeur"]
+    question = "SI UN SALAIRE DE 6000 NET QUEL SERA LE SALIRE BRUTE OPTIMSES LE MOINS CHERE EN CNSS ET IR SANS PERDRE AVANTAGES"
+    r = penser(question)[0]
+    assert "6 459.87" in r and "Optimisation légale" in r and "droits CNSS" in r       # honnête sur les avantages
+    suite = penser("EXLIQUE PLUS", precedente=question)[0]
+    assert suite.startswith("Je reprends ta question précédente") and "Comment j'ai raisonné" in suite
+    assert intention("SIMULE UN BULLETIN DE PAIE CAS MAROC") is None                    # pas le bulletin de notes
+    assert "7 273.65" in penser("SIMULE UN BULLETIN DE PAIE CAS MAROC")[0]
+    assert "trompée" in penser("NON")[0] and "J'apprends en continu" in penser("TU DOIS APPRENDRE")[0]
+    reponse, _, confiance = penser("bof")
+    assert "pas sûre de comprendre" in reponse and confiance < 0.5                     # plus de réponse au hasard
+
+
+def test_non_c_est_corrige_pendant_la_conversation(labo):
+    from ia_aissa.pensee import correction_dans_la_conversation
+    mem, _ = labo
+    precedente = "paiement de la facture maroc telecom"
+    merci = correction_dans_la_conversation("non, c'est 6145", mem,
+                                            {"cle": "comptabilite", "reponse": "6125"}, precedente)
+    assert "6145 Frais postaux" in merci
+    assert mem.corrections_de("comptabilite")[0]["question"] == precedente
+    assert correction_dans_la_conversation("non", mem, {"cle": "comptabilite"}, precedente) is None
+
+
+def _pdf_de_test(texte):
+    """Un vrai petit PDF avec du texte (sans dépendance supplémentaire)."""
+    lignes = [texte[i:i + 90] for i in range(0, len(texte), 90)][:40]
+    flux = "BT /F1 9 Tf 20 800 Td 11 TL " + " ".join(f"({l}) '" for l in lignes) + " ET"
+    objets = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+              "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R "
+              "/Resources << /Font << /F1 5 0 R >> >> >>",
+              f"<< /Length {len(flux)} >>\nstream\n{flux}\nendstream",
+              "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    sortie, positions = "%PDF-1.4\n", []
+    for i, o in enumerate(objets, 1):
+        positions.append(len(sortie.encode("latin-1")))
+        sortie += f"{i} 0 obj\n{o}\nendobj\n"
+    xref = len(sortie.encode("latin-1"))
+    sortie += f"xref\n0 {len(objets) + 1}\n0000000000 65535 f \n" + "".join(f"{p:010d} 00000 n \n" for p in positions)
+    sortie += f"trailer\n<< /Size {len(objets) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF"
+    return sortie.encode("latin-1")
+
+
+def test_ingestion_d_un_livre_pdf_sans_cle_api(labo, tmp_path, monkeypatch):
+    import json
+    import os
+    import tempfile
+    from ia_aissa.pensee import confirmation_ingestion, ingerer_pdf
+    mem, _ = labo
+    crees = []
+    vrai = tempfile.NamedTemporaryFile
+    monkeypatch.setattr(tempfile, "NamedTemporaryFile", lambda **kw: crees.append(vrai(**kw)) or crees[-1])
+    texte = ARTICLE_LOCAL.replace("ô", "o").replace("é", "e").replace("è", "e")
+    bilan = ingerer_pdf(mem, "cours.pdf", _pdf_de_test(texte), fichier_json=tmp_path / "data" / "aissa_memoire.json")
+    assert bilan["concepts"] >= 2 and bilan["entier"]
+    assert not os.path.exists(crees[0].name)                                          # fichier temporaire supprimé
+    archive = json.loads((tmp_path / "data" / "aissa_memoire.json").read_text(encoding="utf-8"))
+    assert archive[0]["source"] == "cours.pdf" and archive[0]["concepts"]
+    assert mem.digestions()[0]["utilisateur"] == "Aissa"                              # jamais oublié par l'élagage
+    message = confirmation_ingestion(bilan)
+    assert "Klit lktab kamel" in message and "supprimer le fichier source" in message
+    import io
+    import zipfile
+    epub = io.BytesIO()
+    with zipfile.ZipFile(epub, "w") as z:
+        z.writestr("chap1.xhtml", "<html><body>" + "".join(f"<p>{p}.</p>" for p in ARTICLE_LOCAL.split(". ")) + "</body></html>")
+    assert ingerer_pdf(mem, "livre.epub", epub.getvalue(), fichier_json=tmp_path / "e.json")["concepts"] >= 2
+    with pytest.raises(ValueError, match="scanné"):
+        ingerer_pdf(mem, "scan.pdf", _pdf_de_test(" "), fichier_json=tmp_path / "x.json")

@@ -35,7 +35,7 @@ ROLES = {
 
 SEUIL_ROLE = 0.5            # confiance minimale d'un cerveau d'école pour changer de rôle à partir d'une question
 EXTENSIONS_DONNEES = (".csv", ".xlsx", ".xlsm", ".xls")
-EXTENSIONS_LECTURE = (".pdf", ".txt", ".md", ".html", ".htm")
+EXTENSIONS_LECTURE = (".pdf", ".epub", ".txt", ".md", ".html", ".htm")
 MOTIF_URL = re.compile(r"https?://[^\s<>\"']+")
 MOTIFS = {
     "programmeur": re.compile(r"\b(code|coder|python|javascript|typescript|java|sql|php|html|css|script|programm\w*|"
@@ -49,7 +49,7 @@ MOTIFS = {
                          r"cours|exercice|leçon|bac|examen|photosynth\w*|planète|univers|énergie|science\w*)\b", re.I),
 }
 INTENTIONS = {
-    "bulletin": re.compile(r"(bulletin|ta croissance|tes progrès|tes notes|ce que tu (as appris|sais)|ton école)", re.I),
+    "bulletin": re.compile(r"(bulletin(?! de (paie|salaire))|ta croissance|tes progrès|tes notes|ce que tu (as appris|sais)|ton école)", re.I),
     "bibliotheque": re.compile(r"(ta bibliothèque|qu'as[- ]tu lu|ce que tu as lu|tes lectures)", re.I),
     "prononciation": re.compile(r"(pronon\w+|apprends?[- ]moi à (dire|parler)|accent)", re.I),
 }
@@ -85,11 +85,11 @@ def detecter_role(texte, noms_fichiers=()):
     return "compagnon"
 
 
-def reponse_locale(texte, memoire=None, conclusion=None):
+def reponse_locale(texte, memoire=None, conclusion=None, precedente=None):
     """Sans clé API : IA AISSA pense avec ses propres cerveaux (calcul, analogie, école, bibliothèque),
     montre son raisonnement et dit honnêtement quand elle ne sait pas."""
     from .pensee import penser
-    reponse, etapes, confiance = penser(texte, memoire, conclusion)
+    reponse, etapes, confiance = penser(texte, memoire, conclusion, precedente)
     return reponse, etapes, confiance
 
 

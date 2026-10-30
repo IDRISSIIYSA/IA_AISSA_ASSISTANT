@@ -18,6 +18,7 @@ import collections
 import json
 import time
 from datetime import timezone
+from pathlib import Path
 import math
 import operator
 import re
@@ -29,7 +30,8 @@ HORS_ANALOGIE = {"langues", "matiere_scolaire", "orientation"}
 VIDES = set("le la les de des du un une et au aux pour par en sur dans mon ma mes ton ta je tu il elle qui que "
             "quoi est ce cet cette dyal dial li ana nta wach chno chnou".split())
 SEUIL_ANALOGIE = 0.45          # au-dessus : l'analogie est assez proche pour répondre
-SEUIL_PISTE = 0.28             # entre les deux : une piste, donnée avec prudence
+SEUIL_PISTE = 0.28             # en dessous de SEUIL_REPONSE : seulement citée comme piste, sans réponse
+SEUIL_REPONSE = 0.5            # le cerveau d'école seul doit être sûr à 50 % pour répondre
 
 
 # ==========================================
@@ -114,7 +116,18 @@ CONVERSATION = [
      "donnes une clé API."),
     (re.compile(r"(comment (ça|ca) va|labas|kidayr|kidayra|cava|ça va)", re.I),
      "Hamdoullah, labas ! Mes cerveaux tournent bien. Et toi ?"),
+    (re.compile(r"^\s*(non|nn|la|lla|no|pas du tout|faux|c'est faux)\s*[.!]*\s*$", re.I),
+     "D'accord, je me suis trompée. Dis-moi la bonne réponse (ou reformule ta question avec un exemple) : "
+     "j'en ferai une correction et je réviserai."),
+    (re.compile(r"^\s*(oui|ok|okay|d'accord|wakha|iyeh|ah|parfait|super|top)\s*[.!]*\s*$", re.I),
+     "Parfait ! Pose-moi la suite quand tu veux : un calcul, une question de cours, ou un fichier à analyser."),
+    (re.compile(r"(tu dois apprendre|apprends|apprend plus|khassek t(t)?3allem)", re.I),
+     "J'apprends en continu : je lis seule Wikipédia, je m'exerce dans mes matières, je résous 5 crises budgétaires "
+     "par heure et je retiens chacune de tes corrections. Le plus efficace : quand je me trompe, dis-moi « non, "
+     "c'est … » avec la bonne réponse."),
 ]
+SUITE = re.compile(r"^\s*(ex\w*li\w*|e?xpli\w*|détaill\w*|detaill\w*|plus de détails|davantage|pourquoi|"
+                   r"comment (ça|ca)|zid|chre7|chra7|فسر|وضح)\b.{0,25}$", re.I)
 
 
 # ==========================================
@@ -160,6 +173,23 @@ def montant(v):
     return f"{v:,.2f}".replace(",", " ").replace(".00", "") + " DH"
 
 
+def bulletin(brut):
+    """Le bulletin de paie détaillé, ligne par ligne, avec la règle de chaque ligne."""
+    p = K.calculer_paie(brut)
+    base_cnss = min(brut, K.PLAFOND_CNSS_MENSUEL)
+    return ("| Ligne | Règle | Montant |\n|---|---|---|\n"
+            f"| Salaire brut | | {montant(brut)} |\n"
+            f"| CNSS salarié | {K.CNSS_SALARIE:.2%} × {montant(base_cnss)} (plafond 6 000 DH) | − {montant(p['cnss_salarie'])} |\n"
+            f"| AMO salarié | {K.AMO_SALARIE:.2%} × brut | − {montant(p['amo_salarie'])} |\n"
+            f"| Frais professionnels | abattement sur le brut, plafonné | ({montant(p['frais_professionnels'])}) |\n"
+            f"| Net imposable | brut − CNSS − AMO − frais professionnels | {montant(p['net_imposable'])} |\n"
+            f"| IR | barème annuel ÷ 12 | − {montant(p['ir'])} |\n"
+            f"| **Salaire net** | brut − CNSS − AMO − IR | **{montant(p['salaire_net'])}** |\n"
+            f"| Charges patronales | CNSS + AMO employeur | {montant(p['charges_patronales'])} |\n"
+            f"| Coût employeur | brut + charges patronales | {montant(brut + p['charges_patronales'])} |\n\n"
+            f"_{p['remarque']}_")
+
+
 def valeur_apres(texte, motif, portee=40):
     """Le premier nombre qui suit un mot-clé (à moins de 40 caractères) : « bénéfice de 500 000 dh » -> 500000."""
     m = re.search(motif, texte, re.I)
@@ -181,15 +211,46 @@ def calculer(texte):
         except (ValueError, SyntaxError, ZeroDivisionError, TypeError):
             pass
     valeurs = [v for v in nombres(t) if v > 0]
+    if re.search(r"bulletin de (paie|salaire)|fiche de paie|fiche de salaire", t):
+        brut = max(valeurs) if valeurs else 8000.0
+        return (f"Bulletin de paie simulé (Maroc) pour un salaire brut mensuel de **{montant(brut)}**"
+                + ("" if valeurs else " (exemple : donne-moi ton brut pour le tien)") + " :\n\n" + bulletin(brut),
+                ["Bulletin de paie demandé.", "Barème marocain : CNSS (plafond 6 000 DH), AMO, frais professionnels, IR."])
     if not valeurs:
         return None
+    if re.search(r"\bnet\b", t) and re.search(r"(salaire|salire|brut|paie|khlass)", t):
+        net = max(valeurs)
+        brut = K.brut_pour_net(net)
+        reponse = f"Pour toucher **{montant(net)} net** par mois, il faut un salaire brut de **{montant(brut)}**.\n\n" + bulletin(brut)
+        etapes = ["Chiffre trouvé : salaire net mensuel.",
+                  "Je cherche le brut par dichotomie : j'essaie un brut, je calcule le net, j'ajuste."]
+        if re.search(r"(optimi|moins ch|moins cher|économ|econom|réduire|charges)", t):
+            o = K.optimiser_salaire(net)
+            a, b = o["tout_salaire"], o["avec_indemnites"]
+            reponse += (
+                f"\n\n**Optimisation légale (même net de {montant(net)})** :\n\n"
+                "| | Tout en salaire | Salaire + indemnités exonérées |\n|---|---|---|\n"
+                f"| Salaire brut | {montant(a['brut'])} | {montant(b['brut'])} |\n"
+                f"| Indemnité de transport (zone urbaine) | — | {montant(b['transport'])} |\n"
+                f"| Prime de panier (30 DH × 22 jours) | — | {montant(b['panier'])} |\n"
+                f"| CNSS + AMO salarié | {montant(a['cnss_amo'])} | {montant(b['cnss_amo'])} |\n"
+                f"| IR | {montant(a['ir'])} | {montant(b['ir'])} |\n"
+                f"| Charges patronales | {montant(a['charges_patronales'])} | {montant(b['charges_patronales'])} |\n"
+                f"| **Coût employeur** | **{montant(a['cout_employeur'])}** | **{montant(b['cout_employeur'])}** |\n\n"
+                f"Économie pour l'employeur : **{montant(o['economie_employeur'])} par mois**.\n\n"
+                "⚠️ Sans perdre d'avantages ? Pas tout à fait : les indemnités exonérées ne cotisent pas, donc les droits "
+                "CNSS (retraite, indemnités journalières) se calculent sur un brut plus bas. Elles doivent aussi "
+                "correspondre à une réalité (trajets, repas pris au travail), le salaire de base rester au moins au SMIG, "
+                "et les plafonds sont à confirmer dans l'article 57 du CGI.")
+            etapes.append("Je compare deux façons de verser le même net : tout en salaire, ou salaire + indemnités exonérées.")
+        return reponse, etapes
     if re.search(r"(salaire|brut|paie|salaire net|khlass|khalss|chhar)", t) and not re.search(r"\bir\b|impôt sur le revenu", t):
         v = max(valeurs)
         p = K.calculer_paie(v)
         return (f"Pour un salaire brut mensuel de **{montant(v)}** : CNSS {montant(p['cnss_salarie'])}, AMO "
                 f"{montant(p['amo_salarie'])}, frais professionnels {montant(p['frais_professionnels'])}, IR "
                 f"{montant(p['ir'])} → **salaire net {montant(p['salaire_net'])}** (charges patronales "
-                f"{montant(p['charges_patronales'])}). _{p['remarque']}_",
+                f"{montant(p['charges_patronales'])}). _{p['remarque']}_\n\n" + bulletin(v),
                 ["Chiffre trouvé : salaire brut mensuel.", "Barème de paie marocain : CNSS, AMO, frais professionnels, IR."])
     if re.search(r"(\bir\b|impôt sur le revenu|dariba 3la (salaire|dakhl))", t):
         v = max(valeurs)
@@ -253,9 +314,15 @@ def calculer(texte):
 # ==========================================
 # Penser
 # ==========================================
-def penser(texte, memoire=None, conclusion=None):
+def penser(texte, memoire=None, conclusion=None, precedente=None):
     """Réponse d'IA AISSA avec ses propres cerveaux. Renvoie (réponse en markdown, étapes du raisonnement, confiance).
-    conclusion (dict facultatif) reçoit la matière, la réponse retenue et l'accord analogie × école."""
+    conclusion (dict facultatif) reçoit la matière, la réponse retenue et l'accord analogie × école.
+    precedente : la question d'avant, pour comprendre « explique plus », « pourquoi »…"""
+    if precedente and SUITE.search(texte) and not SUITE.search(precedente):
+        reponse, etapes, confiance = penser(precedente, memoire)
+        return (f"Je reprends ta question précédente (« {precedente} ») plus en détail :\n\n{reponse}\n\n"
+                "**Comment j'ai raisonné** :\n" + "\n".join(f"{i}. {e}" for i, e in enumerate(etapes, 1)),
+                ["Tu demandes plus de détails : je reprends ta question précédente."] + etapes, confiance)
     for motif, reponse in CONVERSATION:
         if motif.search(texte) and len(texte.split()) <= 6:
             return reponse, ["Petite conversation reconnue."], 0.95
@@ -276,18 +343,19 @@ def penser(texte, memoire=None, conclusion=None):
     etapes.append(f"Mes cerveaux d'école : aiguillage vers « {c['matiere']} », réponse {c['reponse']} "
                   f"(confiance {c['confiance']:.0%}).")
     d_accord = a and a["cle"] == c["cle"] and a["reponse"] == c["reponse"]
+    vrais_mots = [x for x in mots(texte) if x not in VIDES and len(x) > 2]
+    if len(vrais_mots) < 2 and not (a and a["score"] >= 0.8):      # « non », « explique plus » : trop court pour classer
+        d_accord, a, c = False, None, {**c, "confiance": 0.0}
+        etapes.append("Message trop court pour que je devine sa matière.")
     if d_accord:
         choix, confiance = a, min(0.99, max(a["score"], c["confiance"]) + 0.15)
         etapes.append("Les deux sont d'accord : je suis sûre de moi.")
     elif a and a["score"] >= SEUIL_ANALOGIE:
         choix, confiance = a, a["score"]
         etapes.append("Je fais confiance à l'analogie : elle est très proche de ce que je connais.")
-    elif c["confiance"] >= max(SEUIL_CONFIANCE, a["score"] if a else 0):
+    elif c["confiance"] >= max(SEUIL_REPONSE, a["score"] if a else 0):
         choix, confiance = {"cle": c["cle"], "reponse": c["reponse"]}, c["confiance"]
         etapes.append("Je fais confiance à mon cerveau d'école.")
-    elif a and a["score"] >= SEUIL_PISTE:
-        choix, confiance = a, a["score"]
-        etapes.append("Ce n'est qu'une piste : je reste prudente.")
     else:
         choix, confiance = None, max(a["score"] if a else 0, c["confiance"])
         etapes.append("Rien d'assez proche dans ce que je connais : je préfère l'avouer.")
@@ -304,8 +372,9 @@ def penser(texte, memoire=None, conclusion=None):
             etapes.append(f"Ma bibliothèque : {len(lectures)} concept(s) proche(s) dans mes lectures.")
 
     if choix is None:
-        reponse = "Je ne sais pas encore répondre à ça avec mes propres cerveaux : je l'ai noté et je l'étudierai."
-        if c["confiance"] > 0.05 or a:
+        reponse = (f"Je ne suis pas sûre de comprendre « {texte.strip()[:80]} ». Peux-tu préciser (un chiffre, un exemple, "
+                   "la matière) ? Je l'ai noté et je l'étudierai.")
+        if max(c["confiance"], a["score"] if a else 0) >= SEUIL_PISTE:
             pistes = ([f"{PAR_CLE[a['cle']].nom} → {a['reponse']}"] if a else []) + [f"{c['matiere']} → {c['reponse']}"]
             reponse += " Mes pistes, sans certitude : " + " ; ".join(dict.fromkeys(pistes)) + "."
     else:
@@ -408,3 +477,87 @@ def alleger(plafond=PLAFOND_RAM_MO):
     autodidacte._VOCABULAIRE.clear()
     gc.collect()
     return {"avant": avant, "apres": memoire_vive_mo(), "allege": True}
+
+
+# ==========================================
+# « Non, c'est … » : se corriger pendant la conversation
+# ==========================================
+CORRECTION = re.compile(r"^\s*(non|nn|la|faux)\s*[,.!:]?\s*(c'est|c est|c’est|plutôt|plutot|la bonne réponse est|rah|hiya|howa)"
+                        r"\s+(.{2,120})$", re.I)
+
+
+def correction_dans_la_conversation(texte, memoire, conclusion_precedente, question_precedente):
+    """« non, c'est 2340 » juste après une réponse : la bonne réponse devient une correction, révisée aussitôt."""
+    m = CORRECTION.search(texte or "")
+    if not (m and conclusion_precedente and question_precedente and memoire is not None):
+        return None
+    from .corrections import corriger, reviser
+    try:
+        r = corriger(memoire, "Aissa", conclusion_precedente["cle"], question_precedente, m.group(3).strip(" .!"),
+                     source="utilisateur")
+    except ValueError as e:
+        return f"Je n'ai pas trouvé cette réponse dans ma matière : {e}"
+    bilan = reviser(memoire, conclusion_precedente["cle"])
+    adoptee = bilan and bilan.get("adoptee")
+    return (f"Merci ! J'ai retenu : « {question_precedente} » → **{r['bonne_reponse']}** ({r['matiere']}). "
+            + ("J'ai révisé mon cerveau : je ne referai pas cette erreur." if adoptee else
+               "Je l'ai gardé en mémoire ; ma révision n'a pas encore été adoptée (elle ne doit rien me faire oublier), "
+               "mais ma mémoire associative s'en sert déjà."))
+
+
+# ==========================================
+# Ingestion de livres PDF : lire le livre entier, distiller, garder
+# ==========================================
+FICHIER_MEMOIRE = Path(__file__).resolve().parents[1] / "data" / "aissa_memoire.json"
+MAX_PASSAGES = 60               # au-delà, 60 passages répartis du début à la fin du livre
+
+
+def ingerer_pdf(memoire, nom, contenu, utilisateur="Aissa", fichier_json=None):
+    """Lit un PDF (fichier temporaire supprimé aussitôt avec os.remove), le rumine passage par passage avec sa
+    pensée propre (sans clé API), range les concepts dans sa mémoire durable (base de données) et en garde une copie
+    distillée dans data/aissa_memoire.json. Renvoie le bilan ; lève ValueError si le PDF n'a pas de texte."""
+    import os
+    import tempfile
+    from datetime import datetime
+    from .bibliotheque import TAILLE_MORCEAU, digerer, texte_epub, texte_pdf
+    temporaire = tempfile.NamedTemporaryFile(suffix=Path(nom).suffix or ".pdf", delete=False)
+    try:
+        temporaire.write(contenu)
+        temporaire.close()
+        with open(temporaire.name, "rb") as f:
+            titre, texte = texte_epub(f.read()) if nom.lower().endswith(".epub") else texte_pdf(f.read())
+    finally:
+        os.remove(temporaire.name)                    # le fichier source ne reste jamais sur le disque du serveur
+    texte = " ".join(texte.split())
+    if len(texte) < 200:
+        raise ValueError("ce livre n'a presque pas de texte : c'est sans doute un livre scanné (des images de pages). "
+                         "Il faudrait d'abord le passer à la reconnaissance de caractères (OCR).")
+    source = titre or nom
+    passages = -(-len(texte) // TAILLE_MORCEAU)
+    bilan = digerer(memoire, None, None, source, texte, utilisateur, nb_bouchees=min(passages, MAX_PASSAGES))
+    concepts = [c for d in bilan["digestions"] for c in d["concepts"]]
+    fichier_json = Path(fichier_json or FICHIER_MEMOIRE)
+    fichier_json.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        archive = json.loads(fichier_json.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        archive = []
+    archive.append({"source": source, "utilisateur": utilisateur, "date": datetime.now(timezone.utc).isoformat(),
+                    "caracteres": len(texte), "passages_lus": bilan["bouchees"], "passages_total": passages,
+                    "familles": sorted({d["famille"] for d in bilan["digestions"]}), "concepts": concepts})
+    fichier_json.write_text(json.dumps(archive, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"source": source, "caracteres": len(texte), "passages_lus": bilan["bouchees"],
+            "passages_total": passages, "concepts": len(concepts), "entier": bilan["bouchees"] >= passages,
+            "lacunes_comblees": len(bilan["lacunes_comblees"])}
+
+
+def confirmation_ingestion(bilan):
+    """Le message de l'alien après un livre, en darija et en français, fidèle à ce qui a vraiment été lu."""
+    if bilan["entier"]:
+        lu = (f"Klit lktab kamel w wssa3t l3alam dyali ! J'ai digéré tout le livre « {bilan['source']} » "
+              f"({bilan['passages_lus']} passages, {bilan['concepts']} concepts) et agrandi mon univers.")
+    else:
+        lu = (f"Klit l'essentiel dyal lktab ! J'ai lu « {bilan['source']} » et digéré {bilan['passages_lus']} passages "
+              f"répartis du début à la fin (sur {bilan['passages_total']}), soit {bilan['concepts']} concepts : "
+              "mon univers s'est agrandi.")
+    return lu + " Tout est gardé dans ma mémoire : tu peux supprimer le fichier source !"

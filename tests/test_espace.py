@@ -41,7 +41,7 @@ def test_intentions_et_liens():
 def test_reponse_locale_sans_cle():
     assert "Souss-Massa" in reponse_locale("agadir")[0]
     reponse, etapes, confiance = reponse_locale("zzz qwerty xyz")
-    assert "ne sais pas" in reponse and confiance < 0.3 and etapes
+    assert "pas sûre de comprendre" in reponse and confiance < 0.3 and etapes
 
 
 def test_ia_aissa_pense_avec_son_propre_cerveau():

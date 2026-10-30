@@ -110,6 +110,45 @@ def calculer_paie(salaire_brut_mensuel):
     }
 
 
+# Indemnités exonérées d'IR et de CNSS, retenues seulement là où les sources concordent (vérifié le 30/10/2026,
+# Upsilon Consulting, ClicPaie, Wafir — non officielles : à confirmer dans l'article 57 du CGI et les notes DGI/CNSS).
+# Elles doivent correspondre à une réalité (trajets domicile-travail, repas pris au travail), jamais à du salaire déguisé.
+TRANSPORT_EXONERE_URBAIN = 500          # DH par mois, en zone urbaine
+PANIER_EXONERE_JOUR = 30                # DH par jour travaillé (plafond CNSS ; certaines sources donnent 40 DH côté IR)
+
+
+def brut_pour_net(net_mensuel, precision=0.01):
+    """Le salaire brut mensuel qui donne ce net (recherche par dichotomie sur le calcul de paie)."""
+    bas, haut = float(net_mensuel), float(net_mensuel) * 2 + 1000
+    while haut - bas > precision:
+        milieu = (bas + haut) / 2
+        if calculer_paie(milieu)["salaire_net"] < net_mensuel:
+            bas = milieu
+        else:
+            haut = milieu
+    return round(haut, 2)
+
+
+def optimiser_salaire(net_vise, jours_travailles=22):
+    """Deux façons de verser le même net : tout en salaire, ou salaire + indemnités exonérées (transport en zone
+    urbaine, prime de panier), quand elles correspondent à une réalité. Compare le coût pour l'employeur."""
+    tout_salaire = brut_pour_net(net_vise)
+    p1 = calculer_paie(tout_salaire)
+    indemnites = TRANSPORT_EXONERE_URBAIN + PANIER_EXONERE_JOUR * jours_travailles
+    brut_reduit = brut_pour_net(max(0.0, net_vise - indemnites))
+    p2 = calculer_paie(brut_reduit)
+    cout1 = round(tout_salaire + p1["charges_patronales"], 2)
+    cout2 = round(brut_reduit + p2["charges_patronales"] + indemnites, 2)
+    return {"net_vise": float(net_vise),
+            "tout_salaire": {"brut": tout_salaire, "cnss_amo": round(p1["cnss_salarie"] + p1["amo_salarie"], 2),
+                             "ir": p1["ir"], "charges_patronales": p1["charges_patronales"], "cout_employeur": cout1},
+            "avec_indemnites": {"brut": brut_reduit, "transport": TRANSPORT_EXONERE_URBAIN,
+                                "panier": PANIER_EXONERE_JOUR * jours_travailles,
+                                "cnss_amo": round(p2["cnss_salarie"] + p2["amo_salarie"], 2), "ir": p2["ir"],
+                                "charges_patronales": p2["charges_patronales"], "cout_employeur": cout2},
+            "economie_employeur": round(cout1 - cout2, 2)}
+
+
 def calculer_van(investissement, flux, taux):
     van = -float(investissement) + sum(f / (1 + taux) ** (i + 1) for i, f in enumerate(flux))
     return {"van": round(van, 2), "decision": "Accepter le projet" if van > 0 else "Rejeter le projet"}

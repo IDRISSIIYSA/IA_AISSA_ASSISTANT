@@ -224,6 +224,26 @@ Avec une clé API, la rumination et l'étude des lacunes passent par le grand mo
 - **Fiscalité locale** : IS dû = max(IS proportionnel, cotisation minimale 0,25 % des produits, au moins
   3 000 DH) ; TVA due = collectée − déductible (ou crédit de TVA).
 
+## Donner des livres à IA AISSA (sans clé API)
+
+Déposez un livre ou un cours **PDF ou EPUB** dans « 🌌 Cosmic Knowledge Ingestion » (ou par 📎 dans la conversation) :
+- elle lit tout le livre (jusqu'à 60 passages répartis du début à la fin pour les très gros livres), le rumine avec
+  sa pensée propre et range les concepts dans sa mémoire durable (base de données) — vos livres ne sont jamais
+  oubliés par l'élagage ; une copie distillée va aussi dans `data/aissa_memoire.json` ;
+- le fichier temporaire est supprimé aussitôt (`os.remove`) et le dépôt est vidé ;
+- l'alien confirme en darija et en français : « Klit lktab kamel… tu peux supprimer le fichier source ! »
+  (ou, pour un très gros livre, combien de passages il a digérés) ;
+- un PDF scanné (images de pages) est signalé : il faut d'abord un OCR.
+Sur Streamlit Cloud, le disque du serveur est effacé à chaque redémarrage : la mémoire qui dure est la base
+(`MEMOIRE_URL`), le fichier JSON n'est qu'une copie.
+
+### Pensée propre : conversation
+« explique plus », « pourquoi » reprennent la question précédente en détail ; « non, c'est … » devient une
+correction révisée aussitôt ; « non », « ok », « tu dois apprendre » ont une vraie réponse ; sous 50 % de
+confiance, elle demande de préciser au lieu de répondre au hasard. Paie : salaire net → brut (dichotomie),
+bulletin de paie détaillé, et optimisation légale avec indemnités exonérées (transport 500 DH/mois en ville,
+panier 30 DH/jour), en signalant ce que l'on perd en droits CNSS.
+
 ## Atelier de prononciation en darija (`ia_aissa/voix.py`)
 
 « Apprends-moi à dire… en darija » ouvre l'atelier : IA AISSA prononce une phrase du quotidien professionnel
