@@ -1023,3 +1023,19 @@ BALANCE_COMMERCIALE_2025 = {
     "importations": 822.2, "exportations": 469.1, "deficit": 353.2, "deficit_hausse": 15.8, "deficit_2024": 304.9,
     "couverture": 57.2, "couverture_2024": 59.9, "deficit_pib": 22.7, "compte_courant": -42.0,
 }
+
+
+# ==========================================
+# Paie complète 2026 (vérifié le 30/10/2026 auprès de plusieurs cabinets de paie marocains — Humantal, Nexora,
+# Jobsquare ; à confirmer avec les barèmes CNSS officiels)
+# ==========================================
+ALLOCATIONS_FAMILIALES_EMPLOYEUR = 0.064     # sans plafond
+TAXE_FORMATION_PROFESSIONNELLE = 0.016       # sans plafond
+SMIG_HORAIRE_2026 = 17.92                    # DH de l'heure, secteur non agricole, depuis le 1er janvier 2026
+HEURES_LEGALES_MOIS = 191                    # 44 h par semaine (Code du travail, art. 184)
+# Prime d'ancienneté (Code du travail, art. 350) : (années d'ancienneté minimales, taux du salaire de base)
+PRIME_ANCIENNETE = [(25, 0.25), (20, 0.20), (12, 0.15), (5, 0.10), (2, 0.05)]
+
+
+def taux_prime_anciennete(annees):
+    return next((t for seuil, t in PRIME_ANCIENNETE if annees >= seuil), 0.0)

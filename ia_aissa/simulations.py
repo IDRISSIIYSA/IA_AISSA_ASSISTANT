@@ -238,3 +238,70 @@ def carrelage(surface_m2, longueur_carreau_cm, largeur_carreau_cm, chutes=0.10):
     surface_carreau = longueur_carreau_cm * largeur_carreau_cm / 10_000
     a_commander = surface_m2 * (1 + chutes)
     return {"surface_a_commander_m2": round(a_commander, 2), "carreaux": int(-(-a_commander // surface_carreau))}
+
+
+def paie_complete(salaire_base, anciennete_ans=0, personnes_a_charge=0, deduction_par_personne_an=500.0,
+                  indemnites_exonerees=0.0, heures_mois=K.HEURES_LEGALES_MOIS):
+    """Bulletin complet : prime d'ancienneté (art. 350), CNSS/AMO, frais professionnels, IR avec charges de famille
+    (au plus 6 personnes), toutes les charges patronales (CNSS, allocations familiales, AMO, formation
+    professionnelle), contrôle du SMIG."""
+    taux_prime = K.taux_prime_anciennete(anciennete_ans)
+    prime = salaire_base * taux_prime
+    brut = salaire_base + prime
+    cnss = min(brut, K.PLAFOND_CNSS_MENSUEL) * K.CNSS_SALARIE
+    amo = brut * K.AMO_SALARIE
+    taux_fp = next(t for plafond, t in K.FRAIS_PRO if brut * 12 <= plafond)
+    frais_pro = min(brut * taux_fp, K.PLAFOND_FRAIS_PRO_ANNUEL / 12)
+    net_imposable = max(0.0, brut - cnss - amo - frais_pro)
+    ir_brut = K.calculer_ir(net_imposable * 12)["ir_annuel"] / 12
+    deduction_famille = min(personnes_a_charge, 6) * deduction_par_personne_an / 12
+    ir = max(0.0, ir_brut - deduction_famille)
+    net = brut - cnss - amo - ir + indemnites_exonerees
+    patronal = {"CNSS (prestations, plafonnée)": min(brut, K.PLAFOND_CNSS_MENSUEL) * K.CNSS_EMPLOYEUR,
+                "Allocations familiales": brut * K.ALLOCATIONS_FAMILIALES_EMPLOYEUR,
+                "AMO": brut * K.AMO_EMPLOYEUR, "Formation professionnelle": brut * K.TAXE_FORMATION_PROFESSIONNELLE}
+    total_patronal = sum(patronal.values())
+    return {"salaire_base": salaire_base, "taux_prime": taux_prime, "prime_anciennete": round(prime, 2),
+            "brut": round(brut, 2), "cnss": round(cnss, 2), "amo": round(amo, 2), "frais_pro": round(frais_pro, 2),
+            "taux_frais_pro": taux_fp, "net_imposable": round(net_imposable, 2), "ir_avant_famille": round(ir_brut, 2),
+            "deduction_famille": round(deduction_famille, 2), "ir": round(ir, 2),
+            "indemnites_exonerees": indemnites_exonerees, "net": round(net, 2),
+            "patronal": {k: round(v, 2) for k, v in patronal.items()}, "total_patronal": round(total_patronal, 2),
+            "cout_employeur": round(brut + total_patronal + indemnites_exonerees, 2),
+            "taux_horaire_base": round(salaire_base / heures_mois, 2),
+            "sous_smig": salaire_base / heures_mois < K.SMIG_HORAIRE_2026}
+
+
+# ==========================================
+# Immobilier, énergie, statistiques
+# ==========================================
+def rentabilite_locative(prix_achat, frais_acquisition, loyer_mensuel, charges_annuelles, vacance_mois=1.0):
+    loyers = loyer_mensuel * (12 - vacance_mois)
+    cout = prix_achat + frais_acquisition
+    return {"loyers_annuels": round(loyers, 2), "rentabilite_brute": round(loyer_mensuel * 12 / cout, 4) if cout else 0,
+            "rentabilite_nette": round((loyers - charges_annuelles) / cout, 4) if cout else 0,
+            "annees_pour_rembourser": round(cout / (loyers - charges_annuelles), 1) if loyers > charges_annuelles else None}
+
+
+def photovoltaique(puissance_kwc, production_kwh_par_kwc, prix_kwh, cout_installation, perte_annuelle=0.005, annees=25):
+    """Production annuelle = puissance × productible (kWh/kWc/an) ; économies actualisées sur la durée de vie."""
+    lignes, cumul = [], -cout_installation
+    for a in range(1, annees + 1):
+        production = puissance_kwc * production_kwh_par_kwc * (1 - perte_annuelle) ** (a - 1)
+        cumul += production * prix_kwh
+        lignes.append({"Année": a, "Production (kWh)": round(production, 0), "Économie": round(production * prix_kwh, 2),
+                       "Gain cumulé": round(cumul, 2)})
+    tableau = pd.DataFrame(lignes)
+    retour = tableau[tableau["Gain cumulé"] >= 0]
+    return {"production_an1": round(puissance_kwc * production_kwh_par_kwc, 0),
+            "economie_an1": round(puissance_kwc * production_kwh_par_kwc * prix_kwh, 2),
+            "retour_sur_investissement_ans": int(retour["Année"].iloc[0]) if not retour.empty else None,
+            "gain_total": round(cumul, 2), "tableau": tableau}
+
+
+def croissance(valeur_debut, valeur_fin, annees, projection_annees=3):
+    """Taux de croissance annuel moyen (TCAM) et projection au même rythme."""
+    tcam = (valeur_fin / valeur_debut) ** (1 / annees) - 1 if valeur_debut > 0 and annees > 0 else 0.0
+    projection = pd.DataFrame([{"Année": f"+{i}", "Valeur projetée": round(valeur_fin * (1 + tcam) ** i, 2)}
+                               for i in range(1, projection_annees + 1)])
+    return {"tcam": round(tcam, 4), "tableau": projection}

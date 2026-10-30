@@ -292,11 +292,16 @@ l'assistante et l'atelier d'invention ne cherchent que dans ses documents et dan
 web. (Les données sont dans la base `MEMOIRE_URL` ; leur chiffrement au repos dépend de l'hébergeur de la base.)
 
 ### Simulations justifiées (`ia_aissa/espace_simulations.py`, `simulations.py`, `baremes.py`, `rapports.py`)
-24 simulations, **classées par type dans la barre latérale** : 🧾 Fiscalité (IR par année, IS par secteur, TVA due par
+28 simulations, **classées par type dans la barre latérale** (catégories repliables, recherche) : 🧾 Fiscalité (IR par année, IS par secteur, TVA due par
 année, auto-entrepreneur, douane) · 👥 RH et paie (paie brut ↔ net, heures supplémentaires, indemnité de
 licenciement, congés payés) · 📒 Comptabilité (amortissement linéaire/dégressif, seuil de rentabilité, prix et
 marges) · 🏦 Banque (crédit, capacité d'emprunt, épargne) · 💰 Finance (VAN/TRI, BFR, trésorerie, Monte-Carlo) ·
-🛠️ Technique (consommation électrique, stock de Wilson) · 🏗️ Bâtiment (béton, peinture, carrelage).
+🛠️ Technique (consommation électrique, stock de Wilson) · 🏗️ Bâtiment (béton, peinture, carrelage) ·
+🏠 Immobilier (rentabilité locative) · ☀️ Énergie (photovoltaïque) · 📈 Statistiques (TCAM et projection).
+Bulletin de paie complet : prime d'ancienneté (art. 350), charges de famille (art. 74), toutes les charges patronales
+(CNSS, allocations familiales 6,40 %, AMO 4,11 %, formation professionnelle 1,60 %), contrôle du SMIG 2026.
+IS : secteur et date de début d'activité (exonération de cotisation minimale 36 mois). Chaque rapport propose des
+**pistes d'optimisation** chiffrées (💡).
 Chaque résultat est **justifié** (méthode et calcul pas à pas), **référencé** (loi, article, année de référence et
 taux de cette année, sources et date de vérification), avec les régimes particuliers non couverts, et
 **téléchargeable en PDF**. Barèmes par année : seules les périodes vérifiées sont encodées (IR 2010-2024 et 2025-2026,

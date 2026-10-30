@@ -342,3 +342,17 @@ def test_rapports_justifies_traces_et_pdf(tmp_path):
     journaliser(mem, r)
     assert journal(mem)[0]["numero"] == r["numero"] and verifier(mem, r["numero"], r["empreinte"])
     assert not verifier(mem, r["numero"], "0" * 64)
+
+
+def test_paie_complete_conseils_et_barre_repliable():
+    from ia_aissa import connaissances as K
+    from ia_aissa import simulations as S
+    from ia_aissa.espace_simulations import CATEGORIES
+    p = S.paie_complete(8000, 6, 2, 500)
+    assert p["prime_anciennete"] == 800 and p["brut"] == 8800                         # 10 % après 5 ans (art. 350)
+    assert p["deduction_famille"] == round(2 * 500 / 12, 2) and p["ir"] < p["ir_avant_famille"]
+    assert set(p["patronal"]) == {"CNSS (prestations, plafonnée)", "Allocations familiales", "AMO",
+                                  "Formation professionnelle"}
+    assert S.paie_complete(3000)["sous_smig"] and not S.paie_complete(4000)["sous_smig"]  # 17,92 × 191 = 3 422,72
+    assert K.taux_prime_anciennete(1) == 0 and K.taux_prime_anciennete(25) == 0.25
+    assert len(CATEGORIES) >= 10 and sum(len(v) for v in CATEGORIES.values()) >= 28

@@ -30,14 +30,15 @@ def version():
         return "inconnue"
 
 
-def rapport(titre, categorie, entrees, resultats, methode, references, annee=None, tableau=None, remarques=()):
+def rapport(titre, categorie, entrees, resultats, methode, references, annee=None, tableau=None, remarques=(),
+            conseils=()):
     """Assemble un rapport ; entrees et resultats sont des dictionnaires {libellé: valeur affichable}."""
     maintenant = datetime.now(timezone.utc)
     r = {"numero": f"IAA-{maintenant:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:4].upper()}",
          "date": maintenant.strftime("%d/%m/%Y %H:%M UTC"), "version": version(), "titre": titre, "categorie": categorie,
          "annee": annee, "entrees": {k: str(v) for k, v in entrees.items()},
          "resultats": {k: str(v) for k, v in resultats.items()}, "methode": list(methode),
-         "references": list(references), "remarques": list(remarques), "limites": LIMITES}
+         "references": list(references), "remarques": list(remarques), "conseils": list(conseils), "limites": LIMITES}
     r["empreinte"] = empreinte(r)
     r["tableau"] = tableau
     return r
@@ -45,7 +46,7 @@ def rapport(titre, categorie, entrees, resultats, methode, references, annee=Non
 
 def empreinte(r):
     contenu = {k: r[k] for k in ("numero", "date", "version", "titre", "annee", "entrees", "resultats", "methode",
-                                 "references")}
+                                 "references", "conseils")}
     return hashlib.sha256(json.dumps(contenu, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
@@ -71,6 +72,8 @@ def markdown(r):
               "| Donnée | Valeur |", "|---|---|"] + [f"| {k} | {v} |" for k, v in r["entrees"].items()]
     lignes += ["", "| Résultat | Valeur |", "|---|---|"] + [f"| {k} | **{v}** |" for k, v in r["resultats"].items()]
     lignes += ["", "**Méthode et justification**"] + [f"{i}. {m}" for i, m in enumerate(r["methode"], 1)]
+    if r["conseils"]:
+        lignes += ["", "**💡 Propositions et optimisation**"] + [f"- {x}" for x in r["conseils"]]
     lignes += ["", "**Références**"] + [f"- {x}" for x in r["references"]]
     if r["remarques"]:
         lignes += ["", "**À savoir**"] + [f"- {x}" for x in r["remarques"]]
@@ -142,6 +145,10 @@ def pdf(r):
     section("3. Méthode et justification")
     for i, m in enumerate(r["methode"], 1):
         doc.multi_cell(largeur, 5, latin1(f"{i}. {m}"))
+    if r["conseils"]:
+        section("Propositions et optimisation")
+        for x in r["conseils"]:
+            doc.multi_cell(largeur, 5, latin1(f"- {x}"))
     section("4. Références (lois, articles, taux de l'année)")
     for x in r["references"]:
         doc.multi_cell(largeur, 5, latin1(f"- {x}"))
