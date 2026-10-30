@@ -177,6 +177,22 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
   24 périodes) avec un intervalle de confiance à 95 %. Sur les données d'exemple (dérives et incidents
   ponctuels), le vrai réalisé tombe dans l'intervalle environ 83 % du temps : un incident imprévisible reste imprévisible.
 
+## Penser avec son propre cerveau (`ia_aissa/pensee.py`)
+
+Sans clé API, IA AISSA ne se contente pas de classer : elle raisonne, et montre son raisonnement (🧠 Mon raisonnement).
+1. **Comprendre** : salutation, remerciement, « qui es-tu », ou vraie question.
+2. **Calculer** : avec des chiffres, elle calcule seule (opérations, paie, IR, IS, TVA avec le taux trouvé par son
+   cerveau TVA, mensualité de crédit), sans jamais exécuter de code.
+3. **Se souvenir par analogie** : une mémoire associative (TF-IDF sur mots, paires de mots et morceaux de 4 lettres,
+   pour la darija écrite de mille façons) compare la question aux formulations de toutes ses matières et aux
+   corrections qu'on lui a apprises : une correction compte tout de suite, sans attendre la révision.
+4. **Consulter ses cerveaux d'école**, puis **confronter** : d'accord → sûre ; sinon la plus solide l'emporte, l'autre
+   hypothèse est donnée ; trop faible → elle avoue ne pas savoir et note la lacune.
+5. **Lire** : elle ajoute les concepts proches de sa bibliothèque.
+
+Banc d'essai des 20 questions libres : 11/20 avec les cerveaux d'école seuls, 19/20 avec la pensée propre
+(une partie de ces questions figure aussi dans ses formulations connues).
+
 ## Atelier de prononciation en darija (`ia_aissa/voix.py`)
 
 « Apprends-moi à dire… en darija » ouvre l'atelier : IA AISSA prononce une phrase du quotidien professionnel

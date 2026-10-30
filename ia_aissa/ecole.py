@@ -100,6 +100,7 @@ class Matiere:
     texte: bool = False
     note: str = ""
     perception: Callable = vectoriser
+    exemples: list = None      # matières textuelles : formulations connues pour chaque réponse
 
 
 def _matiere_texte(cle, nom, domaine, dictionnaire, note, libelle=lambda k, v: k, perception=None):
@@ -111,7 +112,7 @@ def _matiere_texte(cle, nom, domaine, dictionnaire, note, libelle=lambda k, v: k
     perception = perception or vectoriser_mixte
     dim = 2 * DIM_TEXTE if perception is vectoriser_mixte else DIM_TEXTE
     return Matiere(cle, nom, domaine, actions, dim, lambda rng: exercice_texte(rng, categories, perception),
-                   True, note, perception)
+                   True, note, perception, categories)
 
 
 def _ir(rng):

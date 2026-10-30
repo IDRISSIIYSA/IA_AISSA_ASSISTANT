@@ -35,3 +35,8 @@ for q, attendu in QUESTIONS:
     bons += ok
     print(("✅" if ok else "❌"), f"{q[:42]:42} -> {r['reponse'][:38]} ({r['confiance']:.0%})")
 print(f"Banc d'essai : {bons}/{len(QUESTIONS)} | aiguilleur à l'examen : {precision(charger('orientation')[0], examen(PAR_CLE['orientation'])):.1%}")
+
+# La pensée propre (analogie + cerveaux d'école), telle qu'elle répond sans clé API
+from ia_aissa.pensee import penser  # noqa: E402
+bons_pensee = sum(attendu in penser(q)[0] for q, attendu in QUESTIONS)
+print(f"Pensée propre (analogie + école) : {bons_pensee}/{len(QUESTIONS)}")

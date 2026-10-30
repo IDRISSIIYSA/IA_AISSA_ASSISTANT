@@ -39,8 +39,32 @@ def test_intentions_et_liens():
 
 
 def test_reponse_locale_sans_cle():
-    assert "Souss-Massa" in reponse_locale("agadir")
-    assert "lacune" in reponse_locale("zzz qwerty xyz")
+    assert "Souss-Massa" in reponse_locale("agadir")[0]
+    reponse, etapes, confiance = reponse_locale("zzz qwerty xyz")
+    assert "ne sais pas" in reponse and confiance < 0.3 and etapes
+
+
+def test_ia_aissa_pense_avec_son_propre_cerveau():
+    from ia_aissa.pensee import MemoireAssociative, calculer, nombres, penser
+    assert nombres("8 000 dh et 1.234.567 puis 12,5 et 8k") == [8000.0, 1234567.0, 12.5, 8000.0]
+    assert "87" in penser("combien font 12*7+3 ?")[0]
+    assert "7 273.65" in penser("salaire brut 8000 dh")[0]                     # paie marocaine
+    assert "18 800" in penser("ir sur 10000 dh par mois")[0]                    # IR annuel (×12)
+    assert "1 979.87" in penser("crédit 300000 dh à 5% sur 20 ans")[0]
+    assert calculer("__import__('os').system('ls')") is None                     # jamais d'exécution de code
+    reponse, etapes, confiance = penser("chkoun li bna lkoutoubia")
+    assert "Almohades" in reponse and confiance > 0.8 and any("Mémoire associative" in e for e in etapes)
+    m = MemoireAssociative([("achat d'un camion", "comptabilite", "2340 Matériel de transport")])
+    assert m.chercher("chrit camion")[0]["reponse"] == "2340 Matériel de transport"
+
+
+def test_les_corrections_nourrissent_la_memoire_associative(tmp_path):
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.pensee import memoire_associative
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    avant = len(memoire_associative(mem).souvenirs)
+    mem.ajouter_correction("Aissa", "comptabilite", "chrit camion l charika", "2340 Matériel de transport", "utilisateur")
+    assert len(memoire_associative(mem).souvenirs) == avant + 1
 
 
 def test_controleur_de_gestion_sur_un_fichier_brut():

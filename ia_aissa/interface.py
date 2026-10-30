@@ -622,7 +622,9 @@ def traiter(r, utilisateur, texte, fichiers):
     if client:
         return converser_avec_moteur(r, utilisateur, texte, role, journal), [], journal, role, \
             "hyper" if role == "inventeur" else "normal"
-    return reponse_locale(texte), [], [], role, "normal"
+    reponse, etapes, confiance = reponse_locale(texte, mem)
+    st.session_state["meta_locale"] = {"confiance": confiance, "details": f"{len(etapes)} étape(s) · mon propre cerveau"}
+    return reponse, [{"type": "liste", "titre": "🧠 Mon raisonnement", "lignes": etapes}], [], role, "normal"
 
 
 def apprendre_de_l_echange(r, utilisateur, question, texte):
@@ -714,7 +716,7 @@ def espace_unique():
             reponse, elements, journal, role, etat = traiter(r, utilisateur, texte, fichiers)
         st.session_state["role_ia"] = role
         langue = repondre("langues", reponse[:300])[0]["reponse"]
-        meta = meta_conscience(journal, time.time() - debut)
+        meta = st.session_state.pop("meta_locale", None) or meta_conscience(journal, time.time() - debut)
         message = {"role": "assistant", "texte": reponse, "elements": elements, "outils": journal, "langue": langue,
                    "meta": meta, "role_ia": role}
         st.session_state["affichage"].append(message)

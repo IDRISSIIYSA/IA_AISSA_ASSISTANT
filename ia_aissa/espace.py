@@ -85,16 +85,12 @@ def detecter_role(texte, noms_fichiers=()):
     return "compagnon"
 
 
-def reponse_locale(texte):
-    """Sans clé API : IA AISSA répond avec ses propres cerveaux d'école, et dit honnêtement quand elle ne sait pas."""
-    meilleure = repondre_automatiquement(texte)[0]
-    if meilleure["confiance"] >= SEUIL_CONFIANCE:
-        return (f"D'après mon cerveau d'école ({meilleure['domaine']} — {meilleure['matiere']}) : "
-                f"**{meilleure['reponse']}** (confiance {meilleure['confiance']:.0%}). Pour une explication complète, "
-                "donne-moi une clé API dans ⚙️ Réglages : je réfléchirai avec mon grand moteur.")
-    return ("Je ne sais pas encore répondre à ça avec mes propres cerveaux : je l'ai noté comme lacune, et je "
-            "l'étudierai. Pour que je réfléchisse dès maintenant avec mon grand moteur, ajoute une clé API dans "
-            "⚙️ Réglages.")
+def reponse_locale(texte, memoire=None):
+    """Sans clé API : IA AISSA pense avec ses propres cerveaux (calcul, analogie, école, bibliothèque),
+    montre son raisonnement et dit honnêtement quand elle ne sait pas."""
+    from .pensee import penser
+    reponse, etapes, confiance = penser(texte, memoire)
+    return reponse, etapes, confiance
 
 
 def analyser_controle(nom, contenu, n_episodes=None):
