@@ -144,9 +144,9 @@ def cycle(memoire, moteur_config, client, brouteur=None, rng=random):
     bilan = digerer(memoire, moteur_config, client, source, texte, nb_bouchees=1, famille=famille)
     if famille:                                     # un sujet de son programme : elle connaît sa famille
         from .autodidacte import apprendre_du_programme
-        from .corrections import reviser_tout
+        from .corrections import reviser
         if apprendre_du_programme(memoire, sujet, famille):
-            bilan["revisions"] = (bilan.get("revisions") or []) + reviser_tout(memoire)
+            bilan["revisions"] = (bilan.get("revisions") or []) + [reviser(memoire, "familles_sciences")]
     injections = 0
     for d in bilan["digestions"]:                    # invention : chaque concept relié au contrôle de gestion
         if d["analogie"]:
@@ -158,7 +158,9 @@ def cycle(memoire, moteur_config, client, brouteur=None, rng=random):
     bilan.update(sujet=sujet, injections=injections)
     try:                                            # puis une séance de pratique délibérée dans une matière
         from .autodidacte import pratiquer
+        from .corrections import reviser_tout
         bilan["pratique"] = pratiquer(memoire)
+        bilan["revisions"] = (bilan.get("revisions") or []) + reviser_tout(memoire)   # ce qu'elle a appris d'elle-même
     except Exception as e:
         bilan["pratique"] = {"erreur": str(e)[:120]}
     return bilan

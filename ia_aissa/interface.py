@@ -641,8 +641,8 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
         st.session_state["conversation_id"] = mem.nouvelle_conversation(utilisateur, question or "Fichier")
     mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "user", question or "(fichier)")
     mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "assistant", texte)
-    if mem.corrections_de(seulement_nouvelles=True):
-        reviser_tout(mem)
+    if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)):
+        reviser_tout(mem)               # les corrections d'une personne comptent tout de suite
     if r["cle_api"] and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
         try:
             etude = etudier_seule(mem, r["config"], client_moteur(r["moteur"], r["cle_api"]))

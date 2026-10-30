@@ -104,26 +104,26 @@ def historique_pratique(memoire):
 # ==========================================
 def apprendre_de_soi(memoire, question, conclusion):
     """Si analogie et école étaient d'accord et sûres, la question devient un exemple d'apprentissage."""
-    from .corrections import corriger
+    from .corrections import valider_reponse
     if not conclusion or not conclusion.get("accord") or conclusion.get("confiance", 0) < SEUIL_AUTO:
         return False
-    if not 6 <= len(question) <= 300:
+    if not 6 <= len(question) <= 300 or conclusion["cle"] in ("orientation", "langues"):
         return False
-    try:
-        corriger(memoire, "IA AISSA", conclusion["cle"], question, conclusion["reponse"], source=SOURCE_AUTO)
-        return True
-    except ValueError:
+    officielle = valider_reponse(conclusion["cle"], conclusion["reponse"])
+    if officielle is None:
         return False
+    # révisée en arrière-plan par le travailleur autonome, jamais pendant la conversation
+    memoire.ajouter_correction("IA AISSA", conclusion["cle"], question, officielle, SOURCE_AUTO)
+    return True
 
 
 def apprendre_du_programme(memoire, sujet, famille):
     """Elle lit un sujet de son propre programme : elle en connaît la famille, elle s'en sert pour se corriger
     (son cerveau « Grandes familles de sciences » apprend « photosynthèse → Sciences naturelles »)."""
-    from .corrections import corriger
     reponse = {"Sciences humaines et gestion": "Sciences humaines et sociales"}.get(famille, famille)
     if reponse not in PAR_CLE["familles_sciences"].actions:
         return False
     if repondre("familles_sciences", sujet, top=1)[0]["reponse"] == reponse:
         return False                                  # elle le savait déjà
-    corriger(memoire, "IA AISSA", "familles_sciences", sujet, reponse, source=SOURCE_AUTO)
-    return True
+    memoire.ajouter_correction("IA AISSA", "familles_sciences", sujet, reponse, SOURCE_AUTO)   # pas l'aiguilleur :
+    return True                                                                           # trop lourd à chaque repas
