@@ -30,7 +30,12 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Langues : choisir dans l'atelier la phrase où le score est le plus faible (répétition espacée) et proposer la version en écriture arabe
 - [ ] Mobile : tester aussi en 360 px (petits Android) et en mode paysage ; bouton « remonter à l'alien » quand la conversation est longue
 
+- [ ] Fiscalité : faire vérifier par la lecture du CGI de chaque exercice (PDF déposés) les taux sectoriels de TVA à 10 % et les régimes transitoires d'IS, puis les encoder exercice par exercice
+- [ ] Obligations : rappel de la prochaine échéance dans le chat (« qu'est-ce que je dois payer ce mois-ci ? ») à partir du profil enregistré
+- [ ] Simulations : export Excel des tableaux (échéancier, business plan, état 9421) en plus du PDF
+
 ## Fait
+- [x] Choix « Chat » ou « Simulations et guides » ; 62 simulations et guides en 13 types : obligations et feuille de route, impôts décortiqués (IR, IS, TVA, état 9421, revenu global, loyers, attestations et classement), business plan sur 5 ans, sensibilité, plan de financement, échéancier daté avec différé, assurance et TEG, amortissement au prorata (CGI art. 10), bulletin de paie à l'envers depuis le net
 
 - [x] Broutage autonome poli (robots.txt, délais, repos sur 429, identité honnête) sur Wikipédia et arXiv, rumination, injection des analogies dans l'atelier d'invention, croissance en direct
 - [x] Espace unique : l'alien et une ligne de conversation (texte, voix, fichiers), rôles dynamiques (programmeur avec exécution de code, prof/savant, contrôleur de gestion, inventeur, lecteur, compagnon)

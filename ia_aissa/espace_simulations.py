@@ -13,19 +13,32 @@ from . import simulations as S
 from .rapports import journaliser, markdown, pdf, rapport
 
 CATEGORIES = {
+    "🧭 Mes obligations (guide)": ["Mes impôts et déclarations (calendrier)", "Feuille de route du débutant",
+                                   "Documents et attestations de régularité"],
+    "📚 Impôts décortiqués": ["IR décortiqué", "IS décortiqué", "TVA décortiquée", "État 9421 (traitements et salaires)",
+                             "Déclaration du revenu global (personnes physiques)", "Revenus fonciers (loyers) décortiqués"],
     "🧾 Fiscalité": ["IR (impôt sur le revenu)", "IS (impôt sur les sociétés)", "TVA due ou crédit de TVA",
+                    "Revenus fonciers (loyers)", "Retenue sur dividendes", "Pénalités de retard (IS, TVA, IR)",
                     "Auto-entrepreneur", "Douane à l'importation"],
-    "👥 RH et paie": ["Bulletin de paie complet", "Paie (brut ↔ net)", "Heures supplémentaires",
-                     "Indemnité de licenciement", "Congés payés"],
-    "📒 Comptabilité": ["Amortissement", "Seuil de rentabilité", "Prix de vente et marges"],
-    "🏦 Banque": ["Crédit (échéancier)", "Capacité d'emprunt", "Épargne (intérêts composés)"],
+    "👥 RH et paie": ["Bulletin de paie complet", "Paie (brut ↔ net)", "État 9421 (préparation)",
+                     "Masse salariale et augmentation", "Heures supplémentaires", "Indemnité de licenciement",
+                     "Congés payés", "Retraite CNSS (pension)"],
+    "📊 Projets et business plans": ["Business plan sur 5 ans", "Étude de sensibilité du projet",
+                                    "Plan de financement initial"],
+    "📒 Comptabilité": ["Amortissement", "Seuil de rentabilité", "Prix de vente et marges", "Coût de revient complet",
+                       "Ratios financiers (bilan)"],
+    "🏦 Banque": ["Crédit (échéancier)", "TEG d'un crédit", "Capacité d'emprunt", "Leasing ou crédit",
+                 "Épargne (intérêts composés)"],
     "💰 Finance": ["Investissement (VAN, TRI)", "Besoin en fonds de roulement (BFR)", "Trésorerie sur 12 mois",
-                  "Risque de perte (Monte-Carlo)"],
-    "🛠️ Technique": ["Consommation électrique", "Stock optimal (Wilson)"],
-    "🏗️ Bâtiment": ["Béton (ciment, sable, gravier)", "Peinture", "Carrelage"],
-    "🏠 Immobilier": ["Rentabilité locative"],
-    "☀️ Énergie": ["Énergie solaire (photovoltaïque)"],
-    "📈 Statistiques et prévision": ["Croissance et projection (TCAM)"],
+                  "Valorisation d'entreprise (DCF)", "Effet de levier financier", "Risque de perte (Monte-Carlo)"],
+    "🛠️ Technique": ["Consommation électrique", "Section de câble électrique", "Pompe (puissance et coût)",
+                    "Stock optimal (Wilson)"],
+    "🏗️ Bâtiment": ["Béton (ciment, sable, gravier)", "Ferraillage (poids d'acier)", "Maçonnerie (blocs et mortier)",
+                   "Peinture", "Carrelage"],
+    "🏠 Immobilier": ["Rentabilité locative", "Frais d'acquisition immobilière", "Acheter ou louer"],
+    "☀️ Énergie": ["Énergie solaire (photovoltaïque)", "Chauffe-eau solaire", "Groupe électrogène"],
+    "📈 Statistiques et prévision": ["Croissance et projection (TCAM)", "Tendance et prévision (régression)",
+                                    "Taille d'échantillon (sondage)"],
 }
 CODE_TRAVAIL = "Loi n° 65-99 relative au Code du travail"
 CNSS_AMO = ("CNSS : Dahir portant loi n° 1-72-184 du 27 juillet 1972 relatif au régime de sécurité sociale ; AMO : loi "
@@ -59,11 +72,30 @@ def barre_laterale():
                     if st.button(("▶ " if actif else "") + nom, key=f"sim_{nom}", width="stretch",
                                  type="primary" if actif else "secondary"):
                         st.session_state["simulation"] = nom
+                        st.session_state["mode_visiteur"] = MODES[1]
                         st.rerun()
         if st.session_state.get("simulation") and st.button("✖ Fermer la simulation", width="stretch"):
             st.session_state.pop("simulation")
+            st.session_state["mode_visiteur"] = MODES[0]
             st.rerun()
     return st.session_state.get("simulation")
+
+
+MODES = ["💬 Chat avec IA AISSA", "🧮 Simulations et guides"]
+
+
+def choix_principal():
+    """Sur mobile, la barre latérale est cachée : le même choix, par type puis par simulation, dans la page."""
+    c = st.columns(2)
+    actuelle = st.session_state.get("simulation")
+    types = list(CATEGORIES)
+    t = c[0].selectbox("Type", types, index=types.index(categorie_de(actuelle)) if actuelle else 0, key="choix_type")
+    noms = CATEGORIES[t]
+    n = c[1].selectbox("Simulation ou guide", noms, index=noms.index(actuelle) if actuelle in noms else 0, key="choix_sim")
+    if n != actuelle:
+        st.session_state["simulation"] = n
+        st.rerun()
+    return n
 
 
 def categorie_de(nom):
@@ -260,7 +292,13 @@ def construire(nom, memoire):
         capital = c[0].number_input("Capital (DH)", 0.0, value=200_000.0, step=10_000.0, key="cr_cap")
         taux = c[1].number_input("Taux annuel (%)", 0.0, 30.0, 5.0, 0.1, key="cr_taux") / 100
         ans = c[2].number_input("Durée (ans)", 1, 30, 10, key="cr_ans")
-        x = S.echeancier_credit(capital, taux, ans * 12)
+        c2 = st.columns(4)
+        deblocage = c2[0].date_input("Date de déblocage", value=datetime.date.today(), key="cr_date", format="DD/MM/YYYY")
+        differe = c2[1].number_input("Différé (mois, intérêts seuls)", 0, 36, 0, key="cr_diff")
+        assurance = c2[2].number_input("Assurance (DH/mois)", 0.0, value=0.0, step=10.0, key="cr_ass")
+        frais = c2[3].number_input("Frais de dossier (DH)", 0.0, value=0.0, step=100.0, key="cr_frais")
+        x = S.echeancier_credit(capital, taux, ans * 12, deblocage, differe, assurance)
+        teg = S.taux_effectif_global(capital, taux, ans * 12, frais, assurance) if not differe else None
         plus_court = S.echeancier_credit(capital, taux, max(12, (ans - 2) * 12))
         conseils = [f"Sur {ans - 2} ans au lieu de {ans} : mensualité {dh(plus_court['mensualite'])} (+"
                     f"{dh(plus_court['mensualite'] - x['mensualite'])}) mais {dh(x['cout_total'] - plus_court['cout_total'])} "
@@ -269,21 +307,39 @@ def construire(nom, memoire):
                     f"moins économise environ {dh(x['cout_total'] - S.echeancier_credit(capital, max(0, taux - 0.005), ans * 12)['cout_total'])}.",
                     "Vérifiez les indemnités de remboursement anticipé prévues au contrat avant de signer."]
         return rapport(nom, categorie_de(nom), {"Capital": dh(capital), "Taux nominal annuel": pc(taux),
-                                                "Durée": f"{ans} ans ({ans * 12} mois)"},
-                       {"Mensualité": dh(x["mensualite"]), "Coût des intérêts": dh(x["cout_total"]),
-                        "Total remboursé": dh(x["total_rembourse"])},
+                                                "Durée": f"{ans} ans ({ans * 12} mois)",
+                                                "Date de déblocage": deblocage.strftime("%d/%m/%Y"),
+                                                "Différé": f"{differe} mois", "Assurance": dh(assurance) + "/mois",
+                                                "Frais de dossier": dh(frais)},
+                       {"Mensualité (hors assurance)": dh(x["mensualite"]),
+                        "Première échéance": x["premiere_echeance"], "Dernière échéance": x["derniere_echeance"],
+                        "Coût des intérêts": dh(x["cout_total"]), "Total remboursé": dh(x["total_rembourse"]),
+                        "Coût de l'assurance": dh(assurance * ans * 12),
+                        "TEG (frais et assurance compris)": pc(teg["teg"]) if teg else "non calculé avec un différé"},
                        ["Mensualité constante M = C × t / (1 − (1 + t)^−n), avec t = taux annuel ÷ 12 et n = nombre de mois.",
                         f"M = {dh(capital)} × {taux / 12:.6f} / (1 − (1 + {taux / 12:.6f})^−{ans * 12}) = {dh(x['mensualite'])}.",
-                        "Chaque mois : intérêts = capital restant × t ; capital remboursé = M − intérêts."],
+                        "Chaque mois : intérêts = capital restant × t ; capital remboursé = M − intérêts.",
+                        "Échéances datées un mois après le déblocage, puis de mois en mois (fin de mois si le jour "
+                        "n'existe pas) ; pendant le différé, seuls les intérêts sont payés et M est calculée sur les "
+                        "mois restants.",
+                        "TEG : taux annuel qui égalise le capital reçu (moins les frais) et toutes les sommes payées "
+                        "(mensualités et assurance), comme l'exige l'information du consommateur."],
                        ["Formule de l'annuité constante (mathématiques financières)",
                         "Loi n° 31-08 édictant des mesures de protection du consommateur (information sur le crédit, TEG)"],
                        remarques=["Hors assurance, frais de dossier et garanties : le taux effectif global (TEG) de la "
-                                  "banque est plus élevé que le taux nominal."], tableau=x["tableau"], conseils=conseils)
+                                  "banque est plus élevé que le taux nominal.",
+                                  "Récapitulatif par année civile : " + " ; ".join(
+                                      f"{int(l['Année'])} : intérêts {dh(l['Intérêts'])}, capital {dh(l['Capital remboursé'])}"
+                                      for l in x["par_annee"].to_dict("records"))],
+                       tableau=x["tableau"], conseils=conseils + ([
+                           f"Le différé de {differe} mois coûte {dh(x['cout_total'] - S.echeancier_credit(capital, taux, ans * 12)['cout_total'])} "
+                           "d'intérêts en plus : ne le prenez que si le projet ne produit pas encore de revenus."] if differe else []))
     if nom == "Épargne (intérêts composés)":
         versement = c[0].number_input("Versement mensuel (DH)", 0.0, value=500.0, step=100.0, key="ep_ver")
         taux = c[1].number_input("Rendement annuel (%)", 0.0, 20.0, 4.0, 0.1, key="ep_taux") / 100
         ans = c[2].number_input("Durée (ans)", 1, 50, 10, key="ep_ans")
-        x = S.epargne(versement, taux, ans)
+        debut_ep = st.number_input("Année du premier versement", 2000, 2100, datetime.date.today().year, key="ep_deb")
+        x = S.epargne(versement, taux, ans, annee_debut=debut_ep)
         conseils = [f"Commencer tôt compte plus que le montant : sur {ans} ans, les intérêts représentent "
                     f"{x['interets'] / max(x['capital_final'], 1):.0%} du capital final.",
                     "Comparez les produits d'épargne (rendement, fiscalité des produits de placement, disponibilité)."]
@@ -357,16 +413,19 @@ def construire(nom, memoire):
                                                    "80000; 85000; 80000", key="tr_d")
         try:
             lire = lambda t: [float(v.replace(" ", "").replace(",", ".")) for v in t.split(";") if v.strip()]
-            x = S.tresorerie(solde, lire(enc), lire(dec))
+            depart = st.date_input("Premier mois du plan", value=datetime.date.today().replace(day=1), key="tr_m",
+                                   format="DD/MM/YYYY")
+            x = S.tresorerie(solde, lire(enc), lire(dec), depart)
         except ValueError:
             st.error("Écris les montants comme ceci : 80000; 60000; 90000")
             return None
-        conseils = ([f"Découvert prévu au mois {x['premier_mois_a_decouvert']} : négociez dès maintenant une facilité de "
+        conseils = ([f"Découvert prévu en {x['periode_decouvert']} (besoin maximal {dh(x['besoin_maximal'])}) : négociez dès maintenant une facilité de "
                      "caisse, décalez un investissement ou accélérez l'encaissement des créances."]
                     if x["premier_mois_a_decouvert"] else ["Trésorerie toujours positive : placez l'excédent à court terme."])
         return rapport(nom, categorie_de(nom), {"Solde de départ": dh(solde), "Encaissements": enc, "Décaissements": dec},
                        {"Solde final": dh(x["solde_final"]), "Solde le plus bas": dh(x["solde_minimum"]),
-                        "Premier mois à découvert": x["premier_mois_a_decouvert"] or "aucun"},
+                        "Premier mois à découvert": x["periode_decouvert"] or "aucun",
+                        "Besoin de financement maximal": dh(x["besoin_maximal"])},
                        ["Solde de fin de mois = solde précédent + encaissements − décaissements.",
                         "Un solde négatif signale un besoin de financement (découvert, facilité de caisse)."],
                        ["Plan de trésorerie (gestion financière à court terme)"], tableau=x["tableau"], conseils=conseils)
@@ -374,22 +433,54 @@ def construire(nom, memoire):
         valeur = c[0].number_input("Valeur d'acquisition HT (DH)", 0.0, value=100_000.0, step=5_000.0, key="am_v")
         ans = c[1].number_input("Durée (ans)", 1, 40, 5, key="am_n")
         methode = c[2].radio("Méthode", ["lineaire", "degressif"], format_func=str.capitalize, key="am_m")
-        x = S.amortissement(valeur, ans, methode)
+        c2 = st.columns(3)
+        nature = c2[0].selectbox("Nature du bien", ["Matériel, outillage, mobilier, informatique",
+                                                    "Véhicule de transport de personnes", "Construction"], key="am_nat")
+        service = c2[1].date_input("Date d'acquisition ou de mise en service", value=datetime.date(2026, 1, 1),
+                                   key="am_date", format="DD/MM/YYYY")
+        valeur_ttc = valeur
+        remarques_am = ["Exercices supposés calés sur l'année civile (1er janvier – 31 décembre)."]
+        if nature != "Matériel, outillage, mobilier, informatique" and methode == "degressif":
+            methode = "lineaire"
+            st.info("Dégressif exclu pour les constructions et les véhicules de transport de personnes (CGI, art. 10) : "
+                    "linéaire appliqué.")
+            remarques_am.append("Dégressif exclu pour ce bien : plan linéaire.")
+        if methode == "degressif" and ans < 3:
+            methode = "lineaire"
+            remarques_am.append("Durée inférieure à 3 ans : plan linéaire.")
+        if nature == "Véhicule de transport de personnes":
+            valeur_ttc = c2[2].number_input("Valeur TTC du véhicule (DH)", 0.0, value=valeur * 1.2, step=5_000.0,
+                                            key="am_ttc")
+            if ans < 5:
+                ans = 5
+                remarques_am.append("Véhicule de tourisme : taux d'amortissement de 20 % par an (5 ans).")
+        base_deductible = min(valeur_ttc, 300_000) if nature == "Véhicule de transport de personnes" else valeur
+        x = S.amortissement(base_deductible, ans, methode, service.month, service.year)
+        if nature == "Véhicule de transport de personnes" and valeur_ttc > 300_000:
+            remarques_am.append(f"Base déductible plafonnée à 300 000 DH TTC : la part au-delà ({dh(valeur_ttc - 300_000)}) "
+                                "n'est pas déductible (CGI, art. 10-I-F-1-b) — à réintégrer au résultat fiscal.")
         etapes = (["Dotation annuelle = valeur ÷ durée."] if methode == "lineaire" else
                   [f"Taux dégressif = (1 ÷ durée) × coefficient = (1 ÷ {ans}) × {x['coefficient']} = {pc(x['taux'])}.",
                    "Coefficients : 1,5 (3 ou 4 ans), 2 (5 ou 6 ans), 3 (plus de 6 ans).",
                    "Dotation = valeur nette comptable × taux ; passage au linéaire dès qu'il donne davantage."])
-        lin = S.amortissement(valeur, ans, "lineaire")["tableau"]["Dotation"].iloc[0]
-        deg = S.amortissement(valeur, ans, "degressif")["tableau"]["Dotation"].iloc[0] if ans >= 3 else lin
+        etapes.append(f"Point de départ : 1er jour du mois de mise en service ({service.strftime('%m/%Y')}) ; première "
+                      f"annuité au prorata ({13 - service.month}/12), plan sur {x['exercices']} exercices.")
+        lin = S.amortissement(base_deductible, ans, "lineaire", service.month)["tableau"]["Dotation"].iloc[0]
+        deg = (S.amortissement(base_deductible, ans, "degressif", service.month)["tableau"]["Dotation"].iloc[0]
+               if ans >= 3 and nature.startswith("Matériel") else lin)
         conseils = [f"Le dégressif déduit {dh(deg - lin)} de plus la première année : environ {dh((deg - lin) * 0.20)} "
                     "d'IS reporté (au taux de 20 %), utile pour la trésorerie d'une entreprise bénéficiaire."
                     if deg > lin else "Durée trop courte pour le dégressif : le linéaire s'applique.",
                     "L'option pour le dégressif se fait bien par bien et dans les règles du CGI : documentez-la."]
-        return rapport(nom, categorie_de(nom), {"Valeur": dh(valeur), "Durée": f"{ans} ans", "Méthode": methode},
-                       {"Première dotation": dh(x["tableau"]["Dotation"].iloc[0]),
+        return rapport(nom, categorie_de(nom), {"Valeur": dh(valeur), "Nature": nature, "Durée": f"{ans} ans",
+                                                "Méthode": methode, "Mise en service": service.strftime("%d/%m/%Y")},
+                       {"Base amortissable": dh(base_deductible),
+                        f"Dotation {service.year}": dh(x["tableau"]["Dotation"].iloc[0]),
+                        "Dernier exercice": int(x["tableau"]["Exercice"].iloc[-1]),
                         "Total amorti": dh(x["tableau"]["Dotation"].sum())},
-                       etapes, ["CGI, art. 10 (dotations aux amortissements déductibles)",
-                                "Code général de normalisation comptable (CGNC)"], 2026, tableau=x["tableau"], conseils=conseils)
+                       etapes, ["CGI, art. 10-I-F-1-b (amortissements : point de départ, dégressif, véhicules)",
+                                "Loi n° 9-88 et Code général de normalisation comptable (CGNC)"], service.year,
+                       tableau=x["tableau"], remarques=remarques_am, conseils=conseils)
     if nom == "Stock optimal (Wilson)":
         d = c[0].number_input("Demande annuelle (unités)", 0.0, value=12_000.0, key="st_d")
         cp = c[1].number_input("Coût d'une commande (DH)", 0.0, value=500.0, key="st_cp")
@@ -554,7 +645,13 @@ def construire(nom, memoire):
                         "Carreaux = surface à commander ÷ surface d'un carreau, arrondi au-dessus."],
                        ["Pratique de chantier : 10 % de marge pour la pose droite (15 % en diagonale)"], conseils=conseils)
     if nom == "Bulletin de paie complet":
-        base = c[0].number_input("Salaire de base mensuel (DH)", 0.0, value=8000.0, step=250.0, key="bp_base")
+        sens = st.radio("Je connais", ["le salaire de base (calcul à l'endroit)", "le salaire net (calcul à l'envers)"],
+                        horizontal=True, key="bp_sens")
+        a_l_envers = sens.startswith("le salaire net")
+        if a_l_envers:
+            net_vise = c[0].number_input("Salaire net à payer voulu (DH)", 0.0, value=7000.0, step=250.0, key="bp_net")
+        else:
+            base = c[0].number_input("Salaire de base mensuel (DH)", 0.0, value=8000.0, step=250.0, key="bp_base")
         anc = c[1].number_input("Ancienneté (années)", 0, 50, 6, key="bp_anc")
         pac = c[2].number_input("Personnes à charge", 0, 10, 2, key="bp_pac")
         c2 = st.columns(3)
@@ -562,6 +659,10 @@ def construire(nom, memoire):
                                  help="500 DH selon la LF 2025 ; certaines sources annoncent 600 DH pour 2026 : "
                                       "saisissez le montant de la loi de finances de l'année.")
         indem = c2[1].number_input("Indemnités exonérées (DH/mois)", 0.0, value=0.0, step=50.0, key="bp_ind")
+        if a_l_envers:
+            base = S.base_pour_net(net_vise, anc, pac, ded, indem)
+            st.success(f"Pour un net de {dh(net_vise)}, le salaire de base à inscrire au contrat est de **{dh(base)}** "
+                       "(bulletin détaillé ci-dessous).")
         x = S.paie_complete(base, anc, pac, ded, indem)
         patronal = " ; ".join(f"{k} {dh(v)}" for k, v in x["patronal"].items())
         conseils = []
@@ -575,7 +676,9 @@ def construire(nom, memoire):
         if not indem:
             conseils.append("Indemnités exonérées (transport, panier…) justifiées : même net à coût moindre, mais droits "
                             "CNSS calculés sur un brut plus bas — à décider en connaissance de cause.")
-        return rapport(nom, categorie_de(nom), {"Année de référence": 2026, "Salaire de base": dh(base),
+        return rapport(nom, categorie_de(nom), {"Année de référence": 2026, "Calcul": sens,
+                                                **({"Net voulu": dh(net_vise)} if a_l_envers else {}),
+                                                "Salaire de base": dh(base),
                                                 "Ancienneté": f"{anc} ans", "Personnes à charge": pac,
                                                 "Déduction par personne": dh(ded), "Indemnités exonérées": dh(indem)},
                        {"Prime d'ancienneté": f"{dh(x['prime_anciennete'])} ({pc(x['taux_prime'])})",
@@ -657,4 +760,5 @@ def construire(nom, memoire):
                        ["TCAM = (valeur d'arrivée ÷ valeur de départ)^(1 ÷ années) − 1.",
                         "Projection : valeur × (1 + TCAM) chaque année."],
                        ["Statistiques descriptives (taux de croissance composé)"], tableau=x["tableau"], conseils=conseils)
-    return None
+    from .espace_simulations_plus import construire_plus
+    return construire_plus(nom, memoire, c)

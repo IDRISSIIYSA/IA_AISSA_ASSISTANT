@@ -954,14 +954,18 @@ def espace_visiteur():
         st.session_state["parole"] = {"texte": texte, "audio": _dire(salut, "Darija"), "voix": "ar-MA",
                                       "nouveau": True}
 
-    from .espace_simulations import afficher as afficher_simulation, barre_laterale
-    simulation = barre_laterale()                  # la liste des simulations, classées par type, à gauche
-    if simulation:
+    from .espace_simulations import MODES, afficher as afficher_simulation, barre_laterale, choix_principal
+    barre_laterale()                               # la liste des simulations, classées par type, à gauche
+    if st.session_state.get("mode_visiteur") not in MODES:
+        st.session_state["mode_visiteur"] = MODES[0]
+    mode = st.segmented_control("Que veux-tu faire ?", MODES, key="mode_visiteur", label_visibility="collapsed",
+                                width="stretch") or MODES[0]
+    if mode == MODES[1]:                           # mode Simulations : pas de chat, toute la page pour le calcul
         with st.container(border=True):
-            afficher_simulation(simulation, mem)
-    else:
-        st.caption("🧮 Simulations (fiscalité, RH, comptabilité, banque, finance, technique, bâtiment) : ouvre la barre "
-                   "latérale ‹ en haut à gauche.")
+            afficher_simulation(choix_principal(), mem)
+        if PAGE_ADMIN is not None:
+            st.page_link(PAGE_ADMIN, label="🛡️ Administration (réservée)")
+        return
     if PAGE_ADMIN is not None:
         st.page_link(PAGE_ADMIN, label="🛡️ Administration (réservée)")
 

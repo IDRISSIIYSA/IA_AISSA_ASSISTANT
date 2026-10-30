@@ -356,3 +356,68 @@ def test_paie_complete_conseils_et_barre_repliable():
     assert S.paie_complete(3000)["sous_smig"] and not S.paie_complete(4000)["sous_smig"]  # 17,92 × 191 = 3 422,72
     assert K.taux_prime_anciennete(1) == 0 and K.taux_prime_anciennete(25) == 0.25
     assert len(CATEGORIES) >= 10 and sum(len(v) for v in CATEGORIES.values()) >= 28
+
+
+def test_echeancier_date_amortissement_prorata_et_paie_a_l_envers():
+    import datetime
+    from ia_aissa import simulations as S
+    e = S.echeancier_credit(200_000, 0.05, 120, datetime.date(2026, 1, 31))
+    assert e["tableau"]["Échéance"].iloc[0] == "28/02/2026" and e["derniere_echeance"] == "31/01/2036"
+    assert e["mensualite"] == 2121.31 and e["par_annee"]["Année"].iloc[0] == 2026
+    d = S.echeancier_credit(100_000, 0.06, 24, datetime.date(2026, 1, 1), differe_mois=3)
+    assert d["tableau"]["Capital remboursé"].iloc[:3].sum() == 0 and d["tableau"]["Capital restant dû"].iloc[-1] == 0
+    a = S.amortissement(100_000, 5, "lineaire", 7, 2026)["tableau"]
+    assert a["Dotation"].iloc[0] == 10_000 and a["Exercice"].iloc[-1] == 2031 and a["Dotation"].sum() == 100_000
+    assert S.amortissement(100_000, 5, "degressif")["tableau"]["Dotation"].tolist() == [40000, 24000, 14400, 10800, 10800]
+    base = S.base_pour_net(7_000, 6, 2)
+    assert abs(S.paie_complete(base, 6, 2)["net"] - 7_000) <= 0.01
+    assert S.retenue_dividendes(100_000, 2026)["taux"] == 0.1125 and S.RAS_DIVIDENDES[2027] == 0.10
+
+
+def test_business_plan_obligations_et_impots_decortiques():
+    import datetime
+    from ia_aissa import decortiqueur as D, obligations as O, projets as P
+    p = dict(ca_annee1=1_200_000, croissance_ca=0.10, taux_couts_variables=0.45, charges_fixes=450_000,
+             hausse_charges_fixes=0.03, investissement=500_000, duree_amortissement=5, apport=200_000, emprunt=400_000,
+             taux_emprunt=0.06, duree_emprunt_ans=5, delai_clients_jours=60, delai_fournisseurs_jours=30, stock_jours=30,
+             taux_actualisation=0.10, annee_debut=2026, mois_debut=3)
+    bp = P.business_plan(**p)
+    cr = bp["compte_de_resultat"]
+    assert cr["Exercice"].tolist() == [2026, 2027, 2028, 2029, 2030]
+    assert cr["Chiffre d'affaires"].iloc[0] == 1_000_000                  # 10 mois sur 12 la 1re année
+    assert cr["IS"].iloc[0] == round(cr["Résultat avant impôt"].iloc[0] * 0.20, 2)   # < 36 mois : pas de CM
+    assert bp["van"] > 0 and 0 < bp["tri"] < 1 and bp["dscr_min"] > 1.2
+    s = P.sensibilite(p)
+    assert 0 < s["baisse_critique_des_ventes"] < 0.5 and len(s["tableau"]) == len(P.SCENARIOS)
+    cal = O.calendrier(O.FORMES[0], 2026, datetime.date(2022, 1, 1), 2_000_000, 3, 24_000, 80_000, 30_000,
+                       datetime.date(2026, 10, 30))
+    t = cal["tableau"]
+    assert (t["Obligation"].str.contains("acompte provisionnel").sum() == 4
+            and t["Obligation"].str.contains("TVA du mois").sum() == 12
+            and t["Obligation"].str.contains("9421").sum() == 1)
+    assert cal["prochaine"]["Date limite"] == "31/10/2026"
+    ae = O.calendrier(O.FORMES[2], 2026, datetime.date(2025, 1, 1), 150_000, 0, 0, 0)["tableau"]
+    assert len(ae) == 4 and not ae["Obligation"].str.contains("TVA").any()
+    f = D.revenus_fonciers(96_000, 120_000, 2026)
+    assert f["net_foncier"] == 57_600 and f["taux_ras"] == 0.10 and f["ras"] == 9_600 and f["option_20"] == 19_200
+    assert D.revenus_fonciers(30_000, 0, 2026)["dispense"]
+    e = D.etat_9421([("A", 96_000, 5_370, 2, 0)], 2026)
+    assert e["ecarts"] == ["A"] and e["total_brut"] == 96_000
+    assert {"IR décortiqué", "IS décortiqué", "TVA décortiquée", "Documents et attestations de régularité"} <= set(D.FICHES)
+
+
+def test_choix_entre_chat_et_simulations(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    from ia_aissa.espace_simulations import CATEGORIES, MODES
+    assert len(CATEGORIES) >= 13 and sum(len(v) for v in CATEGORIES.values()) >= 60
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300)
+    at.run()
+    assert not at.exception and at.session_state["mode_visiteur"] == MODES[0] and len(at.chat_input) == 1
+    at.session_state["mode_visiteur"] = MODES[1]
+    at.session_state["simulation"] = "Business plan sur 5 ans"
+    at.run()
+    assert not at.exception and len(at.chat_input) == 0
+    assert any("Compte de résultat prévisionnel" in m.value for m in at.markdown)
