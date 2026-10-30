@@ -68,7 +68,7 @@ def broutage_autonome():
         return ETAT
     moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"])), None)
     par_jour = int(secret("BROUTAGE_PAR_JOUR") or 6)
-    if moteur is None:                  # sans clé : elle broute, rumine et s'exerce seule
-        return demarrer(memoire(), None, lambda: None, par_jour)
+    if moteur is None:                  # sans clé : elle broute, rumine et s'exerce seule (aucun coût d'appel)
+        return demarrer(memoire(), None, lambda: None, int(secret("BROUTAGE_PAR_JOUR") or 24))
     cle = secret(MOTEURS[moteur]["secret"])
     return demarrer(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle), par_jour)

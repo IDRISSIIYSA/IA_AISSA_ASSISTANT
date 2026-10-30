@@ -85,8 +85,8 @@ def test_cycle_complet_rumination_et_injection(reseau, tmp_path, monkeypatch):
     mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
     C.brancher(mem)
     _, file = reseau
-    file += [Reponse(200, json.dumps({"query": {"search": [{"title": "Contrôle de gestion"}]}})),
-             Reponse(200, json.dumps({"query": {"pages": {"1": {"extract": ARTICLE}}}}))]
+    file += [Reponse(200, "<html><title>Contrôle de gestion</title><body>"           # l'article lui-même (/wiki/)
+                          + "".join(f"<p>{p}</p>" for p in ARTICLE.split(". ")) + "</body></html>")]
 
     def moteur(**kw):
         c = kw["messages"][0]["content"]

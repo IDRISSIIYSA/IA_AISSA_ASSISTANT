@@ -185,3 +185,12 @@ def test_apprendre_de_ses_propres_reponses(labo):
     assert any(c["source"] == "auto-apprentissage" for c in mem.corrections_de("histoire"))
     assert not apprendre_de_soi(mem, "bla bla bla", {"cle": "histoire", "reponse": "Almohades (1121-1269)",
                                                    "confiance": 0.5, "accord": True})        # pas assez sûre
+
+
+def test_elle_se_corrige_avec_son_programme(labo):
+    from ia_aissa.autodidacte import apprendre_du_programme, forme_originale
+    mem, _ = labo
+    assert forme_originale("photosynthese", "La photosynthèse des plantes") == "Photosynthèse"
+    assert apprendre_du_programme(mem, "photosynthèse", "Sciences naturelles")
+    assert mem.corrections_de("familles_sciences")[0]["bonne_reponse"] == "Sciences naturelles"
+    assert not apprendre_du_programme(mem, "théorie des graphes", "Sciences formelles")     # déjà su

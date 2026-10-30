@@ -181,7 +181,8 @@ def exercices_pour_ecole(moteur, client, concepts):
 # ==========================================
 # 3. Intégrer
 # ==========================================
-def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_bouchees=4, callback=None):
+def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_bouchees=4, callback=None,
+            famille=None):
     """Mange le texte (morceau par morceau), rumine, range les concepts et nourrit l'école. Renvoie le bilan."""
     if len(texte.strip()) < 200:
         raise ErreurBroutage("Pas assez de texte à manger (page vide, protégée ou scannée sans texte).")
@@ -190,7 +191,7 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
     for k, morceau in enumerate(morceaux, 1):
         if client is None:                          # sans moteur : IA AISSA rumine seule
             from .autodidacte import ruminer_local
-            d = ruminer_local(morceau, source)
+            d = ruminer_local(morceau, source, famille)
         else:
             d = ruminer(moteur, client, morceau, source)
         if d["concepts"]:

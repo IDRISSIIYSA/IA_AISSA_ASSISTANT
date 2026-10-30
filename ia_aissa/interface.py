@@ -667,6 +667,8 @@ def pouls_d_ia_aissa():
         if pratique.get("nom"):
             broutage += (f" · pratique seule en « {pratique['nom']} » : {pratique['avant']:.0%} → {pratique['apres']:.0%}"
                          + (" ✅ adoptée" if pratique["adoptee"] else " (gardée seulement si elle progresse)"))
+    elif etat.get("erreurs"):
+        broutage = f"broutage autonome actif, nouvel essai bientôt (dernier souci : {etat['erreurs'][-1]})"
     else:
         broutage = "broutage autonome actif, premier repas en cours"
     st.caption(f"🌱 {total} concepts maîtrisés · {broutage}")

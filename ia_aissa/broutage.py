@@ -35,6 +35,9 @@ SUJETS = {
     "Sciences appliquées": ["gestion de la chaîne logistique", "maintenance prédictive", "lean management",
                             "agriculture de précision", "économie circulaire", "dessalement de l'eau de mer"],
 }
+BANDEAUX = ("Pour les articles homonymes", "Cet article", "Si vous disposez", "Vous pouvez partager",
+            "Pour l'article", "Ne doit pas être confondu", "Cette section")
+REESSAI = 600                  # secondes avant de retenter un repas raté
 ETAT = {"actif": False, "dernier_repas": None, "repas_du_jour": 0, "jour": None, "erreurs": [], "prochain": None}
 
 
@@ -88,16 +91,20 @@ class Brouteur:
         return texte[:TAILLE_MAX_PAGE]
 
     def wikipedia(self, sujet, langue="fr"):
-        import json
-        api = f"https://{langue}.wikipedia.org/w/api.php"
-        resultats = json.loads(self.visiter(api, {"action": "query", "list": "search", "srsearch": sujet,
-                                                   "srlimit": 1, "format": "json"}))["query"]["search"]
-        if not resultats:
-            raise ErreurBroutage(f"Rien sur Wikipédia pour « {sujet} ».")
-        titre = resultats[0]["title"]
-        pages = json.loads(self.visiter(api, {"action": "query", "prop": "extracts", "explaintext": 1,
-                                               "titles": titre, "format": "json"}))["query"]["pages"]
-        return f"Wikipédia — {titre}", next(iter(pages.values()), {}).get("extract", "")[:TAILLE_MAX_PAGE]
+        """L'article lui-même (/wiki/Titre), seule partie de Wikipédia que son robots.txt ouvre aux robots :
+        son API et sa recherche leur sont fermées, et IA AISSA respecte cette règle."""
+        from urllib.parse import quote
+        titre = sujet.strip()
+        titre = titre[:1].upper() + titre[1:]
+        url = f"https://{langue}.wikipedia.org/wiki/{quote(titre.replace(' ', '_'))}"
+        try:
+            _, texte = texte_html(self.visiter(url))
+        except ErreurBroutage:
+            raise
+        except Exception as e:
+            raise ErreurBroutage(f"Pas d'article Wikipédia « {titre} » ({type(e).__name__}).") from e
+        utiles = [l for l in texte.splitlines() if not l.startswith(BANDEAUX)]
+        return f"Wikipédia — {titre}", "\n".join(utiles)[:TAILLE_MAX_PAGE]
 
     def arxiv(self, sujet, n=3):
         flux = self.visiter("https://export.arxiv.org/api/query",
@@ -130,8 +137,16 @@ def cycle(memoire, moteur_config, client, brouteur=None, rng=random):
         else:
             source, texte = brouteur.wikipedia(sujet)
     except ErreurBroutage:
-        source, texte = brouteur.wikipedia(sujet, langue="en")
-    bilan = digerer(memoire, moteur_config, client, source, texte, nb_bouchees=1)
+        if famille is None:                    # une lacune sans article à son nom : un sujet du programme
+            famille = rng.choice(list(SUJETS))
+            sujet = rng.choice(SUJETS[famille])
+        source, texte = brouteur.wikipedia(sujet)
+    bilan = digerer(memoire, moteur_config, client, source, texte, nb_bouchees=1, famille=famille)
+    if famille:                                     # un sujet de son programme : elle connaît sa famille
+        from .autodidacte import apprendre_du_programme
+        from .corrections import reviser_tout
+        if apprendre_du_programme(memoire, sujet, famille):
+            bilan["revisions"] = (bilan.get("revisions") or []) + reviser_tout(memoire)
     injections = 0
     for d in bilan["digestions"]:                    # invention : chaque concept relié au contrôle de gestion
         if d["analogie"]:
@@ -164,17 +179,19 @@ def demarrer(memoire, moteur_config, fabrique_client, par_jour=6):
             jour = datetime.now(timezone.utc).date()
             if ETAT["jour"] != jour:
                 ETAT.update(jour=jour, repas_du_jour=0)
+            attente = intervalle
             if ETAT["repas_du_jour"] < par_jour:
                 try:
                     bilan = cycle(memoire, moteur_config, fabrique_client(), brouteur)
                     ETAT["dernier_repas"] = {"quand": datetime.now(timezone.utc), "sujet": bilan["sujet"],
                                              "source": bilan["source"], "concepts": bilan["concepts"],
                                              "injections": bilan["injections"], "pratique": bilan.get("pratique")}
+                    ETAT["repas_du_jour"] += 1
                 except Exception as e:                  # réseau, site au repos, moteur indisponible…
                     ETAT["erreurs"] = (ETAT["erreurs"] + [f"{type(e).__name__} : {str(e)[:120]}"])[-5:]
-                ETAT["repas_du_jour"] += 1
-            ETAT["prochain"] = datetime.now(timezone.utc).timestamp() + intervalle
-            time.sleep(intervalle)
+                    attente = REESSAI                   # un repas raté est retenté bientôt, sans entamer le budget
+            ETAT["prochain"] = datetime.now(timezone.utc).timestamp() + attente
+            time.sleep(attente)
 
     threading.Thread(target=boucle, name="ia-aissa-broutage", daemon=True).start()
     return ETAT

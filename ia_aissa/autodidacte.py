@@ -34,8 +34,17 @@ def phrases(texte):
     return [p.strip() for p in re.split(r"(?<=[.!?])\s+|\n+", texte) if 40 <= len(p.strip()) <= 400]
 
 
-def ruminer_local(morceau, source=""):
-    """Rumination sans moteur : les mots-clés du texte et les phrases qui les portent le mieux."""
+def forme_originale(cle, texte):
+    """Le mot tel qu'il est écrit dans le texte (avec ses accents) : « photosynthese » -> « Photosynthèse »."""
+    for brut in re.findall(r"\w+", texte):
+        if len(brut) == len(cle) and mots(brut) == [cle]:
+            return brut[:1].upper() + brut[1:]
+    return cle.capitalize()
+
+
+def ruminer_local(morceau, source="", famille=None):
+    """Rumination sans moteur : les mots-clés du texte et les phrases qui les portent le mieux.
+    famille : la famille de sciences, si elle est déjà connue (sujet de son programme)."""
     frequences = collections.Counter(m for m in mots(morceau) if len(m) > 4 and m not in VIDES and not m.isdigit())
     cles = [m for m, n in frequences.most_common(12) if n >= 2]
     concepts, vus = [], set()
@@ -45,11 +54,13 @@ def ruminer_local(morceau, source=""):
             continue
         meilleure = max(candidates, key=lambda p: sum(frequences[m] for m in set(mots(p)) if m in cles))
         vus.add(meilleure)
-        concepts.append({"nom": cle.capitalize(), "explication": meilleure[:300]})
+        concepts.append({"nom": forme_originale(cle, meilleure), "explication": meilleure[:300]})
         if len(concepts) == 5:
             break
-    famille = repondre("familles_sciences", " ".join(cles) or morceau[:500], top=1)[0]["reponse"]
-    famille = famille if famille in FAMILLES_DIGESTION else "Sciences humaines et gestion"
+    if famille not in FAMILLES_DIGESTION:
+        titre = source.split("—", 1)[-1].strip()
+        famille = repondre("familles_sciences", f"{titre} {' '.join(cles[:4])}", top=1)[0]["reponse"]
+        famille = famille if famille in FAMILLES_DIGESTION else "Sciences humaines et gestion"
     return {"famille": famille, "concepts": concepts, "analogie": "",
             "confiance": round(min(0.6, 0.1 * len(concepts) + 0.1), 2)}
 
@@ -103,3 +114,16 @@ def apprendre_de_soi(memoire, question, conclusion):
         return True
     except ValueError:
         return False
+
+
+def apprendre_du_programme(memoire, sujet, famille):
+    """Elle lit un sujet de son propre programme : elle en connaît la famille, elle s'en sert pour se corriger
+    (son cerveau « Grandes familles de sciences » apprend « photosynthèse → Sciences naturelles »)."""
+    from .corrections import corriger
+    reponse = {"Sciences humaines et gestion": "Sciences humaines et sociales"}.get(famille, famille)
+    if reponse not in PAR_CLE["familles_sciences"].actions:
+        return False
+    if repondre("familles_sciences", sujet, top=1)[0]["reponse"] == reponse:
+        return False                                  # elle le savait déjà
+    corriger(memoire, "IA AISSA", "familles_sciences", sujet, reponse, source=SOURCE_AUTO)
+    return True
