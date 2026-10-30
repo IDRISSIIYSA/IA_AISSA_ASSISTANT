@@ -961,6 +961,7 @@ def espace_visiteur():
     if "affichage" not in st.session_state:
         ouvrir_conversation(utilisateur, None)
 
+    zone_mode = st.container()          # Chat ou Simulations : tout en haut, jamais caché par la barre de saisie
     zone_alien = st.container()
     haut = st.columns([5, 1.4])
     with haut[1]:
@@ -982,10 +983,25 @@ def espace_visiteur():
 
     from .espace_simulations import MODES, afficher as afficher_simulation, barre_laterale, choix_principal
     barre_laterale()                               # la liste des simulations, classées par type, à gauche
+    # La page se décide ici, pas par la valeur du bouton : une simulation choisie dans la liste ouvre toujours la page
+    # Simulations ; le bouton ne fait que refléter ce choix et changer de page quand on le touche.
     if st.session_state.get("mode_visiteur") not in MODES:
         st.session_state["mode_visiteur"] = MODES[0]
-    mode = st.segmented_control("Que veux-tu faire ?", MODES, key="mode_visiteur", label_visibility="collapsed",
-                                width="stretch") or MODES[0]
+    if st.session_state.get("simulation"):
+        st.session_state["mode_visiteur"] = MODES[1]
+
+    def basculer():
+        choix = st.session_state.get("mode_bouton")
+        if choix == MODES[0]:
+            st.session_state.pop("simulation", None)
+        if choix in MODES:
+            st.session_state["mode_visiteur"] = choix
+
+    st.session_state["mode_bouton"] = st.session_state["mode_visiteur"]
+    with zone_mode:
+        st.segmented_control("Que veux-tu faire ?", MODES, key="mode_bouton", on_change=basculer,
+                             label_visibility="collapsed", width="stretch")
+    mode = st.session_state["mode_visiteur"]
     if mode == MODES[1]:                           # mode Simulations : pas de chat, toute la page pour le calcul
         with st.container(border=True):
             afficher_simulation(choix_principal(), mem)

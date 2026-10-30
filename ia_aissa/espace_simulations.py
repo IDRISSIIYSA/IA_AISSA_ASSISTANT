@@ -86,17 +86,24 @@ MODES = ["💬 Chat avec IA AISSA", "🧮 Simulations et guides"]
 
 
 def choix_principal():
-    """Sur mobile, la barre latérale est cachée : le même choix, par type puis par simulation, dans la page."""
+    """Sur mobile, la barre latérale est cachée : le même choix, par type puis par simulation, dans la page. Les deux
+    listes suivent toujours la simulation en cours (choisie ici ou dans la barre latérale)."""
+    actuelle = st.session_state.get("simulation") or next(iter(CATEGORIES.values()))[0]
+    st.session_state["simulation"] = actuelle
+    st.session_state["choix_type"] = categorie_de(actuelle)
+    st.session_state["choix_sim"] = actuelle
+
+    def changer_type():
+        st.session_state["simulation"] = CATEGORIES[st.session_state["choix_type"]][0]
+
+    def changer_simulation():
+        st.session_state["simulation"] = st.session_state["choix_sim"]
+
     c = st.columns(2)
-    actuelle = st.session_state.get("simulation")
-    types = list(CATEGORIES)
-    t = c[0].selectbox("Type", types, index=types.index(categorie_de(actuelle)) if actuelle else 0, key="choix_type")
-    noms = CATEGORIES[t]
-    n = c[1].selectbox("Simulation ou guide", noms, index=noms.index(actuelle) if actuelle in noms else 0, key="choix_sim")
-    if n != actuelle:
-        st.session_state["simulation"] = n
-        st.rerun()
-    return n
+    c[0].selectbox("Type", list(CATEGORIES), key="choix_type", on_change=changer_type)
+    c[1].selectbox("Simulation ou guide", CATEGORIES[categorie_de(actuelle)], key="choix_sim",
+                   on_change=changer_simulation)
+    return actuelle
 
 
 def categorie_de(nom):
