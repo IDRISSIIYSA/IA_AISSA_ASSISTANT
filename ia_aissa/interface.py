@@ -1005,5 +1005,5 @@ def espace_visiteur():
         st.iframe(avatar(parole["texte"][:400] + ("…" if len(parole["texte"]) > 400 else ""), parole.get("audio"),
                          parole.get("voix", "fr-FR"), image, type_image or "image/png",
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),
-                         indicateur=parole.get("meta"), en_haut=not st.session_state["affichage"]), height=590)
+                         indicateur=parole.get("meta"), en_haut=not st.session_state["affichage"]), height=640)
     parole["nouveau"] = False
