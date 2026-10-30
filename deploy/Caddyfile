@@ -1,0 +1,5 @@
+# HTTPS automatique (certificat Let's Encrypt) pour votre domaine, ex. ia.iwelah.com
+{$DOMAINE} {
+	encode gzip
+	reverse_proxy ia_aissa:8501
+}

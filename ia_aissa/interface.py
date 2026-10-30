@@ -394,6 +394,9 @@ def moteur_pour_visiteur(utilisateur):
     mem = memoire()
     if (admin.valeur_app(mem, "VISITEURS_MOTEUR") or "oui") == "non":
         return list(MOTEURS)[0], MOTEURS[list(MOTEURS)[0]], None, 0
+    local = next((m for m, c in MOTEURS.items() if c.get("local") and secret(c["secret"])), None)
+    if local:                           # son propre modèle : gratuit, donc sans quota
+        return local, MOTEURS[local], secret(MOTEURS[local]["secret"]), 999
     quota = int(admin.valeur_app(mem, "QUOTA_VISITEUR") or QUOTA_VISITEUR)
     utilises = int(mem.reglage(f"quota:{date.today().isoformat()}:{utilisateur}") or 0)
     for moteur, config in MOTEURS.items():
@@ -443,7 +446,8 @@ def reglages(utilisateur):
     mem = memoire()
     with st.popover("⚙️ Réglages", width="content"):
         moteurs = list(MOTEURS)
-        moteur = st.selectbox("🧠 Moteur", moteurs, index=moteurs.index(st.session_state.get("moteur_choisi", moteurs[0])))
+        par_defaut = next((m for m in moteurs if secret(MOTEURS[m]["secret"])), "Claude Opus 5.5 (Anthropic)")
+        moteur = st.selectbox("🧠 Moteur", moteurs, index=moteurs.index(st.session_state.get("moteur_choisi", par_defaut)))
         st.session_state["moteur_choisi"] = moteur
         config = MOTEURS[moteur]
         cle_visite = f"cle_visite_{config['secret']}"
@@ -459,8 +463,11 @@ def reglages(utilisateur):
         if secret(config["secret"]):
             st.caption("🔑 Clé de l'application (secrets ou administration).")
         elif not cle_api:
-            saisie = st.text_input(f"Clé API ({moteur.split(' (')[0]})", type="password",
-                                   help=f"Créez une clé sur {config['console']}.")
+            saisie = st.text_input(f"{config.get('champ', 'Clé API')} ({moteur.split(' (')[0]})",
+                                   type="default" if config.get("local") else "password",
+                                   placeholder="http://adresse-du-serveur:11434" if config.get("local") else None,
+                                   help=f"Créez une clé sur {config['console']}." if not config.get("local") else
+                                   "Le serveur Ollama installé avec deploy/installer.sh (voir deploy/README.md).")
             souvenir = st.checkbox("🔐 Ne jamais oublier ma clé", value=True,
                                    help="Gardée avec votre compte (tous vos appareils, même après une nouvelle "
                                         "session) et sur cet appareil. N'utilisez pas cette option sur un appareil partagé.")
@@ -632,8 +639,17 @@ def converser_avec_moteur(r, utilisateur, question, role, journal):
     profil += "\n" + ROLES[role][1]
     import anthropic                    # SDK importés à la demande : le serveur démarre plus vite
     import openai
+    contexte = None
+    if r["config"].get("local"):        # ses faits sûrs d'abord ; le modèle local ne fait que parler
+        from .assistant import preparer_local
+        sure, contexte = preparer_local(question, mem, utilisateur)
+        if sure:
+            st.session_state["messages_api"].append({"role": "assistant", "content": sure})
+            journal.append({"outil": "pensee_propre", "entree": question, "resultat": "réponse sûre d'IA AISSA"})
+            return sure
     try:
         return converser_moteur(r["moteur"], client_moteur(r["moteur"], r["cle_api"]), st.session_state["messages_api"],
+                                contexte=contexte,
                                 journal=journal, profil=profil,
                                 memoriser=lambda fait: mem.memoriser(utilisateur, fait),
                                 corriger=lambda cle, q, rep: corriger(mem, utilisateur, cle, q, rep),
@@ -656,14 +672,15 @@ def traiter(r, utilisateur, texte, fichiers):
         role = "inventeur"
     elements, journal = [], []
     client = client_moteur(r["moteur"], r["cle_api"]) if r["cle_api"] else None
+    grand = None if r["config"].get("local") else client   # écoute, lecture, invention : grands moteurs seulement
     if client and not r.get("admin"):
         compter_message_visiteur(utilisateur)           # quota quotidien du grand moteur pour les visiteurs
 
     from .ecoute import SECURITE, ecoute_locale, en_detresse
     if en_detresse(texte):                              # la sécurité d'abord, avant toute autre réponse
-        suite = converser_avec_moteur(r, utilisateur, texte, "psy", journal) if client else ""
+        suite = converser_avec_moteur(r, utilisateur, texte, "psy", journal) if grand else ""
         return SECURITE + (f"\n\n{suite}" if suite else ""), [], journal, "psy", "normal"
-    if role == "psy" and not client and not fichiers:
+    if role == "psy" and not grand and not fichiers:
         return ecoute_locale(texte), [], [], "psy", "normal"
 
     donnees = [f for f in fichiers if f.name.lower().endswith(EXTENSIONS_DONNEES)]
@@ -685,7 +702,7 @@ def traiter(r, utilisateur, texte, fichiers):
             reponse = "📊 " + "\n\n".join(resumes)
         return reponse, elements, journal, "controleur", "normal"
 
-    if lectures and not client:          # sans moteur : elle lit elle-même le livre entier
+    if lectures and not grand:          # sans moteur : elle lit elle-même le livre entier
         from .pensee import confirmation_ingestion, ingerer_pdf
         messages = []
         for f in lectures:
@@ -699,7 +716,7 @@ def traiter(r, utilisateur, texte, fichiers):
             except (ValueError, ErreurBroutage) as e:
                 messages.append(f"Je n'ai pas pu lire « {f.name} » : {e}")
         return "\n\n".join(messages), [], [], "lecteur", "hyper"
-    if urls(texte) and not client:       # sans moteur : elle va voir seule, si le site l'autorise
+    if urls(texte) and not grand:       # sans moteur : elle va voir seule, si le site l'autorise
         from .broutage import Brouteur
         from .livres_libres import manger_livre, recommander, site_refuse
         from .pensee import confirmation_ingestion
@@ -765,7 +782,7 @@ def traiter(r, utilisateur, texte, fichiers):
         return (f"Écoute-moi, puis répète : je te note sur 100 ({langue}).",
                 [{"type": "atelier", "langue": langue, "phrase": phrase}], [], "savant", "normal")
 
-    if role == "inventeur" and client:
+    if role == "inventeur" and grand:
         historique, meilleure = evoluer(r["config"], client, texte, generations=2, taille=4,
                                         inspirations=chercher(mem, texte, n=4, utilisateur=utilisateur))
         finale, debat, meta = debattre(r["config"], client, texte, meilleure, 3)
@@ -813,7 +830,9 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
     mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "assistant", texte)
     if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)):
         reviser_tout(mem)               # les corrections d'une personne comptent tout de suite
-    if r["cle_api"] and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
+    # Étude autonome avec un grand moteur seulement : un petit modèle local, lent et moins sûr, lui apprendrait des
+    # erreurs (elle apprend alors par ses lectures, sa rumination et ses examens)
+    if r["cle_api"] and not r["config"].get("local") and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
         try:
             etude = etudier_seule(mem, r["config"], client_moteur(r["moteur"], r["cle_api"]))
             st.toast(f"🧠 J'ai étudié seule {etude['etudiees']} question(s) : {etude['apprises']} nouvelle(s) "

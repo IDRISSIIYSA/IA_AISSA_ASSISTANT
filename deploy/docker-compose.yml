@@ -1,0 +1,62 @@
+# IA AISSA sur votre serveur : l'application, son propre modèle de langage (Ollama) et HTTPS automatique (Caddy).
+# Lancement : docker compose --env-file .env up -d   (voir README.md ; installer.sh fait tout)
+services:
+  ia_aissa:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      MEMOIRE_URL: ${MEMOIRE_URL}
+      ADMIN_CODE: ${ADMIN_CODE}
+      OLLAMA_URL: http://ollama:11434
+      MODELE_LOCAL: ${MODELE_LOCAL:-qwen2.5:3b}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - donnees:/app/data
+
+  ollama:
+    image: ollama/ollama:0.40.4
+    restart: unless-stopped
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h          # le modèle reste en mémoire : pas d'attente au premier message
+      OLLAMA_NUM_PARALLEL: 2
+    volumes:
+      - modeles:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  # Télécharge le modèle une fois (quelques minutes), puis s'arrête.
+  telechargement_modele:
+    image: ollama/ollama:0.40.4
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${MODELE_LOCAL:-qwen2.5:3b}"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  caddy:
+    image: caddy:2.11.6
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAINE: ${DOMAINE}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_donnees:/data
+    depends_on:
+      - ia_aissa
+
+volumes:
+  donnees:
+  modeles:
+  caddy_donnees:

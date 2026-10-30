@@ -113,7 +113,7 @@ def broutage_autonome():
     from .broutage import ETAT, demarrer
     if str(secret("BROUTAGE_AUTONOME") or "oui").lower() in ("non", "false", "0") or os.environ.get("IA_AISSA_TESTS"):
         return ETAT
-    moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"])), None)
+    moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"]) and not c.get("local")), None)
     par_jour = int(secret("BROUTAGE_PAR_JOUR") or 6)
     if moteur is None:                  # sans clé : elle broute, rumine et s'exerce seule (aucun coût d'appel)
         return demarrer(memoire(), None, lambda: None, int(secret("BROUTAGE_PAR_JOUR") or 24))

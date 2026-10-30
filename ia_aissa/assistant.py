@@ -5,6 +5,7 @@ exacts et sur les cerveaux qu'IA AISSA a formés elle-même à l'école.
 """
 
 import json
+import os
 
 from . import connaissances as K
 from .ecole import MATIERES, repondre, repondre_automatiquement
@@ -243,6 +244,11 @@ def client_anthropic(cle_api=None):
 # Autres moteurs : GPT-4o (OpenAI) et MiniMax (API compatible OpenAI)
 # ==========================================
 MOTEURS = {
+    # Son propre modèle, gratuit, sur son serveur (Ollama, API compatible OpenAI) : prioritaire dès que OLLAMA_URL
+    # est donnée. Le « secret » est ici l'adresse du serveur, pas une clé payante.
+    "Modèle local (Ollama)": {"type": "openai", "local": True, "modele": os.environ.get("MODELE_LOCAL", "qwen2.5:3b"),
+                              "secret": "OLLAMA_URL", "console": "ollama.com (installation sur votre serveur)",
+                              "champ": "Adresse du serveur Ollama"},
     "Claude Opus 5.5 (Anthropic)": {"type": "anthropic", "modele": MODELE, "secret": "ANTHROPIC_API_KEY",
                                     "console": "console.anthropic.com"},
     "GPT-4o (OpenAI)": {"type": "openai", "modele": "gpt-4o", "secret": "OPENAI_API_KEY",
@@ -261,22 +267,54 @@ def client_moteur(moteur, cle_api):
     if config["type"] == "anthropic":
         return client_anthropic(cle_api)
     import openai
+    if config.get("local"):           # pas de clé : l'adresse du serveur Ollama (temps de réponse d'un CPU)
+        return openai.OpenAI(api_key="ollama", base_url=adresse_ollama(cle_api), timeout=180, max_retries=1)
     return openai.OpenAI(api_key=cle_api, base_url=config.get("base_url"))
+
+
+def adresse_ollama(adresse):
+    """« http://ollama:11434 », « localhost:11434 » ou « …/v1 » : toujours l'API compatible OpenAI (…/v1)."""
+    adresse = (adresse or "http://localhost:11434").strip().rstrip("/")
+    if "://" not in adresse:
+        adresse = "http://" + adresse
+    return adresse if adresse.endswith("/v1") else adresse + "/v1"
+
+
+def appel_outil_en_texte(contenu):
+    """Les petits modèles écrivent parfois l'appel d'outil en texte ({"name": …, "arguments": …}) au lieu de
+    l'émettre : on le reconnaît pour l'exécuter quand même. Renvoie (nom, arguments JSON) ou None."""
+    import re
+    texte = re.sub(r"^```(?:json)?|```$", "", (contenu or "").strip(), flags=re.M).strip()
+    texte = re.sub(r"^<tool_call>|</tool_call>$", "", texte).strip()
+    try:
+        d = json.loads(texte)
+    except (ValueError, TypeError):
+        return None
+    noms = {o["function"]["name"] for o in OUTILS_OPENAI}
+    if isinstance(d, dict) and d.get("name") in noms:
+        arguments = d.get("arguments", d.get("parameters", {}))
+        return d["name"], arguments if isinstance(arguments, str) else json.dumps(arguments, ensure_ascii=False)
+    return None
 
 
 def converser_openai(client, moteur, messages, max_tours=8, journal=None, profil=None, memoriser=None,
                      corriger=None, bibliotheque=None, execution_code=False):
     """execution_code est ignoré : le bac à sable d'exécution n'existe qu'avec Claude."""
-    """Même boucle d'outils pour les API au format OpenAI (GPT-4o, MiniMax).
+    """Même boucle d'outils pour les API au format OpenAI (GPT-4o, MiniMax, modèle local).
     `messages` (sans message système) est complété sur place, raisonnement compris."""
     import re
+    from types import SimpleNamespace
     config = MOTEURS[moteur]
     systeme = [{"role": "system", "content": SYSTEME + ("\n\n" + profil if profil else "")}]
-    for _ in range(max_tours):
+    for tour in range(max_tours):
         reponse = client.chat.completions.create(model=config["modele"], messages=systeme + messages,
                                                  tools=OUTILS_OPENAI, extra_body=config.get("extra_body"))
         choix = reponse.choices[0]
         message = choix.message
+        en_texte = None if message.tool_calls else appel_outil_en_texte(message.content)
+        if en_texte:                       # appel d'outil écrit en texte : traité comme un vrai appel
+            message = SimpleNamespace(content="", reasoning_content=None, tool_calls=[SimpleNamespace(
+                id=f"appel_texte_{tour}", function=SimpleNamespace(name=en_texte[0], arguments=en_texte[1]))])
         historique = {"role": "assistant", "content": message.content or ""}
         if getattr(message, "reasoning_content", None):
             historique["reasoning_content"] = message.reasoning_content   # à renvoyer tel quel (MiniMax)
@@ -303,6 +341,9 @@ def converser_openai(client, moteur, messages, max_tours=8, journal=None, profil
 
 
 def converser_moteur(moteur, client, messages, **options):
+    if MOTEURS[moteur].get("local"):
+        return repondre_local(client, moteur, messages, options.get("contexte"), options.get("journal"))
+    options.pop("contexte", None)          # les grands moteurs ont leurs outils et leur bibliothèque
     if MOTEURS[moteur]["type"] == "anthropic":
         return converser(client, messages, **options)
     return converser_openai(client, moteur, messages, **options)
@@ -326,3 +367,67 @@ def meta_conscience(journal, duree):
                 pass
     return {"confiance": round(sum(signaux) / len(signaux), 3),
             "details": f"{len(journal)} outil(s) · {duree:.1f} s"}
+
+
+
+# ==========================================
+# Modèle local : IA AISSA fournit les faits, le petit modèle ne fait que parler
+# ==========================================
+SEUIL_REPONSE_PROPRE = 0.85
+CONSIGNE_REFORMULATION = (
+    "Tu es la voix d'IA AISSA. Réponds dans la langue de la question, simplement et brièvement. "
+    "Tu ne calcules rien et tu n'inventes aucun fait, taux, montant, date ou article de loi : n'écris un chiffre que "
+    "s'il figure dans la question ou dans les SOURCES. Si les sources ne suffisent pas pour une question de "
+    "fiscalité, de droit ou de chiffres, dis-le et propose les simulations et guides d'IA AISSA.")
+
+
+def preparer_local(question, memoire=None, utilisateur=None):
+    """Renvoie (réponse sûre d'IA AISSA ou None, sources pour le modèle local).
+    Ses calculs exacts et ses fiches vérifiées priment : le petit modèle ne les réécrit pas."""
+    try:
+        from .pensee import penser
+        reponse, _, confiance = penser(question, memoire, utilisateur=utilisateur)
+        if confiance >= SEUIL_REPONSE_PROPRE and reponse:
+            return reponse, None
+    except Exception:
+        pass
+    sources = ""
+    try:
+        from .lecture import repondre_par_lecture
+        lu = repondre_par_lecture(question, memoire, utilisateur, n=3)
+        sources = lu["reponse"][:3000] if lu else ""
+    except Exception:
+        pass
+    return None, sources
+
+
+def nombres_non_sources(reponse, sources):
+    """Les nombres de la réponse qui n'apparaissent nulle part dans les sources (question comprise)."""
+    import re
+
+    def nombres(t):
+        t = re.sub(r"(?m)^\s*\d{1,2}[.)]\s", " ", t or "")          # numéros de liste « 1. », « 2) »
+        return {re.sub(r"[\s ,.]", "", n) for n in re.findall(r"\d[\d\s ,.]*\d|\d", t)}
+    connus = nombres(sources)
+    return sorted(n for n in nombres(reponse) if n not in connus)
+
+
+def repondre_local(client, moteur, messages, sources=None, journal=None):
+    """Le modèle local parle sans outils, à partir des sources ; tout chiffre non sourcé est signalé."""
+    import re
+    question = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+    systeme = CONSIGNE_REFORMULATION + (f"\n\nSOURCES (lectures d'IA AISSA) :\n{sources}" if sources else
+                                        "\n\nSOURCES : aucune lecture sur ce sujet.")
+    historique = [m for m in messages if m["role"] in ("user", "assistant") and isinstance(m.get("content"), str)][-6:]
+    r = client.chat.completions.create(model=MOTEURS[moteur]["modele"], temperature=0.2, max_tokens=500,
+                                       messages=[{"role": "system", "content": systeme}, *historique])
+    texte = re.sub(r"<think>.*?</think>", "", r.choices[0].message.content or "", flags=re.S).strip()
+    douteux = nombres_non_sources(texte, f"{sources or ''} {question}")
+    if journal is not None:
+        journal.append({"outil": "modele_local", "entree": {"sources": bool(sources)},
+                        "resultat": f"chiffres non sourcés : {', '.join(douteux) or 'aucun'}"})
+    if douteux:
+        texte += ("\n\n⚠️ *Chiffres non vérifiés (" + ", ".join(douteux[:5]) + ") : mon modèle local peut se "
+                  "tromper. Pour un montant fiable, ouvre « 🧮 Simulations et guides ».*")
+    messages.append({"role": "assistant", "content": texte})
+    return texte

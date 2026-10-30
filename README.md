@@ -5,6 +5,12 @@ par essais, récompenses et pénalités, les métiers de l'entreprise marocaine.
 par une **assistante conversationnelle** (API Claude) qui parle arabe, darija, français, anglais
 et espagnol, à l'écrit comme à l'oral.
 
+## Indépendante : son propre serveur et son propre modèle (`deploy/`)
+
+Sans clé d'API payante : le moteur « Modèle local (Ollama) » est activé par `OLLAMA_URL`. Ses calculs exacts et ses
+fiches vérifiées répondent d'abord ; le petit modèle ne fait que parler, à partir de ses lectures, et tout chiffre non
+sourcé est signalé. Installation sur un VPS en une commande (Docker, Ollama, HTTPS) : voir [deploy/README.md](deploy/README.md).
+
 ## Deux espaces : visiteurs et administration
 
 | Espace visiteurs (page d'accueil, ouverte à tous) | Administration (`/admin`, réservée au propriétaire) |
