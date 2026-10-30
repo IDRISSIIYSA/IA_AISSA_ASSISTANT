@@ -1,5 +1,5 @@
 # Toute modification de ce fichier redémarre complètement l'application sur Streamlit Cloud
-# Version d'IA AISSA : 2026-10-30.22 (à changer quand le dossier ia_aissa/ change)
+# Version d'IA AISSA : 2026-10-30.23 (à changer quand le dossier ia_aissa/ change)
 # Version CPU de PyTorch : bien plus légère, indispensable pour Streamlit Cloud
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
@@ -24,3 +24,4 @@ pypdf>=4.0
 # Mémoire des conversations (SQLite en local, PostgreSQL en ligne)
 sqlalchemy>=2.0
 psycopg[binary]>=3.2
+fpdf2==2.8.3

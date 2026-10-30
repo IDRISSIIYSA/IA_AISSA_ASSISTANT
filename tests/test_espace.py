@@ -280,15 +280,20 @@ def test_toutes_les_simulations(tmp_path, monkeypatch):
     monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
 
     def page():
-        from ia_aissa.interface import panneau_simulations
-        panneau_simulations()
+        import streamlit as st
+        from ia_aissa.espace_simulations import afficher
+        from ia_aissa.partage import memoire
+        afficher(st.session_state["simulation"], memoire())
 
-    at = AppTest.from_function(page, default_timeout=300).run()
-    options = at.selectbox(key="sim_choix").options
-    assert len(options) == len(S.CATALOGUE)
-    for option in options:
-        at.selectbox(key="sim_choix").set_value(option).run()
-        assert not at.exception, option
+    from ia_aissa.espace_simulations import CATEGORIES
+    for noms in CATEGORIES.values():
+        for nom in noms:
+            at = AppTest.from_function(page, default_timeout=300)
+            at.session_state["simulation"] = nom
+            at.run()
+            assert not at.exception, nom
+            assert any("Méthode et justification" in m.value for m in at.markdown), nom
+            assert any("Références" in m.value for m in at.markdown), nom
 
 
 def test_secrets_ranges_dans_une_section_et_adresse_neon_copiee_avec_psql(monkeypatch):
@@ -313,3 +318,27 @@ def test_diagnostic_des_secrets_sur_la_page_admin(tmp_path, monkeypatch):
     at = AppTest.from_function(page, default_timeout=300).run()
     texte = " ".join(i.value for i in at.info)
     assert "Diagnostic des Secrets" in texte and "❌ `ADMIN_CODE`" in texte and "❌ `MEMOIRE_URL`" in texte
+
+
+
+def test_rapports_justifies_traces_et_pdf(tmp_path):
+    from ia_aissa import baremes as B
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.rapports import journal, journaliser, pdf, rapport, verifier
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    assert B.ir_annee(120_000, 2024)["ir_annuel"] == 120_000 * 0.34 - 17_200        # barème LF 2010 (38 % max)
+    assert B.ir_annee(120_000, 2026)["ir_annuel"] == 18_800
+    with pytest.raises(ValueError, match="non vérifié"):
+        B.ir_annee(120_000, 1996)                                                       # jamais inventé
+    B.ajouter_bareme_ir(mem, 1996, 1996, "Loi de finances 1996 (exemple de test)", "Bulletin officiel (test)",
+                        [(20_000, 0.0, 0), (None, 0.4, 8_000)])
+    assert B.ir_annee(100_000, 1996, mem)["ir_annuel"] == 32_000 and 1996 in B.annees_couvertes("ir", mem)
+    with pytest.raises(ValueError, match="obligatoires"):
+        B.ajouter_bareme_ir(mem, 1990, 1990, "", "", [(None, 0.4, 0)])
+    r = rapport("IR (impôt sur le revenu)", "🧾 Fiscalité", {"Revenu": "120 000 DH"}, {"IR": "18 800 DH"},
+                ["IR = revenu × taux − somme à déduire."], ["CGI, art. 73-I"], 2026)
+    contenu = pdf(r)
+    assert contenu.startswith(b"%PDF") and len(contenu) > 1000
+    journaliser(mem, r)
+    assert journal(mem)[0]["numero"] == r["numero"] and verifier(mem, r["numero"], r["empreinte"])
+    assert not verifier(mem, r["numero"], "0" * 64)

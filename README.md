@@ -291,13 +291,19 @@ Les livres et documents déposés par une personne ne servent qu'à elle : la bi
 l'assistante et l'atelier d'invention ne cherchent que dans ses documents et dans le savoir commun lu seule sur le
 web. (Les données sont dans la base `MEMOIRE_URL` ; leur chiffrement au repos dépend de l'hébergeur de la base.)
 
-### Simulations (`ia_aissa/simulations.py`)
-Panneau « 🧮 Simulations » et questions en toutes lettres : paie (brut ↔ net), crédit (échéancier), épargne
-(intérêts composés), amortissement linéaire ou dégressif (coefficients 1,5 / 2 / 3), investissement (VAN, TRI,
-délai de récupération), seuil de rentabilité, prix de vente (taux de marge / de marque), trésorerie sur 12 mois,
-risque de perte (Monte-Carlo, 10 000 tirages), impôts (TVA due, IS avec cotisation minimale, IR),
-auto-entrepreneur, droits de douane, stock (Wilson). Exemples : « échéancier crédit 200000 dh à 5% sur 10 ans »,
-« TRI investissement 100000 flux 30000 40000 50000 20000 à 8% ».
+### Simulations justifiées (`ia_aissa/espace_simulations.py`, `simulations.py`, `baremes.py`, `rapports.py`)
+24 simulations, **classées par type dans la barre latérale** : 🧾 Fiscalité (IR par année, IS par secteur, TVA due par
+année, auto-entrepreneur, douane) · 👥 RH et paie (paie brut ↔ net, heures supplémentaires, indemnité de
+licenciement, congés payés) · 📒 Comptabilité (amortissement linéaire/dégressif, seuil de rentabilité, prix et
+marges) · 🏦 Banque (crédit, capacité d'emprunt, épargne) · 💰 Finance (VAN/TRI, BFR, trésorerie, Monte-Carlo) ·
+🛠️ Technique (consommation électrique, stock de Wilson) · 🏗️ Bâtiment (béton, peinture, carrelage).
+Chaque résultat est **justifié** (méthode et calcul pas à pas), **référencé** (loi, article, année de référence et
+taux de cette année, sources et date de vérification), avec les régimes particuliers non couverts, et
+**téléchargeable en PDF**. Barèmes par année : seules les périodes vérifiées sont encodées (IR 2010-2024 et 2025-2026,
+TVA 2021-2026, IS 2026) ; une année non vérifiée est signalée, jamais inventée, et l'administrateur peut ajouter un
+barème lu au Bulletin officiel (loi et source obligatoires). **Traçabilité (démarche qualité type ISO 9001)** :
+numéro unique, date, version, empreinte SHA-256, journal des rapports et vérification d'authenticité dans
+l'administration.
 
 ### Simulateur de paie
 « 💼 Simulateur de paie » : brut ou net, et en un coup d'œil brut, CNSS, AMO, IR, net, coût employeur

@@ -155,3 +155,86 @@ CATALOGUE = [
     ("🚢", "Douane", "droits d'importation et TVA à l'import"),
     ("📦", "Stock", "quantité économique de commande (Wilson)"),
 ]
+
+
+# ==========================================
+# Ressources humaines (Code du travail marocain, loi n° 65-99)
+# ==========================================
+def heures_supplementaires(taux_horaire, heures_jour, heures_nuit=0.0, heures_repos_jour=0.0, heures_repos_nuit=0.0):
+    """Majoration (art. 201) : 25 % de 6 h à 21 h, 50 % de 21 h à 6 h ; le jour du repos hebdomadaire : 50 % et 100 %."""
+    lignes = [("Jour ouvrable, 6 h – 21 h", heures_jour, 0.25), ("Jour ouvrable, 21 h – 6 h", heures_nuit, 0.50),
+              ("Repos hebdomadaire, 6 h – 21 h", heures_repos_jour, 0.50),
+              ("Repos hebdomadaire, 21 h – 6 h", heures_repos_nuit, 1.00)]
+    tableau = pd.DataFrame([{"Période": p, "Heures": h, "Majoration": f"{m:.0%}",
+                             "Montant": round(h * taux_horaire * (1 + m), 2)} for p, h, m in lignes if h])
+    return {"total": round(float(tableau["Montant"].sum()) if len(tableau) else 0.0, 2), "tableau": tableau}
+
+
+def indemnite_licenciement(salaire_horaire_moyen, annees):
+    """Art. 53 : 96 h de salaire par année pour les 5 premières années, 144 h de la 6e à la 10e, 192 h de la 11e à la
+    15e, 240 h au-delà (hors faute grave)."""
+    tranches = [(5, 96), (10, 144), (15, 192), (float("inf"), 240)]
+    heures, debut, detail = 0.0, 0, []
+    for fin, h in tranches:
+        n = max(0.0, min(annees, fin) - debut)
+        if n > 0:
+            detail.append({"Années": f"{debut + 1} à {int(min(annees, fin)) if fin != float('inf') else int(annees)}",
+                           "Nombre d'années": n, "Heures par année": h, "Heures": n * h})
+            heures += n * h
+        debut = fin
+        if annees <= fin:
+            break
+    return {"heures": heures, "indemnite": round(heures * salaire_horaire_moyen, 2), "tableau": pd.DataFrame(detail)}
+
+
+def conges_payes(mois_de_service, annees_anciennete=0):
+    """Art. 231 et 241 : 1,5 jour ouvrable par mois de service, plus 1,5 jour par période de 5 ans d'ancienneté,
+    dans la limite de 30 jours ouvrables."""
+    base = 1.5 * min(mois_de_service, 12)
+    bonus = 1.5 * (annees_anciennete // 5)
+    return {"jours": min(30.0, base + bonus), "base": base, "anciennete": bonus}
+
+
+# ==========================================
+# Banque et finance
+# ==========================================
+def capacite_emprunt(revenu_mensuel, charges_credits_existants, taux_annuel, duree_mois, taux_endettement=0.40):
+    """Mensualité maximale = revenu × taux d'endettement − crédits en cours ; capital empruntable correspondant."""
+    mensualite = max(0.0, revenu_mensuel * taux_endettement - charges_credits_existants)
+    t = taux_annuel / 12
+    capital = mensualite * duree_mois if t == 0 else mensualite * (1 - (1 + t) ** -duree_mois) / t
+    return {"mensualite_max": round(mensualite, 2), "capital_max": round(capital, 2)}
+
+
+def besoin_fonds_roulement(stocks, creances_clients, dettes_fournisseurs, chiffre_affaires_ht):
+    """BFR = stocks + créances clients − dettes fournisseurs ; exprimé aussi en jours de chiffre d'affaires."""
+    bfr = stocks + creances_clients - dettes_fournisseurs
+    return {"bfr": round(bfr, 2), "jours_de_ca": round(bfr / chiffre_affaires_ht * 360, 1) if chiffre_affaires_ht else None}
+
+
+# ==========================================
+# Technique et bâtiment
+# ==========================================
+def consommation_electrique(puissance_watts, heures_par_jour, jours, prix_kwh):
+    kwh = puissance_watts / 1000 * heures_par_jour * jours
+    return {"kwh": round(kwh, 2), "cout": round(kwh * prix_kwh, 2)}
+
+
+def beton(longueur, largeur, epaisseur, dosage_ciment_kg=350):
+    """Volume de béton et quantités indicatives pour 1 m³ de béton courant dosé à 350 kg : environ 400 L de sable,
+    800 L de gravier et 175 L d'eau (dosages usuels de chantier)."""
+    volume = longueur * largeur * epaisseur
+    return {"volume_m3": round(volume, 3), "ciment_kg": round(volume * dosage_ciment_kg, 1),
+            "sacs_ciment_50kg": int(-(-volume * dosage_ciment_kg // 50)), "sable_m3": round(volume * 0.4, 3),
+            "gravier_m3": round(volume * 0.8, 3), "eau_litres": round(volume * 175, 1)}
+
+
+def peinture(surface_m2, couches=2, rendement_m2_par_litre=10.0):
+    litres = surface_m2 * couches / rendement_m2_par_litre
+    return {"litres": round(litres, 2)}
+
+
+def carrelage(surface_m2, longueur_carreau_cm, largeur_carreau_cm, chutes=0.10):
+    surface_carreau = longueur_carreau_cm * largeur_carreau_cm / 10_000
+    a_commander = surface_m2 * (1 + chutes)
+    return {"surface_a_commander_m2": round(a_commander, 2), "carreaux": int(-(-a_commander // surface_carreau))}

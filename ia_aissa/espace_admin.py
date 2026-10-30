@@ -54,6 +54,8 @@ def espace_admin():
         admin_utilisateurs()
     with onglets[5]:
         admin_cles()
+        st.divider()
+        tracabilite(mem)
 
 
 # ==========================================
@@ -112,6 +114,7 @@ def apprentissage(mem, afficher_element):
             mem.supprimer_reglage(cle)
             st.rerun()
     tester_ses_apprentissages(mem)
+    baremes_historiques(mem)
     st.subheader("📈 Croissance")
     afficher(st, mem)
     afficher_element({"type": "bulletin", "titre": "📒 Bulletin de notes"}, "adm_bulletin")
@@ -275,3 +278,53 @@ def visiteurs(mem):
         admin.definir_valeur_app(mem, "QUOTA_VISITEUR", nouveau)
     st.caption("Au-delà du quota, IA AISSA répond avec son propre cerveau. Les conversations des visiteurs restent "
                "privées : ici, seulement des comptes.")
+
+
+# ==========================================
+# Traçabilité des rapports et barèmes historiques
+# ==========================================
+def tracabilite(mem):
+    """Journal des rapports de simulation émis (démarche qualité) et vérification de l'intégrité d'un rapport."""
+    from .rapports import journal, verifier
+    st.subheader("🧾 Journal des rapports de simulation")
+    st.caption("Chaque PDF téléchargé est enregistré avec son numéro, sa date, sa version et son empreinte SHA-256.")
+    lignes = journal(mem)
+    if lignes:
+        st.dataframe(pd.DataFrame(lignes), hide_index=True, width="stretch")
+    else:
+        st.caption("Aucun rapport émis pour l'instant.")
+    c1, c2, c3 = st.columns([2, 3, 1])
+    numero = c1.text_input("N° du rapport", key="verif_num", placeholder="IAA-20261030-…")
+    empreinte = c2.text_input("Empreinte SHA-256 lue sur le PDF", key="verif_sha")
+    if c3.button("Vérifier") and numero and empreinte:
+        if verifier(mem, numero, empreinte):
+            st.success("✅ Rapport authentique : numéro et empreinte correspondent au journal.")
+        else:
+            st.error("❌ Rapport inconnu ou modifié : l'empreinte ne correspond pas.")
+
+
+def baremes_historiques(mem):
+    """Ajouter un barème d'IR d'une autre période, lu dans un texte officiel, avec sa source (obligatoire)."""
+    from .baremes import ajouter_bareme_ir, annees_couvertes
+    st.subheader("📏 Barèmes historiques de l'IR")
+    st.caption("Années couvertes : " + ", ".join(map(str, annees_couvertes("ir", mem))) + ". Pour une autre période "
+               "(années 90, 2000…), recopiez le barème du Bulletin officiel ou de la loi de finances, avec sa référence.")
+    with st.form("bareme_ir"):
+        c = st.columns(2)
+        de = c[0].number_input("De l'année", 1950, 2100, 1996)
+        a = c[1].number_input("À l'année", 1950, 2100, 1996)
+        loi = st.text_input("Texte de loi (ex. : loi de finances n° …, article …)")
+        source = st.text_input("Source consultée (ex. : Bulletin officiel n° … du …)")
+        tranches = st.text_area("Tranches : une par ligne « plafond ; taux % ; somme à déduire » (dernière tranche : "
+                                "plafond vide)", "30000 ; 0 ; 0\n50000 ; 10 ; 3000\n ; 38 ; 24400")
+        if st.form_submit_button("Ajouter ce barème"):
+            try:
+                lues = []
+                for ligne in tranches.splitlines():
+                    if ligne.strip():
+                        p, t, d = [x.strip().replace(" ", "") for x in ligne.split(";")]
+                        lues.append((float(p) if p else None, float(t.replace(",", ".")) / 100, float(d or 0)))
+                ajouter_bareme_ir(mem, de, a, loi, source, lues)
+                st.success(f"Barème {de}–{a} ajouté avec sa source.")
+            except ValueError as e:
+                st.error(f"Barème refusé : {e}")
