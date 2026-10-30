@@ -8,8 +8,8 @@ et espagnol, à l'écrit comme à l'oral.
 ## Un seul espace : l'alien et une ligne de conversation
 
 Toute l'application tient dans un seul écran (`ia_aissa/interface.py`), dans un thème clair
-(ciel d'aube pastel, poussière d'étoiles discrète, messages en verre dépoli blanc) : IA AISSA, l'alien en 3D réaliste, grand et centré
-dans son portail cosmique, et une seule ligne de conversation qui accepte le texte, la voix (🎙️) et les fichiers (📎).
+(ciel d'aube pastel, poussière d'étoiles discrète, messages en verre dépoli blanc) : IA AISSA, « Nour », un alien de lumière en 3D (tête de perle irisée, yeux-galaxies, étoile marocaine au front,
+antennes à perles de lumière, anneau de zellige), grand et centré, et une seule ligne de conversation qui accepte le texte, la voix (🎙️) et les fichiers (📎).
 Les réglages (moteur, clé API, réponses écrites/vocales, niveau, conversations, souvenirs, reconnaissance du
 visage, image de l'alien) tiennent dans un seul panneau ⚙️.
 

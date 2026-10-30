@@ -1,15 +1,17 @@
 """
-L'alien d'IA AISSA en 3D réaliste (three.js / WebGL), d'après le rendu de référence fourni par Aissa.
+L'alien d'IA AISSA en 3D (three.js / WebGL) : « Nour », un être de lumière imaginé pour elle.
 
-- Tête sculptée : grand crâne, menton fin, arcade sourcilière, pommettes, orbites creusées, petit nez.
-- Peau gris-bleu satinée avec un grain fin et des rides de front (textures procédurales : couleur et relief).
-- Grands yeux ambrés, humides et brillants, posés dans leurs orbites, avec paupières qui clignent.
-- Grandes oreilles pointues, bandeau argenté à LED, harnais tech, panneau holographique
-  « AI COMPANION · ONLINE · SYNC 100% », icônes holographiques ; halos lumineux sur les lumières.
-- Éclairage cinéma (lumière d'environnement, contre-jour cyan) ; fond transparent : l'alien flotte devant son
-  portail, dans le cosmos du site. Mode hyper : portail magenta, particules et « QUANTUM FUSION ».
-- Il respire, cligne des yeux, suit la souris du regard et bouge la bouche quand il parle.
-Si le navigateur n'a pas WebGL, l'alien dessiné en 2D reste affiché.
+- Une grande tête de perle irisée (lilas et bleu, reflets nacrés qui changent avec l'angle) sur un petit corps
+  en forme de haricot, sans cou : un compagnon doux, presque un jouet, qui flotte.
+- De grands yeux-galaxies : iris indigo et turquoise semé d'étoiles dorées, pupille profonde, deux reflets de
+  lumière ; ils suivent la souris, font de petites saccades et clignent derrière de vraies paupières.
+- Sur le front, une étoile marocaine à huit branches (khatam) qui s'illumine quand il parle.
+- Deux antennes souples terminées par des perles de lumière, qui ondulent ; de petites mains flottantes qui
+  accompagnent la parole ; des joues roses ; un sourire qui s'ouvre quand il parle.
+- Un anneau doré incliné autour de lui, où orbitent des carreaux de zellige (turquoise, cobalt, safran, blanc).
+- Fond transparent et ombre douce au sol, pour le thème clair. Mode hyper : tout passe au magenta, l'anneau
+  s'emballe, « QUANTUM FUSION ».
+Si le navigateur n'a pas WebGL, l'alien dessiné en 2D (le même Nour) reste affiché.
 """
 
 THREE = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
@@ -30,174 +32,130 @@ try {
   rendu.setClearColor(0x000000, 0);
   rendu.outputColorSpace = THREE.SRGBColorSpace;
   rendu.toneMapping = THREE.ACESFilmicToneMapping;
-  rendu.toneMappingExposure = .82;
+  rendu.toneMappingExposure = 1.0;
   const scene = new THREE.Scene();
   scene.environment = new THREE.PMREMGenerator(rendu).fromScene(new RoomEnvironment(), .04).texture;
   const camera = new THREE.PerspectiveCamera(28, L / H, 0.1, 50);
-  camera.position.set(0, .5, 6.4); camera.lookAt(0, .4, 0);
+  camera.position.set(0, .35, 8.3); camera.lookAt(0, .2, 0);
 
-  const toile = (l, h, dessin, couleur = true) => { const c = document.createElement('canvas'); c.width = l; c.height = h;
-    dessin(c.getContext('2d'), l, h); const t = new THREE.CanvasTexture(c); if (couleur) t.colorSpace = THREE.SRGBColorSpace;
+  const toile = (l, h, dessin) => { const c = document.createElement('canvas'); c.width = l; c.height = h;
+    dessin(c.getContext('2d'), l, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4; return t; };
   const halo = toile(128, 128, (g, l) => { const d = g.createRadialGradient(l / 2, l / 2, 0, l / 2, l / 2, l / 2);
-    d.addColorStop(0, 'rgba(255,255,255,1)'); d.addColorStop(.25, 'rgba(255,255,255,.45)'); d.addColorStop(1, 'rgba(255,255,255,0)');
+    d.addColorStop(0, 'rgba(255,255,255,1)'); d.addColorStop(.3, 'rgba(255,255,255,.4)'); d.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = d; g.fillRect(0, 0, l, l); });
-  const lueur = (couleur, taille) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({map: halo, color: couleur,
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false})); s.scale.setScalar(taille); return s; };
-  const ACCENT = HYPER ? 0xe879f9 : 0x38bdf8;
+  const lueur = (couleur, taille, opacite = 1, additif = true) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({map: halo,
+    color: couleur, transparent: true, opacity: opacite, depthWrite: false,
+    blending: additif ? THREE.AdditiveBlending : THREE.NormalBlending}));
+    s.scale.setScalar(taille); return s; };
+  const ACCENT = HYPER ? 0xe879f9 : 0x22d3ee, OR = HYPER ? 0xf0abfc : 0xfbbf24;
 
-  // ---------- Portail cosmique derrière lui ----------
-  const portail = new THREE.Mesh(new THREE.TorusGeometry(1.62, .025, 12, 160),
-    new THREE.MeshBasicMaterial({color: ACCENT, transparent: true, opacity: .85}));
-  portail.position.set(0, .55, -1.4); scene.add(portail);
-  const voile = lueur(HYPER ? 0xa855f7 : 0x1d4ed8, 3.4); voile.position.set(0, .55, -1.6); voile.material.opacity = .4; scene.add(voile);
-  const poussiere = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(
-      Array.from({length: 900}, (_, i) => { const a = Math.random() * Math.PI * 2, r = 1.6 + (Math.random() - .5) * .3;
-        return i % 3 === 0 ? Math.cos(a) * r : i % 3 === 1 ? Math.sin(a) * r + .55 : -1.4 + (Math.random() - .5) * .2; }), 3)),
-    new THREE.PointsMaterial({color: ACCENT, size: .025, transparent: true, opacity: .8, blending: THREE.AdditiveBlending}));
-  scene.add(poussiere);
+  // ---------- Lumières ----------
+  const cle = new THREE.DirectionalLight(0xfff4e6, 2.2); cle.position.set(-3, 4, 5); scene.add(cle);
+  const contre = new THREE.DirectionalLight(ACCENT, 2.4); contre.position.set(3, 2, -4); scene.add(contre);
+  const remplissage = new THREE.DirectionalLight(0xc7d2fe, .8); remplissage.position.set(4, -1, 3); scene.add(remplissage);
+  scene.add(new THREE.AmbientLight(0xffffff, .25));
 
-  // ---------- Lumières : clé chaude, contre-jour cyan, remplissage froid ----------
-  const cle = new THREE.DirectionalLight(0xffe4c4, 1.35); cle.position.set(-2.2, 2.6, 3.2); scene.add(cle);
-  const contre = new THREE.DirectionalLight(ACCENT, 2.6); contre.position.set(1.8, 1.4, -2.6); scene.add(contre);
-  const contre2 = new THREE.DirectionalLight(HYPER ? 0x6366f1 : 0x818cf8, 1.6); contre2.position.set(-2, .5, -2.4); scene.add(contre2);
-  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e1b4b, .35));
+  // ---------- La peau : perle irisée ----------
+  const peau = new THREE.MeshPhysicalMaterial({color: HYPER ? 0xe39cf2 : 0x9aa6ff, roughness: .4, metalness: 0,
+    clearcoat: .7, clearcoatRoughness: .25, sheen: .7, sheenRoughness: .45, sheenColor: new THREE.Color(HYPER ? 0xf0abfc : 0x99f6e4),
+    iridescence: .55, iridescenceIOR: 1.35});
 
-  // ---------- Peau : couleur nuancée, grain fin, rides du front ----------
-  const bruit = (g, l, h, n, a, taille) => { for (let i = 0; i < n; i++) { g.globalAlpha = Math.random() * a;
-    g.beginPath(); g.arc(Math.random() * l, Math.random() * h, Math.random() * taille, 0, 7); g.fill(); } g.globalAlpha = 1; };
-  const couleurPeau = toile(1024, 512, (g, l, h) => {
-    g.fillStyle = '#8ea4b2'; g.fillRect(0, 0, l, h);
-    g.fillStyle = '#b8c9d3'; bruit(g, l, h, 900, .18, 26);
-    g.fillStyle = '#7d93a1'; bruit(g, l, h, 700, .14, 22);
-    g.fillStyle = '#c9b4bd'; bruit(g, l, h * .55, 160, .10, 30);           // légères rougeurs vers le bas du visage
+  const nour = new THREE.Group(); scene.add(nour);
+  const tete = new THREE.Group(); tete.position.y = .45; nour.add(tete);
+  const crane = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), peau);
+  crane.scale.set(1.08, .94, .98); tete.add(crane);
+  const corps = new THREE.Mesh(new THREE.SphereGeometry(.5, 64, 48), peau);
+  corps.scale.set(1, 1.22, .92); corps.position.y = -.98; nour.add(corps);
+  const ventre = lueur(ACCENT, .5, .25, false); ventre.position.set(0, -.95, .5); nour.add(ventre);
+
+  // ---------- Les yeux-galaxies ----------
+  const iris = toile(512, 256, (g, l, h) => {
+    g.fillStyle = '#0a0f2c'; g.fillRect(0, 0, l, h);
+    const cx = 128, cy = 128;
+    const d = g.createRadialGradient(cx, cy, 8, cx, cy, 74);
+    d.addColorStop(0, HYPER ? '#f0abfc' : '#5eead4'); d.addColorStop(.45, HYPER ? '#a21caf' : '#0ea5e9');
+    d.addColorStop(.8, HYPER ? '#4a044e' : '#3730a3'); d.addColorStop(1, '#0a0f2c');
+    g.fillStyle = d; g.beginPath(); g.arc(cx, cy, 74, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < 70; i++) { const a = Math.random() * Math.PI * 2, r = 30 + Math.random() * 40;
+      g.fillStyle = `rgba(253, 230, 138, ${.4 + Math.random() * .6})`;
+      g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, Math.random() * 1.6 + .3, 0, Math.PI * 2); g.fill(); }
+    const p = g.createRadialGradient(cx, cy, 0, cx, cy, 30);
+    p.addColorStop(0, '#000'); p.addColorStop(.85, '#020617'); p.addColorStop(1, 'rgba(2,6,23,0)');
+    g.fillStyle = p; g.beginPath(); g.arc(cx, cy, 30, 0, Math.PI * 2); g.fill();
   });
-  const reliefPeau = toile(1024, 512, (g, l, h) => {
-    g.fillStyle = '#808080'; g.fillRect(0, 0, l, h);
-    g.fillStyle = '#9a9a9a'; bruit(g, l, h, 9000, .5, 1.6);
-    g.fillStyle = '#606060'; bruit(g, l, h, 9000, .5, 1.6);
-    g.strokeStyle = 'rgba(40,40,40,.55)'; g.lineWidth = 2.2;
-    for (let k = 0; k < 4; k++) { const y = h * (.27 + k * .028); g.beginPath();            // rides du front
-      for (let x = 0; x <= l; x += 8) g.lineTo(x, y + Math.sin(x / 40 + k) * 3); g.stroke(); }
-  }, false);
-  const peau = new THREE.MeshPhysicalMaterial({map: couleurPeau, bumpMap: reliefPeau, bumpScale: 1.6, roughness: .52,
-    sheen: .5, sheenColor: new THREE.Color(0xc7dbe6), sheenRoughness: .5, clearcoat: .1, clearcoatRoughness: .5,
-    envMapIntensity: .35});
-  const metal = new THREE.MeshStandardMaterial({color: 0xd9dee4, metalness: .95, roughness: .2});
-  const noir = new THREE.MeshStandardMaterial({color: 0x161c28, metalness: .55, roughness: .38});
-  const led = new THREE.MeshBasicMaterial({color: ACCENT});
-  const leds = [];
-  const poserLed = (parent, x, y, z, l = .07, h = .03) => { const m = new THREE.Mesh(new THREE.BoxGeometry(l, h, .02), led.clone());
-    m.position.set(x, y, z); parent.add(m); const g = lueur(ACCENT, .28); g.position.set(x, y, z + .02); parent.add(g);
-    leds.push([m, g]); return m; };
-
-  // ---------- Buste ----------
-  const alien = new THREE.Group(); scene.add(alien);
-  const peauCorps = peau.clone(); peauCorps.bumpScale = .5;
-  const buste = new THREE.Mesh(new THREE.LatheGeometry([[0, -1.45], [.62, -1.45], [.78, -1.1], [.74, -.72], [.5, -.42], [.2, -.2],
-    [.17, .1], [0, .12]].map(([x, y]) => new THREE.Vector2(x, y)), 96), peauCorps);
-  buste.scale.set(1.15, 1, .72); alien.add(buste);
-  for (const s of [-1, 1]) {
-    const sangle = new THREE.Mesh(new THREE.TorusGeometry(.62, .06, 12, 48, Math.PI * .75), noir);
-    sangle.position.set(s * .12, -.78, .05); sangle.rotation.set(.15, s * .35, s > 0 ? -.35 : Math.PI + .35); alien.add(sangle);
-    const epaule = new THREE.Mesh(new THREE.SphereGeometry(.16, 24, 16), noir); epaule.scale.set(1.3, .7, 1);
-    epaule.position.set(s * .66, -.68, .05); alien.add(epaule);
-  }
-  const plastron = new THREE.Mesh(new THREE.BoxGeometry(.5, .3, .1), noir); plastron.position.set(0, -.92, .5);
-  plastron.rotation.x = -.15; alien.add(plastron);
-  [-.15, -.05, .05, .15].forEach((x, i) => poserLed(alien, x, -.9 + (i % 2) * .07, .56, .07));
-
-  // ---------- Tête sculptée ----------
-  const tete = new THREE.Group(); tete.position.y = .78; alien.add(tete);
-  const forme = new THREE.SphereGeometry(.95, 160, 120), p = forme.attributes.position, v = new THREE.Vector3();
-  const bosses = [   // [x, y, z, amplitude, étendue] : orbites, arcade, pommettes, nez, bouche, tempes
-    [-.38, .02, .92, -.11, .17], [.38, .02, .92, -.11, .17], [0, .3, .95, .035, .32],
-    [-.56, -.16, .8, .018, .22], [.56, -.16, .8, .018, .22], [0, -.24, .97, .045, .08], [0, -.47, .88, -.02, .12],
-    [-.8, .35, .3, -.03, .35], [.8, .35, .3, -.03, .35]];
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i).normalize();
-    let r = 1;
-    for (const [x, y, z, a, e] of bosses) { const d = (v.x - x) ** 2 + (v.y - y) ** 2 + (v.z - z) ** 2; r += a * Math.exp(-d / (e * e)); }
-    const tt = Math.min(1, Math.max(0, (.18 - v.y) / 1.18));             // crâne large, menton fin : transition douce
-    const etroit = 1 + .05 * Math.max(0, v.y) - .44 * tt * tt * (3 - 2 * tt);
-    p.setXYZ(i, v.x * r * etroit * .95, v.y * r * 1.08, v.z * r * etroit * .9);
-  }
-  forme.computeVertexNormals();
-  tete.add(new THREE.Mesh(forme, peau));
-  for (const s of [-1, 1]) {                         // grandes oreilles pointues, légèrement creusées
-    const oreille = new THREE.Mesh(new THREE.ConeGeometry(.24, 1.0, 32, 1, true), peau);
-    oreille.scale.set(1, 1, .35); oreille.position.set(s * .95, .2, -.12); oreille.rotation.set(-.15, s * .35, -s * 1.08);
-    tete.add(oreille);
-    const creux = new THREE.Mesh(new THREE.ConeGeometry(.15, .68, 24), new THREE.MeshStandardMaterial({color: 0xc9969c, roughness: .6}));
-    creux.scale.set(1, 1, .25); creux.position.set(s * 1.0, .21, -.07); creux.rotation.set(-.15, s * .35, -s * 1.08); tete.add(creux);
-  }
-  const front = new THREE.Group(); front.position.y = .5; front.rotation.x = -.38; tete.add(front);
-  const bandeau = new THREE.Mesh(new THREE.TorusGeometry(.79, .05, 16, 96, Math.PI * 1.1), metal);
-  bandeau.rotation.set(Math.PI / 2, 0, -Math.PI * .05); front.add(bandeau);
-  for (const a of [-.55, -.2, .2, .55]) { const l = poserLed(front, Math.sin(a) * .83, 0, Math.cos(a) * .83, Math.abs(a) < .3 ? .14 : .09, .045);
-    l.rotation.y = a; }
-
-  // ---------- Yeux humides dans leurs orbites ----------
-  const iris = toile(512, 512, (g, l) => {
-    const c = l / 2, d = g.createRadialGradient(c, c, 20, c, c, c);
-    d.addColorStop(0, '#2a1404'); d.addColorStop(.26, '#6b3606'); d.addColorStop(.5, '#d48a22'); d.addColorStop(.72, '#f2b54c');
-    d.addColorStop(.88, '#a2580e'); d.addColorStop(1, '#140902');
-    g.fillStyle = d; g.fillRect(0, 0, l, l);
-    for (let a = 0; a < 260; a++) { const t = Math.random() * Math.PI * 2, r1 = 70 + Math.random() * 20, r2 = 150 + Math.random() * 90;
-      g.strokeStyle = Math.random() < .5 ? 'rgba(255,214,140,.22)' : 'rgba(80,40,6,.25)'; g.lineWidth = 1 + Math.random() * 1.5;
-      g.beginPath(); g.moveTo(c + Math.cos(t) * r1, c + Math.sin(t) * r1); g.lineTo(c + Math.cos(t) * r2, c + Math.sin(t) * r2); g.stroke(); }
-    g.fillStyle = '#030303'; g.beginPath(); g.arc(c, c, 66, 0, 7); g.fill();
-  });
+  const matOeil = new THREE.MeshPhysicalMaterial({map: iris, roughness: .05, clearcoat: 1, clearcoatRoughness: .02});
   const yeux = [], paupieres = [];
-  for (const s of [-1, 1]) {
-    const oeil = new THREE.Group(); oeil.position.set(s * .33, .03, .66); tete.add(oeil);
-    const globe = new THREE.Mesh(new THREE.SphereGeometry(.24, 64, 48), new THREE.MeshPhysicalMaterial({color: 0x0a0d12, roughness: .25}));
-    globe.scale.set(1.08, 1, .8); oeil.add(globe);
-    const iriss = new THREE.Mesh(new THREE.CircleGeometry(.215, 64), new THREE.MeshStandardMaterial({map: iris, roughness: .3,
-      emissive: 0xffffff, emissiveMap: iris, emissiveIntensity: .55}));
-    iriss.position.z = .19; oeil.add(iriss);
-    const cornee = new THREE.Mesh(new THREE.SphereGeometry(.245, 64, 48), new THREE.MeshPhysicalMaterial(
-      {transparent: true, opacity: .2, roughness: 0, metalness: 0, clearcoat: 1, clearcoatRoughness: 0, ior: 1.38, color: 0xffffff}));
-    cornee.scale.set(1.1, 1.02, .86); oeil.add(cornee);
-    for (const [x, y, t] of [[-.085, .1, .05], [.06, -.07, .022]]) {
-      const reflet = new THREE.Mesh(new THREE.SphereGeometry(t, 16, 12), new THREE.MeshBasicMaterial({color: 0xffffff}));
-      reflet.position.set(x, y, .205); oeil.add(reflet);
-    }
-    const levre = new THREE.Mesh(new THREE.TorusGeometry(.252, .018, 16, 64), peau);    // bord de paupière
-    levre.scale.set(1.08, 1, .7); levre.position.z = .02; oeil.add(levre);
-    const paupiere = new THREE.Mesh(new THREE.SphereGeometry(.275, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), peau);
-    paupiere.scale.set(1.1, .02, .85); paupiere.position.y = .01; oeil.add(paupiere);
-    yeux.push(oeil); paupieres.push(paupiere);
+  for (const cote of [-1, 1]) {
+    const pivot = new THREE.Group(); pivot.position.set(cote * .37, .02, .8);
+    pivot.rotation.set(0, cote * .32, cote * -.12); tete.add(pivot);
+    const oeil = new THREE.Mesh(new THREE.SphereGeometry(.29, 48, 32), matOeil);
+    oeil.scale.set(1, 1.3, .62); pivot.add(oeil); yeux.push(oeil);
+    for (const [x, y, r] of [[-.07, .12, .045], [.06, -.05, .02]]) {
+      const reflet = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      reflet.position.set(x, y, .185); pivot.add(reflet); }
+    const paupiere = new THREE.Mesh(new THREE.SphereGeometry(.3, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), peau);
+    paupiere.scale.set(1.04, 1.34, .7); pivot.add(paupiere); paupieres.push(paupiere);
   }
-  const sourire = new THREE.Mesh(new THREE.TorusGeometry(.13, .014, 10, 32, Math.PI * .7),
-    new THREE.MeshStandardMaterial({color: 0x5b6d78, roughness: .6}));
-  sourire.position.set(0, -.5, .74); sourire.rotation.z = Math.PI * 1.15; tete.add(sourire);
-  const bouche = new THREE.Mesh(new THREE.SphereGeometry(.085, 24, 16), new THREE.MeshStandardMaterial({color: 0x2e1d26, roughness: .8}));
-  bouche.scale.set(1.25, .05, .4); bouche.position.set(0, -.52, .74); tete.add(bouche);
+  for (const cote of [-1, 1]) { const joue = lueur(0xfb7185, .34, .45, false); joue.position.set(cote * .6, -.3, .82); tete.add(joue); }
 
-  // ---------- Hologrammes ----------
-  const holo = (l, h, dessin) => new THREE.MeshBasicMaterial({transparent: true, blending: THREE.AdditiveBlending,
-    depthWrite: false, side: THREE.DoubleSide, map: toile(l, h, dessin)});
-  const coul = HYPER ? '#f0abfc' : '#7dd3fc';
-  const panneau = new THREE.Mesh(new THREE.PlaneGeometry(.7, .8), holo(256, 292, (g, l, h) => {
-    g.strokeStyle = coul; g.lineWidth = 4; g.strokeRect(6, 6, l - 12, h - 12);
-    g.fillStyle = HYPER ? 'rgba(192,132,252,.16)' : 'rgba(56,189,248,.14)'; g.fillRect(6, 6, l - 12, h - 12);
-    g.beginPath(); g.arc(l / 2, 92, 44, 0, 7); g.stroke();
-    for (const [x, y] of [[0, -20], [-26, 16], [26, 16]]) { g.beginPath(); g.arc(l / 2 + x, 92 + y, 7, 0, 7); g.stroke();
-      g.beginPath(); g.moveTo(l / 2, 92); g.lineTo(l / 2 + x, 92 + y); g.stroke(); }
-    g.fillStyle = '#e0f2fe'; g.textAlign = 'center'; g.font = 'bold 27px sans-serif'; g.fillText('AI COMPANION', l / 2, 188);
-    g.font = '21px sans-serif'; g.fillText('— ONLINE —', l / 2, 226); g.fillText(HYPER ? 'QUANTUM FUSION' : 'SYNC 100%', l / 2, 260);
-  }));
-  panneau.position.set(1.02, -.5, .55); panneau.rotation.y = -.42; alien.add(panneau);
-  const icones = new THREE.Mesh(new THREE.PlaneGeometry(1, .33), holo(330, 108, (g, l, h) => {
-    g.strokeStyle = coul; g.lineWidth = 4; g.strokeRect(4, 4, l - 8, h - 8);
-    g.strokeRect(30, 30, 56, 40); g.beginPath(); g.moveTo(44, 70); g.lineTo(40, 84); g.lineTo(58, 70); g.stroke();
-    g.beginPath(); g.arc(150, 60, 18, Math.PI, 0); g.arc(178, 56, 14, Math.PI * 1.2, 0); g.lineTo(196, 72); g.lineTo(132, 72); g.closePath(); g.stroke();
-    g.beginPath(); g.arc(262, 54, 10, 0, 7); g.stroke();
-    for (let a = 0; a < 6; a++) { const t = a * Math.PI / 3; g.beginPath(); g.moveTo(262 + Math.cos(t) * 10, 54 + Math.sin(t) * 10);
-      g.lineTo(262 + Math.cos(t) * 30, 54 + Math.sin(t) * 30); g.stroke(); }
-  }));
-  icones.position.set(-.7, 2.05, .2); icones.rotation.y = .28; alien.add(icones);
+  // ---------- Bouche ----------
+  const sourire = new THREE.Mesh(new THREE.TorusGeometry(.1, .016, 8, 32, Math.PI),
+    new THREE.MeshStandardMaterial({color: 0x312e81, roughness: .4}));
+  sourire.rotation.z = Math.PI; sourire.position.set(0, -.34, .91); sourire.scale.set(1.3, .8, 1); tete.add(sourire);
+  const bouche = new THREE.Mesh(new THREE.SphereGeometry(.09, 24, 16), new THREE.MeshStandardMaterial({color: 0x1e1b4b, roughness: .6}));
+  bouche.scale.set(1.2, .05, .4); bouche.position.set(0, -.38, .9); tete.add(bouche);
+
+  // ---------- L'étoile marocaine du front ----------
+  const forme = new THREE.Shape();
+  for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + Math.PI / 16, r = i % 2 ? .065 : .13;
+    i ? forme.lineTo(Math.cos(a) * r, Math.sin(a) * r) : forme.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  const etoile = new THREE.Mesh(new THREE.ShapeGeometry(forme), new THREE.MeshBasicMaterial({color: OR, transparent: true}));
+  etoile.position.set(0, .52, .83); etoile.rotation.x = -.55; tete.add(etoile);
+  const auraEtoile = lueur(OR, .4, .5, false); auraEtoile.position.set(0, .52, .86); tete.add(auraEtoile);
+
+  // ---------- Antennes à perles de lumière ----------
+  const antennes = [];
+  for (const cote of [-1, 1]) {
+    const pivot = new THREE.Group(); pivot.position.set(cote * .32, .82, .05); tete.add(pivot);
+    const courbe = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(cote * .12, .3, -.02),
+      new THREE.Vector3(cote * .32, .52, .05), new THREE.Vector3(cote * .48, .62, .12)]);
+    pivot.add(new THREE.Mesh(new THREE.TubeGeometry(courbe, 40, .028, 10), peau));
+    const perle = new THREE.Mesh(new THREE.SphereGeometry(.075, 24, 16), new THREE.MeshBasicMaterial({color: ACCENT}));
+    perle.position.copy(courbe.getPoint(1)); pivot.add(perle);
+    const aura = lueur(ACCENT, .32, .5, false); aura.position.copy(perle.position); pivot.add(aura);
+    antennes.push([pivot, aura, cote]);
+  }
+
+  // ---------- Petites mains flottantes ----------
+  const mains = [];
+  for (const cote of [-1, 1]) {
+    const main = new THREE.Mesh(new THREE.SphereGeometry(.15, 32, 24), peau);
+    main.scale.set(.85, 1, .8); main.position.set(cote * .78, -.95, .25); nour.add(main); mains.push([main, cote]);
+  }
+
+  // ---------- Anneau doré et carreaux de zellige ----------
+  const anneau = new THREE.Group(); anneau.position.y = -1.0; anneau.rotation.set(1.35, 0, -.12); nour.add(anneau);
+  anneau.add(new THREE.Mesh(new THREE.TorusGeometry(1.2, .018, 12, 200),
+    new THREE.MeshStandardMaterial({color: OR, metalness: .9, roughness: .25, emissive: OR, emissiveIntensity: .25})));
+  const couleursZellige = HYPER ? [0xe879f9, 0xa855f7, 0xf0abfc, 0xffffff] : [0x14b8a6, 0x1d4ed8, 0xf59e0b, 0xffffff];
+  const carreaux = Array.from({length: 14}, (_, i) => {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(.09, .09, .02), new THREE.MeshStandardMaterial({
+      color: couleursZellige[i % 4], metalness: .2, roughness: .3, emissive: couleursZellige[i % 4], emissiveIntensity: .25}));
+    c.userData.angle = i / 14 * Math.PI * 2; anneau.add(c); return c; });
+
+  // ---------- Ombre douce au sol ----------
+  const ombre = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({transparent: true,
+    depthWrite: false, map: toile(128, 128, (g, l) => { const d = g.createRadialGradient(l / 2, l / 2, 0, l / 2, l / 2, l / 2);
+      d.addColorStop(0, 'rgba(30,41,90,.45)'); d.addColorStop(1, 'rgba(30,41,90,0)'); g.fillStyle = d; g.fillRect(0, 0, l, l); })}));
+  ombre.rotation.x = -Math.PI / 2; ombre.position.y = -1.72; scene.add(ombre);
+
+  // ---------- Poussière d'étoiles ----------
+  const poussiere = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(
+      Array.from({length: 360}, () => (Math.random() - .5) * 4.2), 3)),
+    new THREE.PointsMaterial({color: ACCENT, size: .03, transparent: true, opacity: .7, blending: THREE.AdditiveBlending,
+      depthWrite: false}));
+  scene.add(poussiere);
 
   boite.innerHTML = ''; boite.appendChild(rendu.domElement);
   document.getElementById('alien2d')?.remove();
@@ -207,25 +165,32 @@ try {
   const horloge = new THREE.Clock();
   window.addEventListener('pointermove', e => { cibleX = e.clientX / innerWidth * 2 - 1; cibleY = e.clientY / innerHeight * 2 - 1; });
   function anime() {
-    const t = horloge.getElapsedTime();
-    alien.position.y = Math.sin(t * 1.4) * .025;
-    buste.scale.y = 1 + Math.sin(t * 1.4) * .012;
-    tete.rotation.y += ((cibleX * .32 + Math.sin(t * .45) * .05) - tete.rotation.y) * .05;
-    tete.rotation.x += ((cibleY * .07 - .03) - tete.rotation.x) * .05;
-    tete.rotation.z = Math.sin(t * .6) * .02;
-    if (t > prochaineSaccade) { saccade = [(Math.random() - .5) * .08, (Math.random() - .5) * .05]; prochaineSaccade = t + .8 + Math.random() * 2; }
-    for (const o of yeux) { o.rotation.y += ((cibleX * .1 + saccade[0]) - o.rotation.y) * .25; o.rotation.x += ((cibleY * .06 + saccade[1]) - o.rotation.x) * .25; }
-    if (t > prochainClin) prochainClin = t + 2.5 + Math.random() * 3.5;
-    const clin = Math.max(0, 1 - Math.abs(prochainClin - t - .08) * 14);
-    for (const pp of paupieres) pp.scale.y = .02 + (t > prochainClin - .2 ? clin : 0) * .98;
-    const parle = window.alienParle === true;
-    bouche.scale.y = parle ? .3 + Math.abs(Math.sin(t * 17)) * .9 : .05;
+    const t = horloge.getElapsedTime(), parle = window.alienParle === true;
+    nour.position.y = Math.sin(t * 1.3) * .06;
+    ombre.scale.setScalar(1 - Math.sin(t * 1.3) * .06);
+    corps.scale.y = 1.22 + Math.sin(t * 1.3 + 1) * .015;
+    tete.rotation.y += ((cibleX * .35 + Math.sin(t * .4) * .06) - tete.rotation.y) * .05;
+    tete.rotation.x += ((cibleY * .12 - .02) - tete.rotation.x) * .05;
+    tete.rotation.z = Math.sin(t * .55) * .035 + (parle ? Math.sin(t * 5) * .02 : 0);
+    if (t > prochaineSaccade) { saccade = [(Math.random() - .5) * .14, (Math.random() - .5) * .1]; prochaineSaccade = t + .7 + Math.random() * 2; }
+    for (const o of yeux) { o.rotation.y += ((cibleX * .22 + saccade[0]) - o.rotation.y) * .25;
+      o.rotation.x += ((cibleY * .16 + saccade[1]) - o.rotation.x) * .25; }
+    if (t > prochainClin) prochainClin = t + 2.4 + Math.random() * 3.6;
+    const clin = Math.max(0, 1 - Math.abs(prochainClin - t - .09) * 12);
+    for (const p of paupieres) p.rotation.x = -.95 + (t > prochainClin - .2 ? clin : 0) * 2.5;
+    bouche.scale.y = parle ? .25 + Math.abs(Math.sin(t * 16)) * .75 : .05;
     sourire.visible = !parle;
-    panneau.material.opacity = .85 + Math.sin(t * 23) * .06 + (Math.random() < .015 ? -.45 : 0);
-    icones.position.y = 2.05 + Math.sin(t * 1.3) * .05;
-    leds.forEach(([m, g], i) => { const k = .55 + .45 * Math.sin(t * (parle ? 9 : 3) + i); g.material.opacity = k; m.material.color.setHSL(HYPER ? .83 : .55, 1, .45 + .2 * k); });
-    portail.rotation.z = t * (HYPER ? .8 : .12); poussiere.rotation.z = -t * (HYPER ? .5 : .06);
-    voile.material.opacity = .45 + Math.sin(t * (HYPER ? 4 : 1.2)) * .1;
+    etoile.material.color.setHSL(HYPER ? .85 : .12, 1, parle ? .55 + .2 * Math.abs(Math.sin(t * 8)) : .55);
+    auraEtoile.material.opacity = parle ? .35 + .4 * Math.abs(Math.sin(t * 8)) : .3 + Math.sin(t * 2) * .08;
+    for (const [pivot, aura, cote] of antennes) { pivot.rotation.z = Math.sin(t * 1.8 + cote) * .12 * cote;
+      pivot.rotation.x = Math.sin(t * 1.3 + cote) * .08; aura.material.opacity = .35 + Math.sin(t * (parle ? 10 : 2.5) + cote) * .2; }
+    for (const [main, cote] of mains) { main.position.y = -.95 + Math.sin(t * 1.6 + cote) * .05 + (parle ? Math.abs(Math.sin(t * 4 + cote)) * .14 : 0);
+      main.rotation.z = parle ? Math.sin(t * 6 + cote) * .3 : 0; }
+    anneau.rotation.z = -.12 + Math.sin(t * .3) * .05;
+    const vitesse = HYPER ? 1.6 : .35;
+    for (const c of carreaux) { const a = c.userData.angle + t * vitesse; c.position.set(Math.cos(a) * 1.2, Math.sin(a) * 1.2, 0);
+      c.rotation.set(t, t * .7, a); }
+    poussiere.rotation.y = t * (HYPER ? .4 : .04);
     rendu.render(scene, camera);
     requestAnimationFrame(anime);
   }

@@ -1,7 +1,6 @@
 """
-Le visage d'IA AISSA : un petit alien gentil, avec son harnais tech et ses hologrammes
-(« AI COMPANION · ONLINE · SYNC 100 % »). Il vit dans son univers (le portail cosmique derrière lui),
-mais se penche vers nous : présent à nos côtés. Il respire, cligne des yeux, et sa bouche bouge quand il parle.
+Le visage d'IA AISSA : Nour, un petit alien de lumière (tête de perle, yeux-galaxies, étoile marocaine au front)
+et son anneau de zellige. Il flotte, respire, cligne des yeux, et sa bouche bouge quand il parle.
 On peut aussi le remplacer par une image (ex. un rendu réaliste de l'alien) : elle s'anime en parlant.
 """
 
@@ -23,102 +22,53 @@ def image_reference():
 from .voix import _SCRIPT_COMMUN, js
 
 ALIEN_SVG = """
-<svg viewBox="0 0 400 430" overflow="visible" role="img" aria-label="IA AISSA, petit alien assistant">
+<svg viewBox="0 -24 400 454" overflow="visible" role="img" aria-label="IA AISSA : Nour, petit alien de lumière">
   <defs>
-    <radialGradient id="peau" cx="45%" cy="35%" r="70%">
-      <stop offset="0" stop-color="#cfdde4"/><stop offset=".6" stop-color="#a9bdc8"/><stop offset="1" stop-color="#7f97a5"/>
+    <radialGradient id="perle" cx=".38" cy=".3" r=".8">
+      <stop offset="0" stop-color="#f1f4ff"/><stop offset=".45" stop-color="#b9c1ff"/><stop offset="1" stop-color="#6d76d9"/>
     </radialGradient>
-    <radialGradient id="iris" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#3a1f05"/><stop offset=".35" stop-color="#8a4b0c"/>
-      <stop offset=".75" stop-color="#e09a2c"/><stop offset="1" stop-color="#6b3a08"/>
+    <radialGradient id="iris" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#5eead4"/><stop offset=".45" stop-color="#0ea5e9"/><stop offset=".8" stop-color="#3730a3"/>
+      <stop offset="1" stop-color="#0a0f2c"/>
     </radialGradient>
-    <radialGradient id="halo" cx="50%" cy="45%" r="55%">
-      <stop offset="0" stop-color="#38bdf8" stop-opacity=".28"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="metal" x1="0" x2="1"><stop offset="0" stop-color="#6b7480"/><stop offset=".5" stop-color="#e5e9ee"/>
-      <stop offset="1" stop-color="#6b7480"/></linearGradient>
-    <radialGradient id="cosmos" cx="45%" cy="40%" r="65%">
-      <stop offset="0" stop-color="#312e81"/><stop offset=".55" stop-color="#1e1b4b"/><stop offset="1" stop-color="#0b1026"/>
-    </radialGradient>
-    <radialGradient id="nebuleuse" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#c084fc" stop-opacity=".55"/><stop offset="1" stop-color="#c084fc" stop-opacity="0"/>
-    </radialGradient>
-    <clipPath id="portail"><circle cx="200" cy="200" r="178"/></clipPath>
+    <radialGradient id="ombre" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#1e295a" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#1e295a" stop-opacity="0"/></radialGradient>
   </defs>
-  <g class="univers">
-    <circle cx="200" cy="200" r="186" fill="none" stroke="#38bdf8" stroke-width="5" opacity=".55" class="anneau"/>
-    <circle cx="200" cy="200" r="178" fill="url(#cosmos)"/>
-    <g clip-path="url(#portail)">
-      <ellipse cx="300" cy="120" rx="120" ry="70" fill="url(#nebuleuse)"/>
-      <ellipse cx="90" cy="260" rx="90" ry="55" fill="url(#nebuleuse)" opacity=".6"/>
-      <g fill="#fff">
-        <circle class="etoile" cx="60" cy="110" r="1.6"/><circle class="etoile e2" cx="95" cy="60" r="1.2"/>
-        <circle class="etoile e3" cx="330" cy="70" r="1.8"/><circle class="etoile" cx="352" cy="190" r="1.3"/>
-        <circle class="etoile e2" cx="40" cy="200" r="1.1"/><circle class="etoile e3" cx="300" cy="250" r="1.5"/>
-        <circle class="etoile" cx="150" cy="40" r="1.2"/><circle class="etoile e2" cx="250" cy="35" r="1.4"/>
-        <circle class="etoile e3" cx="75" cy="300" r="1.3"/><circle class="etoile" cx="340" cy="300" r="1.1"/>
-      </g>
-      <g class="warp" stroke="#e9d5ff" stroke-linecap="round">
-        <line x1="200" y1="200" x2="40" y2="90" stroke-width="2"/><line x1="200" y1="200" x2="360" y2="80" stroke-width="2"/>
-        <line x1="200" y1="200" x2="30" y2="260" stroke-width="1.5"/><line x1="200" y1="200" x2="370" y2="270" stroke-width="1.5"/>
-        <line x1="200" y1="200" x2="120" y2="25" stroke-width="1.2"/><line x1="200" y1="200" x2="290" y2="30" stroke-width="1.2"/>
-      </g>
-      <g class="planete"><circle cx="335" cy="135" r="20" fill="#f59e0b"/><circle cx="329" cy="129" r="20" fill="#fbbf24"/>
-        <ellipse cx="335" cy="137" rx="34" ry="8" fill="none" stroke="#fde68a" stroke-width="3" transform="rotate(-18 335 137)"/></g>
+  <ellipse cx="200" cy="415" rx="110" ry="16" fill="url(#ombre)"/>
+  <g class="flotte">
+    <g class="univers">
+      <ellipse class="anneau" cx="200" cy="300" rx="150" ry="26" fill="none" stroke="#fbbf24" stroke-width="4"/>
+      <ellipse class="warp" cx="200" cy="300" rx="150" ry="26" fill="none" stroke="#e879f9" stroke-width="5"/>
+      <rect class="etoile" x="64" y="296" width="10" height="10" fill="#14b8a6" transform="rotate(45 69 301)"/>
+      <rect class="etoile e2" x="326" y="292" width="10" height="10" fill="#1d4ed8" transform="rotate(45 331 297)"/>
+      <rect class="etoile e3" x="196" y="320" width="10" height="10" fill="#f59e0b" transform="rotate(45 201 325)"/>
     </g>
-  </g>
-  <ellipse cx="200" cy="215" rx="190" ry="200" fill="url(#halo)"/>
-  <g class="holo flotte">
-    <rect x="40" y="18" width="150" height="46" rx="10" fill="#38bdf8" fill-opacity=".12" stroke="#7dd3fc" stroke-width="2"/>
-    <path d="M58 32h22a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6h-12l-8 6v-6h-2a6 6 0 0 1-6-6v-8a6 6 0 0 1 6-6z" fill="none" stroke="#7dd3fc" stroke-width="2"/>
-    <path d="M103 50a9 9 0 0 1 1-18 12 12 0 0 1 22 3 8 8 0 0 1 1 15z" fill="none" stroke="#7dd3fc" stroke-width="2"/>
-    <circle cx="163" cy="41" r="5" fill="#7dd3fc"/>
-    <g stroke="#7dd3fc" stroke-width="2"><line x1="163" y1="41" x2="150" y2="30"/><line x1="163" y1="41" x2="177" y2="30"/>
-      <line x1="163" y1="41" x2="150" y2="53"/><line x1="163" y1="41" x2="177" y2="53"/></g>
-  </g>
-  <g class="respire">
-    <path d="M95 430 C100 350 140 318 200 318 C260 318 300 350 305 430 Z" fill="url(#peau)"/>
-    <path d="M168 300 L232 300 L240 330 L160 330 Z" fill="#9fb4c0"/>
-    <g class="harnais">
-      <path d="M118 380 C140 340 170 330 200 330 C230 330 260 340 282 380" fill="none" stroke="#1f2937" stroke-width="20" stroke-linecap="round"/>
-      <path d="M150 340 L170 430 M250 340 L230 430" stroke="#1f2937" stroke-width="16"/>
-      <rect x="176" y="352" width="48" height="30" rx="6" fill="#111827" stroke="#38bdf8" stroke-width="2"/>
-      <rect class="led" x="184" y="361" width="32" height="5" rx="2" fill="#38bdf8"/>
-      <rect class="led l2" x="184" y="369" width="20" height="5" rx="2" fill="#7dd3fc"/>
-      <rect class="led l3" x="128" y="364" width="14" height="8" rx="2" fill="#38bdf8"/>
-      <rect class="led" x="258" y="364" width="14" height="8" rx="2" fill="#38bdf8"/>
+    <g class="respire">
+      <path d="M150 70 C140 40 120 22 98 14" fill="none" stroke="#9aa6ff" stroke-width="6" stroke-linecap="round"/>
+      <path d="M250 70 C260 40 280 22 302 14" fill="none" stroke="#9aa6ff" stroke-width="6" stroke-linecap="round"/>
+      <circle class="led" cx="96" cy="13" r="11" fill="#22d3ee"/>
+      <circle class="led l2" cx="304" cy="13" r="11" fill="#22d3ee"/>
+      <ellipse cx="200" cy="340" rx="56" ry="68" fill="url(#perle)"/>
+      <ellipse class="holo" cx="122" cy="330" rx="19" ry="22" fill="url(#perle)"/>
+      <ellipse class="holo" cx="278" cy="330" rx="19" ry="22" fill="url(#perle)"/>
+      <ellipse cx="200" cy="170" rx="150" ry="132" fill="url(#perle)"/>
+      <path class="led l3" d="M200 74 l7 12 14 -3 -4 13 11 9 -13 4 1 14 -12 -7 -11 9 -3 -14 -14 -3 11 -9 -6 -13 14 3z"
+            fill="#fbbf24" transform="translate(-3 0) scale(1)"/>
+      <g transform="rotate(-8 140 172)"><ellipse cx="140" cy="172" rx="42" ry="55" fill="#0a0f2c"/>
+        <circle class="pupille" cx="140" cy="172" r="36" fill="url(#iris)"/><circle cx="140" cy="172" r="15" fill="#020617"/>
+        <circle cx="127" cy="150" r="10" fill="#fff"/><circle cx="152" cy="190" r="4" fill="#fff"/></g>
+      <g transform="rotate(8 260 172)"><ellipse cx="260" cy="172" rx="42" ry="55" fill="#0a0f2c"/>
+        <circle class="pupille" cx="260" cy="172" r="36" fill="url(#iris)"/><circle cx="260" cy="172" r="15" fill="#020617"/>
+        <circle cx="247" cy="150" r="10" fill="#fff"/><circle cx="272" cy="190" r="4" fill="#fff"/></g>
+      <g class="paupieres"><ellipse cx="140" cy="172" rx="45" ry="58" fill="#aab3ff"/>
+        <ellipse cx="260" cy="172" rx="45" ry="58" fill="#aab3ff"/></g>
+      <ellipse cx="100" cy="232" rx="20" ry="11" fill="#fb7185" opacity=".35"/>
+      <ellipse cx="300" cy="232" rx="20" ry="11" fill="#fb7185" opacity=".35"/>
+      <path class="sourire" d="M184 248 Q200 262 216 248" fill="none" stroke="#312e81" stroke-width="4" stroke-linecap="round"/>
+      <ellipse class="bouche" cx="200" cy="256" rx="15" ry="11" fill="#1e1b4b"/>
     </g>
-    <g class="tete">
-      <path d="M95 150 L28 105 L70 175 Z" fill="#a9bdc8"/><path d="M90 152 L45 120 L74 168 Z" fill="#e8b4b8" opacity=".55"/>
-      <path d="M305 150 L372 105 L330 175 Z" fill="#a9bdc8"/><path d="M310 152 L355 120 L326 168 Z" fill="#e8b4b8" opacity=".55"/>
-      <path d="M200 40 C292 40 330 110 322 170 C314 230 262 300 200 304 C138 300 86 230 78 170 C70 110 108 40 200 40 Z" fill="url(#peau)"/>
-      <path d="M112 102 C140 72 260 72 288 102" fill="none" stroke="url(#metal)" stroke-width="12" stroke-linecap="round"/>
-      <rect class="led" x="186" y="72" width="28" height="7" rx="3" fill="#38bdf8"/>
-      <rect class="led l2" x="140" y="82" width="14" height="5" rx="2" fill="#7dd3fc"/>
-      <rect class="led l3" x="246" y="82" width="14" height="5" rx="2" fill="#7dd3fc"/>
-      <path d="M150 120 C170 112 185 118 190 126 M250 120 C230 112 215 118 210 126" fill="none" stroke="#8aa1ae" stroke-width="3" stroke-linecap="round"/>
-      <g class="yeux">
-        <g class="oeil" transform="rotate(-8 150 172)"><ellipse cx="150" cy="172" rx="50" ry="44" fill="#0b0f14"/><circle cx="150" cy="172" r="37" fill="url(#iris)"/>
-          <circle class="pupille" cx="150" cy="172" r="17" fill="#050505"/><circle cx="136" cy="154" r="9" fill="#fff" opacity=".9"/>
-          <circle cx="162" cy="184" r="4" fill="#fff" opacity=".6"/></g>
-        <g class="oeil" transform="rotate(8 250 172)"><ellipse cx="250" cy="172" rx="50" ry="44" fill="#0b0f14"/><circle cx="250" cy="172" r="37" fill="url(#iris)"/>
-          <circle class="pupille" cx="250" cy="172" r="17" fill="#050505"/><circle cx="236" cy="154" r="9" fill="#fff" opacity=".9"/>
-          <circle cx="262" cy="184" r="4" fill="#fff" opacity=".6"/></g>
-      </g>
-      <g class="paupieres"><ellipse cx="150" cy="172" rx="53" ry="47" fill="#a3b8c4" transform="rotate(-8 150 172)"/><ellipse cx="250" cy="172" rx="53" ry="47" fill="#a3b8c4" transform="rotate(8 250 172)"/></g>
-      <ellipse cx="193" cy="226" rx="3" ry="2" fill="#6e8593"/><ellipse cx="207" cy="226" rx="3" ry="2" fill="#6e8593"/>
-      <path class="sourire" d="M172 250 C185 263 215 263 228 250" fill="none" stroke="#5f7684" stroke-width="4" stroke-linecap="round"/>
-      <ellipse class="bouche" cx="200" cy="256" rx="17" ry="9" fill="#3b2a33"/>
-    </g>
-  </g>
-  <g class="holo panneau">
-    <rect x="268" y="300" width="128" height="104" rx="10" fill="#0c4a6e" fill-opacity=".55" stroke="#7dd3fc" stroke-width="2"/>
-    <circle cx="332" cy="326" r="15" fill="none" stroke="#7dd3fc" stroke-width="2.5"/>
-    <circle cx="332" cy="326" r="4" fill="#7dd3fc"/>
-    <text x="332" y="360" text-anchor="middle" font-size="14" font-weight="800" fill="#e0f2fe" font-family="sans-serif">AI COMPANION</text>
-    <text x="332" y="378" text-anchor="middle" font-size="12" fill="#bae6fd" font-family="sans-serif">ONLINE</text>
-    <text class="txt-normal" x="332" y="395" text-anchor="middle" font-size="12" fill="#bae6fd" font-family="sans-serif">SYNC 100%</text>
-    <text class="txt-hyper" x="332" y="395" text-anchor="middle" font-size="11" font-weight="800" fill="#f0abfc" font-family="sans-serif">QUANTUM FUSION</text>
+    <text class="txt-hyper" x="200" y="425" text-anchor="middle" font-size="13" font-weight="800" fill="#c026d3"
+          font-family="sans-serif">QUANTUM FUSION</text>
   </g>
 </svg>"""
 
@@ -140,7 +90,7 @@ _STYLE = """
   .flotte { animation: flotte 5s ease-in-out infinite; }
   .holo { animation: scintille 3.2s steps(1) infinite; }
   .led { animation: led 1.8s ease-in-out infinite; } .l2 { animation-delay: .6s; } .l3 { animation-delay: 1.1s; }
-  .paupieres { transform-origin: 200px 128px; transform: scaleY(0); animation: cligne 5.5s infinite; }
+  .paupieres { transform-origin: 200px 115px; transform: scaleY(0); animation: cligne 5.5s infinite; }
   .bouche { transform-origin: 200px 256px; transform: scaleY(0); }
   .parle .bouche { animation: parle .22s ease-in-out infinite alternate; }
   .parle .sourire { opacity: 0; }
