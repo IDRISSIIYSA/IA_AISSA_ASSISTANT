@@ -982,3 +982,29 @@ PRINCIPES_TRIZ = {
     "Transformer un mal en bien": ["utiliser un déchet comme ressource", "chaleur perdue récupérée pour chauffer l'eau",
                                    "fumier transformé en biogaz"],
 }
+
+
+# ==========================================
+# Évolutions fiscales datées (vérifiées le 30/10/2026 auprès de cabinets et de la presse économique marocaine ;
+# le détail produit par produit est à confirmer dans le CGI et les notes circulaires de la DGI)
+# ==========================================
+EVOLUTIONS = {
+    "tva": ("**Évolution de la TVA au Maroc (2021 → 2026)**\n\n"
+            "| Période | Taux en vigueur |\n|---|---|\n"
+            "| 2021 – 2023 | quatre taux : 7 %, 10 %, 14 % et 20 % (taux normal) |\n"
+            "| 2024 – 2025 | réforme de la loi de finances 2024 : les taux réduits de 7 % et 14 % sont rapprochés, "
+            "par étapes et selon les produits, de 10 % ou de 20 % |\n"
+            "| depuis le 1er janvier 2026 | deux taux seulement : **20 %** (normal) et **10 %** (réduit) ; "
+            "les taux de 7 % et 14 % sont supprimés |\n\n"
+            "Le but : simplifier la TVA, élargir l'assiette et réduire les crédits de TVA des entreprises (butoir). "
+            "Le calendrier exact de chaque produit (électricité, eau, médicaments…) est à vérifier dans le Code général "
+            "des impôts et les notes circulaires de la DGI."),
+    "is": ("**Évolution de l'IS au Maroc (2023 → 2026)**\n\n"
+           "La loi de finances 2023 a remplacé le barème progressif par des taux proportionnels, atteints par étapes "
+           "jusqu'en 2026 : **20 %** pour un bénéfice net inférieur à 100 millions de DH, **35 %** au-delà, et 40 % pour "
+           "les banques et assurances. La cotisation minimale reste de 0,25 % des produits (au moins 3 000 DH)."),
+    "ir": ("**Évolution de l'IR au Maroc (2025)**\n\n"
+           "Depuis le 1er janvier 2025 (loi de finances 2025), le barème annuel est : 0 % jusqu'à 40 000 DH, puis 10 %, "
+           "20 %, 30 %, 34 % et **37 %** au-delà de 180 000 DH (au lieu de 38 % avant) ; les frais professionnels sont de "
+           "35 % jusqu'à 78 000 DH de revenu brut annuel, 25 % au-delà, plafonnés à 35 000 DH par an."),
+}

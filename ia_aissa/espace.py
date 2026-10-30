@@ -31,6 +31,35 @@ ROLES = {
         "Rôle actuel : inventeur. Croise des domaines éloignés (TRIZ, SCAMPER, analogies), puis critique sans "
         "complaisance (faisabilité, coût, équilibre financier) avant de proposer la meilleure idée.")),
     "lecteur": ("📚 Lecteur", "Rôle actuel : lecteur. Résume fidèlement, extrais les concepts clés et cite la source."),
+    "juriste": ("⚖️ Conseil juridique", (
+        "Rôle actuel : conseiller juridique (droit marocain d'abord : code des obligations et contrats, code de commerce, "
+        "code du travail, Moudawana, droit des sociétés ; droit français si demandé). Explique la règle, cite le texte "
+        "(loi, article) quand tu le connais avec certitude, donne les démarches concrètes et les délais. Termine par : "
+        "« Information générale, pas un avis d'avocat : pour un litige ou un acte important, consultez un avocat ou un "
+        "notaire. »")),
+    "comptable": ("🧾 Conseil comptable et fiscal", (
+        "Rôle actuel : expert-comptable marocain (CGNC, IS, IR, TVA, cotisation minimale, liasse fiscale). Calcule avec "
+        "les outils, passe les écritures (débit / crédit), cite le CGI quand tu en es sûr. Termine par : « À valider "
+        "avec votre expert-comptable avant toute déclaration. »")),
+    "social": ("👥 Conseil social et RH", (
+        "Rôle actuel : conseiller social (code du travail marocain, CNSS, AMO, paie, contrats, congés, licenciement). "
+        "Calcule la paie avec les outils, explique les droits et obligations des deux parties, les démarches et "
+        "délais. Termine par : « Information générale : pour un litige, voyez l'inspection du travail ou un avocat. »")),
+    "financier": ("💰 Conseil financier", (
+        "Rôle actuel : conseiller financier (trésorerie, financement, crédit, investissement, VAN/TRI, BFR, banques "
+        "marocaines). Calcule avec les outils, compare les options, chiffre les risques. Ne promets jamais de "
+        "rendement ; termine par : « Ce n'est pas un conseil en investissement personnalisé. »")),
+    "technicien": ("🛠️ Conseil technique", (
+        "Rôle actuel : technicien et ingénieur. Diagnostique pas à pas (symptômes, causes probables, tests à faire), "
+        "propose la solution la plus sûre d'abord, signale les dangers (électricité, gaz, hauteur) et quand il faut "
+        "appeler un professionnel.")),
+    "psy": ("💚 Écoute bienveillante", (
+        "Rôle actuel : écoute bienveillante, dans l'esprit d'un psychologue mais sans en être un. Écoute, reformule, "
+        "valide les émotions, pose des questions ouvertes, propose des pistes simples (respiration, sommeil, parler à "
+        "un proche). Ne pose jamais de diagnostic et ne parle pas de médicaments. Encourage avec douceur à consulter un "
+        "psychologue ou un médecin si la souffrance dure. Si la personne parle de se faire du mal ou de mourir, donne "
+        "tout de suite les numéros d'urgence au Maroc (141 urgences médicales SAMU, 15 protection civile, 19 police) "
+        "et invite-la à ne pas rester seule.")),
 }
 
 SEUIL_ROLE = 0.5            # confiance minimale d'un cerveau d'école pour changer de rôle à partir d'une question
@@ -44,6 +73,23 @@ MOTIFS = {
     "controleur": re.compile(r"(budget|écart|ecart|contr[ôo]le de gestion|réalisé|realise|charges? (fixes|variables)|"
                              r"co[ûu]ts?\b|marge|rentabilit|tableau de bord|kpi|chiffre d'affaires|trésorerie|"
                              r"seuil de rentabilité|bilan|compte de résultat)", re.I),
+    "psy": re.compile(r"(stress|angoiss\w*|anxi\w*|déprim\w*|deprim\w*|triste\w*|seul(e)? au monde|je me sens|"
+                      r"j'ai peur|burn[- ]?out|épuis\w*|insomni\w*|dors plus|pleur\w*|mal[- ]être|moral|"
+                      r"m3assab|m9ala9|mkhnou9|9al9|حزين|قلق|خايف|مكتئب|suicid\w*|me tuer|en finir)", re.I),
+    "juriste": re.compile(r"\b(loi|juridique|juriste|avocat|tribunal|procès|plainte|contrat|bail|loyer impayé|"
+                          r"héritage|succession|divorce|moudawana|code (civil|pénal|de commerce|des obligations)|"
+                          r"droit (des|du|de la)|statuts|notaire|mahkama|محكمة|قانون)\b", re.I),
+    "social": re.compile(r"(licenci\w*|démission|demission|préavis|preavis|contrat de travail|cnss|amo\b|"
+                         r"congé|conge|heures sup\w*|inspection du travail|salarié|salarie|employeur|bulletin de paie|"
+                         r"salaire|smig|indemnit\w*)", re.I),
+    "comptable": re.compile(r"\b(comptab\w*|écriture|ecriture|débit|crédit d'impôt|bilan comptable|tva|\bis\b|"
+                            r"impôt sur les sociétés|liasse|amortissement|cgnc|plan comptable|déclaration fiscale|"
+                            r"cotisation minimale|facture)\b", re.I),
+    "financier": re.compile(r"(trésorerie|tresorerie|financement|prêt|pret bancaire|crédit|credit|investir|"
+                            r"investissement|placement|bourse|rentabilité d'un projet|\bvan\b|\btri\b|bfr|levée de fonds|"
+                            r"banque)", re.I),
+    "technicien": re.compile(r"\b(panne|réparer|reparer|ne marche plus|ne démarre|bruit bizarre|installation|"
+                             r"électrici\w*|plomberie|fuite|moteur de|wifi|imprimante|ordinateur lent|réseau)\b", re.I),
     "savant": re.compile(r"\b(qu'est[- ]ce qu|explique|expliquer|démontr\w*|théorème|équation|formule|cellule|atome|"
                          r"molécule|physique|chimie|biologie|svt|math\w*|géométrie|histoire|géographie|philosoph\w*|"
                          r"cours|exercice|leçon|bac|examen|photosynth\w*|planète|univers|énergie|science\w*)\b", re.I),
@@ -76,7 +122,8 @@ def detecter_role(texte, noms_fichiers=()):
         return "controleur"
     if any(n.endswith(EXTENSIONS_LECTURE) for n in noms) or urls(texte):
         return "lecteur"
-    for role in ("programmeur", "inventeur", "controleur", "savant"):
+    for role in ("psy", "programmeur", "inventeur", "juriste", "social", "comptable", "controleur", "financier",
+                 "technicien", "savant"):
         if MOTIFS[role].search(texte or ""):
             return role
     if len((texte or "").strip()) >= 6:

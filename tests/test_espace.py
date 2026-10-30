@@ -156,3 +156,52 @@ def test_la_bibliotheque_n_ajoute_que_des_lectures_pertinentes(tmp_path):
     mem.garder_digestion("Aissa", "wikipedia", "Sciences humaines", json.dumps(
         [{"nom": "7 World Trade Center", "explication": "La tour a été inaugurée le 18 mai 2006."}]), "", 0.8)
     assert "World Trade" not in penser("chkoun li bna lkoutoubia", mem)[0]
+
+
+def test_roles_de_conseil_et_ecoute_securisee():
+    from ia_aissa.ecoute import SECURITE, ecoute_locale, en_detresse
+    attendus = {"je me sens triste et seul": "psy", "mon employeur veut me licencier sans préavis": "social",
+                "comment passer l'écriture d'une facture": "comptable", "je veux un prêt pour investir": "financier",
+                "mon wifi ne marche plus": "technicien", "mon voisin ne paie pas, quel tribunal": "juriste"}
+    for question, role in attendus.items():
+        assert detecter_role(question) == role, question
+    for phrase in ("je veux en finir", "bghit nmout", "j'ai envie de mourir"):
+        assert en_detresse(phrase) and ecoute_locale(phrase) == SECURITE
+    assert "141" in SECURITE and "19" in SECURITE
+    assert not en_detresse("je suis stressé par mon examen") and "pas un psychologue" in ecoute_locale("je suis stressé")
+
+
+def test_evolutions_fiscales_et_annees_qui_ne_sont_pas_des_montants():
+    from ia_aissa.pensee import penser
+    r = penser("QU IL EST LEVOLUSTION DE TVA AU MAROC DE 2021 A 2026")[0]
+    assert "Évolution de la TVA" in r and "20 %" in r and "10 %" in r and "TTC" not in r
+    assert "Évolution de l'IS" in penser("évolution de l'IS")[0]
+    assert "405.20" in penser("tva sur 2026 dh ht")[0]                        # un vrai montant reste un montant
+
+
+def test_corrections_des_visiteurs_attendent_l_admin(tmp_path):
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.pensee import correction_dans_la_conversation, propositions
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    merci = correction_dans_la_conversation("non, c'est 6145", mem, {"cle": "comptabilite"},
+                                            "paiement de la facture maroc telecom", valider=False, auteur="Visiteur ab12")
+    assert "administrateur la vérifiera" in merci and not mem.corrections_de()           # rien d'appris sans l'admin
+    (cle, p), = propositions(mem)
+    assert p["reponse"].startswith("6145") and p["auteur"] == "Visiteur ab12"
+
+
+def test_espace_administrateur_s_affiche(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+
+    def page():
+        import streamlit as st
+        st.session_state["admin"] = True
+        from ia_aissa.espace_admin import espace_admin
+        espace_admin()
+
+    at = AppTest.from_function(page, default_timeout=300).run()
+    assert not at.exception
+    assert [t.label for t in at.tabs] == ["📊 Tableau de bord", "📈 Apprentissage", "📚 Livres", "🕹️ Commandes",
+                                          "👥 Visiteurs et accès", "🔑 Clés et sécurité"]
+    assert any(m.label == "Corrections à valider" for m in at.metric)

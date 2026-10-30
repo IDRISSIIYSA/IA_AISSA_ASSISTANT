@@ -5,6 +5,22 @@ par essais, récompenses et pénalités, les métiers de l'entreprise marocaine.
 par une **assistante conversationnelle** (API Claude) qui parle arabe, darija, français, anglais
 et espagnol, à l'écrit comme à l'oral.
 
+## Deux espaces : visiteurs et administration
+
+| Espace visiteurs (page d'accueil, ouverte à tous) | Administration (`/admin`, réservée au propriétaire) |
+|---|---|
+| L'alien Nour et la conversation (texte, voix, fichiers) | 📊 Tableau de bord : savoir, mémoire vive, travailleur autonome, fréquentation |
+| Conseil juridique, comptable et fiscal, social et paie, financier, technique, cours, contrôle de gestion | 📈 Apprentissage : croissance, bulletin, vitesse par matière, révisions, lacunes, corrections apprises |
+| 💚 Écoute bienveillante (pas un psychologue) ; en cas de détresse, les urgences d'abord : 141, 15, 19 | ✅ Corrections proposées par les visiteurs, à valider ou rejeter avant qu'elle les apprenne |
+| 💼 Simulateur de paie | 📚 Livres : dépôt PDF/EPUB, lien libre à lire, livres lus, quarantaine, bibliothèque |
+| Réglages : réponses écrites/vocales, niveau, ses conversations | 🕹️ Commandes : repas, manuel libre, crises, pratique, élagage, mémoire vive, broutage |
+| Grand moteur dans la limite du quota quotidien, sinon sa pensée propre | 👥 Accès : espace ouvert ou réservé, grand moteur et quota des visiteurs, comptes |
+| Conversations et documents privés (identifiant anonyme gardé sur l'appareil) | 🔑 Clés API de l'application, déconnexion |
+
+L'administration ne montre jamais le contenu des conversations des visiteurs, seulement des comptes. Les corrections
+d'un visiteur (« non, c'est … ») n'entrent dans les cerveaux qu'après validation, pour qu'on ne puisse pas lui
+apprendre des erreurs. Les rôles de conseil rappellent leurs limites (avocat, expert-comptable, médecin).
+
 ## Un seul espace : l'alien et une ligne de conversation
 
 Toute l'application tient dans un seul écran (`ia_aissa/interface.py`), dans un thème clair

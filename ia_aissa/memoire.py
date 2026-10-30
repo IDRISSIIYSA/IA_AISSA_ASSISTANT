@@ -315,6 +315,11 @@ class Memoire:
             return [dict(l._mapping) for l in c.execute(select(idees).where(idees.c.utilisateur == utilisateur)
                                                         .order_by(idees.c.id.desc()).limit(limite))]
 
+    def frequentation(self):
+        """Conversations ouvertes (date, utilisateur), sans leur contenu : pour les tableaux de bord."""
+        with self.moteur.connect() as c:
+            return [dict(l._mapping) for l in c.execute(select(conversations.c.cree_le, conversations.c.utilisateur))]
+
     def compter_lacunes(self):
         with self.moteur.connect() as c:
             lignes = list(c.execute(select(lacunes.c.resolue)))

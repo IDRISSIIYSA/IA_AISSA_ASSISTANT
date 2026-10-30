@@ -236,46 +236,53 @@ def est_admin():
     return bool(st.session_state.get("admin"))
 
 
-def administration():
+def admin_connexion():
+    """Création du compte administrateur, ou connexion. Renvoie True si la personne est administrateur."""
     from . import admin
     mem = memoire()
-    st.markdown("**🛡️ Administration**")
-    if not est_admin():
-        if not admin.admin_existe(mem):
-            st.caption("Aucun administrateur : créez votre compte, il sera le compte administrateur de l'application.")
-            prenom_admin = st.text_input("Votre prénom", value=st.session_state.get("utilisateur") or "Aissa",
-                                         key="adm_prenom")
-            mdp = st.text_input("Nouveau mot de passe admin (8 caractères au moins)", type="password", key="adm_new")
-            mdp2 = st.text_input("Confirmer", type="password", key="adm_new2")
-            if st.button("Créer l'administrateur") and mdp:
-                if mdp != mdp2:
-                    st.error("Les deux mots de passe diffèrent.")
-                else:
-                    try:
-                        ecrire_cookie(COOKIE_ADMIN, admin.creer_admin(mem, mdp, prenom_admin))
-                        prenom_admin = prenom_admin.strip()
-                        coffre.ecrire("ia_aissa_session", admin.ouvrir_session(mem, prenom_admin))
-                        st.session_state.update(admin=True, utilisateur=prenom_admin, authentifie=prenom_admin)
-                        st.rerun()
-                    except (ValueError, PermissionError) as e:
-                        st.error(str(e))
-        else:
-            mdp = st.text_input("Mot de passe admin", type="password", key="adm_mdp")
-            if mdp:
-                jeton = admin.connexion_admin(mem, mdp)
-                if jeton:
-                    if not admin.proprietaire(mem):              # ce compte administrateur devient le vôtre
-                        admin.lier_proprietaire(mem, st.session_state.get("utilisateur"), mdp)
-                    ecrire_cookie(COOKIE_ADMIN, jeton)
-                    st.session_state["admin"] = True
-                    st.session_state.pop("cookie_oublie", None)
+    if est_admin():
+        return True
+    if not admin.admin_existe(mem):
+        st.caption("Aucun administrateur : créez votre compte, il sera le compte administrateur de l'application.")
+        prenom_admin = st.text_input("Votre prénom", value=st.session_state.get("utilisateur") or "Aissa",
+                                     key="adm_prenom")
+        mdp = st.text_input("Nouveau mot de passe admin (8 caractères au moins)", type="password", key="adm_new")
+        mdp2 = st.text_input("Confirmer", type="password", key="adm_new2")
+        if st.button("Créer l'administrateur") and mdp:
+            if mdp != mdp2:
+                st.error("Les deux mots de passe diffèrent.")
+            else:
+                try:
+                    ecrire_cookie(COOKIE_ADMIN, admin.creer_admin(mem, mdp, prenom_admin))
+                    prenom_admin = prenom_admin.strip()
+                    coffre.ecrire("ia_aissa_session", admin.ouvrir_session(mem, prenom_admin))
+                    st.session_state.update(admin=True, utilisateur=prenom_admin, authentifie=prenom_admin)
                     st.rerun()
-                st.error("Mot de passe incorrect.")
-        return
-    st.success(f"Compte administrateur : {admin.proprietaire(mem) or st.session_state.get('utilisateur')}")
+                except (ValueError, PermissionError) as e:
+                    st.error(str(e))
+    else:
+        mdp = st.text_input("Mot de passe administrateur", type="password", key="adm_mdp")
+        if mdp:
+            jeton = admin.connexion_admin(mem, mdp)
+            if jeton:
+                proprio = admin.proprietaire(mem)
+                if not proprio:                              # ce compte administrateur devient le vôtre
+                    admin.lier_proprietaire(mem, st.session_state.get("utilisateur"), mdp)
+                    proprio = admin.proprietaire(mem)
+                ecrire_cookie(COOKIE_ADMIN, jeton)
+                st.session_state.update(admin=True, utilisateur=proprio, authentifie=proprio)
+                st.session_state.pop("cookie_oublie", None)
+                st.rerun()
+            st.error("Mot de passe incorrect.")
+    return False
+
+
+def admin_cles():
+    from . import admin
+    mem = memoire()
     if not mem.persistante:
-        st.caption("⚠️ Mémoire temporaire : ces réglages seront effacés au prochain redémarrage (ajoutez MEMOIRE_URL).")
-    st.caption("Clés API de l'application (tous les appareils et le broutage autonome) :")
+        st.warning("Mémoire temporaire : ces réglages seront effacés au prochain redémarrage (ajoutez MEMOIRE_URL).")
+    st.caption("Clés API de l'application : valables sur tous les appareils, pour l'espace visiteurs et le broutage.")
     for nom, libelle in (("ANTHROPIC_API_KEY", "Claude"), ("OPENAI_API_KEY", "GPT-4o"), ("MINIMAX_API_KEY", "MiniMax")):
         actuelle = admin.valeur_app(mem, nom)
         c1, c2 = st.columns([3, 1])
@@ -287,19 +294,30 @@ def administration():
         if actuelle and c2.button("Retirer", key=f"adm_del_{nom}"):
             admin.definir_valeur_app(mem, nom, None)
             st.rerun()
+
+
+def admin_broutage():
+    from . import admin
+    mem = memoire()
     actif = (admin.valeur_app(mem, "BROUTAGE_AUTONOME") or "oui") != "non"
-    if st.toggle("Broutage autonome", value=actif, key="adm_brout") != actif:
+    if st.toggle("Broutage autonome (lecture seule sur le web, pratique, crises synthétiques)", value=actif,
+                 key="adm_brout") != actif:
         admin.definir_valeur_app(mem, "BROUTAGE_AUTONOME", "oui" if not actif else "non")
         st.rerun()
-    par_jour = int(admin.valeur_app(mem, "BROUTAGE_PAR_JOUR") or 6)
+    par_jour = int(admin.valeur_app(mem, "BROUTAGE_PAR_JOUR") or 24)
     nouveau = st.number_input("Repas par jour", 1, 48, par_jour, key="adm_repas")
     if nouveau != par_jour:
         admin.definir_valeur_app(mem, "BROUTAGE_PAR_JOUR", nouveau)
-    st.caption("Personnes autorisées (si la liste est vide, l'accès est libre) :")
+
+
+def admin_utilisateurs():
+    from . import admin
+    mem = memoire()
+    st.caption("Comptes (prénom + mot de passe) : nécessaires seulement si l'espace visiteurs est réservé.")
     for prenom in admin.utilisateurs(mem):
         c1, c2 = st.columns([3, 1])
         c1.write(prenom)
-        if c2.button("Retirer", key=f"adm_u_{prenom}"):
+        if prenom != admin.proprietaire(mem) and c2.button("Retirer", key=f"adm_u_{prenom}"):
             admin.retirer_utilisateur(mem, prenom)
             st.rerun()
     c1, c2, c3 = st.columns([2, 2, 1])
@@ -311,20 +329,81 @@ def administration():
             st.rerun()
         except ValueError as e:
             st.error(str(e))
-    if st.button("Se déconnecter"):
-        admin.deconnexion(mem)
-        admin.fermer_session(mem, coffre.lire("ia_aissa_session"))
-        st.session_state["cookie_oublie"] = COOKIE_ADMIN
-        ecrire_cookie(COOKIE_ADMIN, None)
-        coffre.ecrire("ia_aissa_session", None)
-        for nom in ("admin", "utilisateur", "authentifie"):
-            st.session_state.pop(nom, None)
-        st.rerun()
+
+
+def admin_deconnexion():
+    from . import admin
+    mem = memoire()
+    admin.deconnexion(mem)
+    admin.fermer_session(mem, coffre.lire("ia_aissa_session"))
+    st.session_state["cookie_oublie"] = COOKIE_ADMIN
+    ecrire_cookie(COOKIE_ADMIN, None)
+    coffre.ecrire("ia_aissa_session", None)
+    for nom in ("admin", "utilisateur", "authentifie"):
+        st.session_state.pop(nom, None)
+    st.rerun()
 
 
 # ==========================================
-# Le panneau unique des réglages
+# Les réglages : visiteurs et administrateur
 # ==========================================
+PAGE_ADMIN = None                   # la page d'administration (st.Page), fixée par application()
+QUOTA_VISITEUR = 30                 # messages par visiteur et par jour avec le grand moteur (réglable par l'admin)
+
+
+def moteur_pour_visiteur(utilisateur):
+    """Visiteurs : le grand moteur de l'application (clé de l'admin) dans la limite du quota quotidien, sinon
+    la pensée propre d'IA AISSA. Renvoie (moteur, config, clé API ou None, messages restants)."""
+    from datetime import date
+    from . import admin
+    mem = memoire()
+    if (admin.valeur_app(mem, "VISITEURS_MOTEUR") or "oui") == "non":
+        return list(MOTEURS)[0], MOTEURS[list(MOTEURS)[0]], None, 0
+    quota = int(admin.valeur_app(mem, "QUOTA_VISITEUR") or QUOTA_VISITEUR)
+    utilises = int(mem.reglage(f"quota:{date.today().isoformat()}:{utilisateur}") or 0)
+    for moteur, config in MOTEURS.items():
+        if secret(config["secret"]):
+            return moteur, config, (secret(config["secret"]) if utilises < quota else None), max(0, quota - utilises)
+    return list(MOTEURS)[0], MOTEURS[list(MOTEURS)[0]], None, 0
+
+
+def compter_message_visiteur(utilisateur):
+    from datetime import date
+    mem = memoire()
+    cle = f"quota:{date.today().isoformat()}:{utilisateur}"
+    mem.definir_reglage(cle, str(int(mem.reglage(cle) or 0) + 1))
+
+
+def reglages_visiteur(utilisateur):
+    """Le panneau des visiteurs : comment IA AISSA répond, et leurs conversations. Rien d'autre."""
+    mem = memoire()
+    moteur, config, cle_api, restants = moteur_pour_visiteur(utilisateur)
+    with st.popover("⚙️ Réglages", width="content"):
+        modes = ["✍️🔊 Écrites et vocales", "✍️ Écrites", "🔊 Vocales"]
+        mode = st.radio("Réponses", modes, index=modes.index(st.session_state.get("mode_reponse", modes[0])),
+                        horizontal=True)
+        st.session_state["mode_reponse"] = mode
+        niveaux = list(NIVEAUX)
+        niveau = st.selectbox("Accompagnement (niveau scolaire, invention…)", niveaux,
+                              index=niveaux.index(st.session_state.get("niveau", niveaux[0])))
+        st.session_state["niveau"] = niveau
+        st.caption(f"🧠 Grand moteur : {restants} message(s) restant(s) aujourd'hui" if cle_api else
+                   "🧠 Je réponds avec mon propre cerveau.")
+        st.markdown("**📚 Mes conversations**")
+        if st.button("➕ Nouvelle conversation", width="stretch"):
+            ouvrir_conversation(utilisateur, None)
+            st.rerun()
+        for conv in mem.lister_conversations(utilisateur, limite=8):
+            if st.button(conv["titre"][:45], key=f"conv{conv['id']}", width="stretch"):
+                ouvrir_conversation(utilisateur, conv["id"])
+                st.rerun()
+        st.caption("🔒 Tes conversations et tes documents ne sont visibles que par toi.")
+        if PAGE_ADMIN is not None:
+            st.page_link(PAGE_ADMIN, label="🛡️ Administration")
+    return {"moteur": moteur, "config": config, "cle_api": cle_api, "niveau": niveau, "voir_outils": False,
+            "ecrit": "Écrites" in mode, "vocal": "Vocales" in mode or "vocales" in mode, "admin": False}
+
+
 def reglages(utilisateur):
     mem = memoire()
     with st.popover("⚙️ Réglages", width="content"):
@@ -415,13 +494,12 @@ def reglages(utilisateur):
                 else:
                     mem.ajouter_visage(utilisateur, empreinte)
                     st.success(f"Visage mémorisé : je te reconnaîtrai, {utilisateur}.")
-        administration()
         image = st.file_uploader("🖼️ Mon visage d'alien (image)", type=["png", "jpg", "jpeg", "webp"])
         if image is not None and st.button("Utiliser cette image"):
             mem.sauver_media("avatar", image.getvalue(), image.type or "image/png")
             st.rerun()
     return {"moteur": moteur, "config": config, "cle_api": cle_api, "niveau": niveau, "voir_outils": voir_outils,
-            "ecrit": "Écrites" in mode, "vocal": "Vocales" in mode or "vocales" in mode}
+            "ecrit": "Écrites" in mode, "vocal": "Vocales" in mode or "vocales" in mode, "admin": True}
 
 
 # ==========================================
@@ -541,6 +619,15 @@ def traiter(r, utilisateur, texte, fichiers):
         role = "inventeur"
     elements, journal = [], []
     client = client_moteur(r["moteur"], r["cle_api"]) if r["cle_api"] else None
+    if client and not r.get("admin"):
+        compter_message_visiteur(utilisateur)           # quota quotidien du grand moteur pour les visiteurs
+
+    from .ecoute import SECURITE, ecoute_locale, en_detresse
+    if en_detresse(texte):                              # la sécurité d'abord, avant toute autre réponse
+        suite = converser_avec_moteur(r, utilisateur, texte, "psy", journal) if client else ""
+        return SECURITE + (f"\n\n{suite}" if suite else ""), [], journal, "psy", "normal"
+    if role == "psy" and not client and not fichiers:
+        return ecoute_locale(texte), [], [], "psy", "normal"
 
     donnees = [f for f in fichiers if f.name.lower().endswith(EXTENSIONS_DONNEES)]
     lectures = [f for f in fichiers if f.name.lower().endswith(EXTENSIONS_LECTURE)]
@@ -662,7 +749,8 @@ def traiter(r, utilisateur, texte, fichiers):
             "hyper" if role == "inventeur" else "normal"
     from .pensee import correction_dans_la_conversation
     precedente = st.session_state.get("question_locale")
-    merci = correction_dans_la_conversation(texte, mem, st.session_state.get("derniere_conclusion"), precedente)
+    merci = correction_dans_la_conversation(texte, mem, st.session_state.get("derniere_conclusion"), precedente,
+                                            valider=r.get("admin", False), auteur=utilisateur)
     if merci:
         return merci, [], [], "compagnon", "normal"
     conclusion = {}
@@ -782,11 +870,48 @@ def ingestion_de_livres(utilisateur):
             st.rerun()
 
 
-def espace_unique():
+def identite_visiteur():
+    """Qui parle : un compte connecté (ou l'administrateur), sinon un visiteur anonyme reconnu par son appareil."""
+    from . import admin
+    import uuid
+    mem = memoire()
+    if (admin.valeur_app(mem, "ACCES_VISITEURS") or "ouvert") == "reserve":
+        return verifier_acces(st)                       # espace réservé aux personnes autorisées
+    if st.session_state.get("authentifie"):
+        return st.session_state["authentifie"]
+    retenu = admin.session(mem, coffre.lire("ia_aissa_session"))
+    if retenu:
+        st.session_state["utilisateur"] = st.session_state["authentifie"] = retenu
+        return retenu
+    ident = coffre.lire("ia_aissa_visiteur")
+    if not ident:
+        ident = st.session_state.setdefault("visiteur_nouveau", uuid.uuid4().hex[:8])
+        coffre.ecrire("ia_aissa_visiteur", ident)
+    nom = f"Visiteur {ident}"
+    if st.session_state.get("utilisateur") != nom:      # appareil reconnu : on retrouve ses conversations
+        st.session_state["utilisateur"] = nom
+        st.session_state.pop("affichage", None)
+    return nom
+
+
+def application():
+    """Deux espaces : les visiteurs parlent avec IA AISSA ; l'administrateur la nourrit, la commande et la suit."""
+    global PAGE_ADMIN
     st.set_page_config(page_title="IA AISSA", page_icon="👽", layout="centered", initial_sidebar_state="collapsed")
     st.markdown(STYLE, unsafe_allow_html=True)
-    coffre.ouvrir()                     # ce que cet appareil retient : clé API, jeton admin, connexion
-    utilisateur = verifier_acces(st)
+    coffre.ouvrir()                     # ce que cet appareil retient : identité, connexion, clé API
+    broutage_autonome()                 # le travailleur autonome (démarré une seule fois par serveur)
+    from .espace_admin import espace_admin
+    visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)
+    PAGE_ADMIN = st.Page(espace_admin, title="Administration", icon="🛡️", url_path="admin")
+    st.navigation([visiteurs, PAGE_ADMIN], position="hidden").run()
+
+
+espace_unique = application             # ancien nom
+
+
+def espace_visiteur():
+    utilisateur = identite_visiteur()
     mem = memoire()
     if "affichage" not in st.session_state:
         ouvrir_conversation(utilisateur, None)
@@ -794,20 +919,22 @@ def espace_unique():
     zone_alien = st.container()
     haut = st.columns([5, 1.4])
     with haut[1]:
-        r = reglages(utilisateur)
+        r = reglages(utilisateur) if est_admin() else reglages_visiteur(utilisateur)
     role_courant = st.session_state.get("role_ia", "compagnon")
     with haut[0]:
         st.markdown(f'<span class="role">{ROLES[role_courant][0]}</span>', unsafe_allow_html=True)
-        pouls_d_ia_aissa()
+        st.caption("Je t'aide en droit, comptabilité, fiscalité, social et paie, finance, technique, études… "
+                   "et je t'écoute quand ça ne va pas. Je réponds en darija, français, arabe, anglais, espagnol.")
 
     if "parole" not in st.session_state:          # première visite : l'alien salue, en darija et en français
-        salut = SALUTATIONS["Darija"][moment_de_la_journee()].format(nom=utilisateur)
-        texte = (f"{salut} — {SALUTATIONS['Français'][moment_de_la_journee()].format(nom=utilisateur)} Je suis IA AISSA. "
-                 "Parle-moi, pose une question, demande du code, ou dépose un fichier de chiffres ou un livre.")
+        prenom = "" if utilisateur.startswith("Visiteur ") else utilisateur
+        salut = SALUTATIONS["Darija"][moment_de_la_journee()].format(nom=prenom).replace(" آ ،", "،").replace(" ,", ",").replace("  ", " ")
+        texte = (f"{salut} — {SALUTATIONS['Français'][moment_de_la_journee()].format(nom=prenom)} Je suis IA AISSA. "
+                 "Pose-moi ta question : un problème juridique, comptable, social, financier, technique, un cours… "
+                 "ou dis-moi simplement ce qui ne va pas.").replace(" ,", ",").replace("  ", " ")
         st.session_state["parole"] = {"texte": texte, "audio": _dire(salut, "Darija"), "voix": "ar-MA",
                                       "nouveau": True}
 
-    ingestion_de_livres(utilisateur)
     simulateur_de_paie()
 
     if not st.session_state["affichage"]:

@@ -210,7 +210,15 @@ def calculer(texte):
             return f"**{expression.strip()} = {valeur:,.6g}**".replace(",", " "), ["Opération reconnue, calculée pas à pas."]
         except (ValueError, SyntaxError, ZeroDivisionError, TypeError):
             pass
-    valeurs = [v for v in nombres(t) if v > 0]
+    if re.search(r"([ée]vol\w*tion|[ée]volu|historique|r[ée]forme|changement|a chang|depuis quand|chronologie)", t):
+        sujet = next((k for k, motif in (("tva", r"\btva\b|taxe sur la valeur"), ("is", r"\bis\b|impôt sur les sociétés"),
+                                          ("ir", r"\bir\b|impôt sur le revenu")) if re.search(motif, t)), None)
+        if sujet:
+            return K.EVOLUTIONS[sujet], ["Question sur une évolution dans le temps : je réponds par la chronologie."]
+    annees = re.compile(r"(?<![\d.,])(19[5-9]\d|20[0-4]\d)(?![\d.,])")
+    sans_annees = annees.sub(" ", t) if re.search(r"\b(de|à|a|en|depuis|entre|et|jusqu'à|année|annee|loi de finances)\s+"
+                                                  r"(19|20)\d\d\b", t) else t
+    valeurs = [v for v in nombres(sans_annees) if v > 0]
     if re.search(r"bulletin de (paie|salaire)|fiche de paie|fiche de salaire", t):
         brut = max(valeurs) if valeurs else 8000.0
         return (f"Bulletin de paie simulé (Maroc) pour un salaire brut mensuel de **{montant(brut)}**"
@@ -293,7 +301,10 @@ def calculer(texte):
         taux = next((x / 100 for x in valeurs if x in (7, 10, 14, 20) and x != v), None)
         if taux is None:
             regime = repondre("tva", texte, top=1)[0]
-            taux = {"20 %": 0.2, "10 %": 0.1}.get(regime["reponse"], 0.0 if "xon" in regime["reponse"] else 0.2)
+            if regime["confiance"] < 0.5:                 # produit inconnu : taux normal
+                taux = 0.2
+            else:
+                taux = {"20 %": 0.2, "10 %": 0.1}.get(regime["reponse"], 0.0 if "xon" in regime["reponse"] else 0.2)
         r = K.calculer_tva(v, taux, "ttc" in t)
         return (f"Montant **{montant(v)}** {'TTC' if 'ttc' in t else 'HT'} au taux de {taux:.0%} : HT {montant(r['ht'])}, "
                 f"TVA {montant(r['tva'])}, **TTC {montant(r['ttc'])}**.",
@@ -486,11 +497,21 @@ CORRECTION = re.compile(r"^\s*(non|nn|la|faux)\s*[,.!:]?\s*(c'est|c est|c’est|
                         r"\s+(.{2,120})$", re.I)
 
 
-def correction_dans_la_conversation(texte, memoire, conclusion_precedente, question_precedente):
-    """« non, c'est 2340 » juste après une réponse : la bonne réponse devient une correction, révisée aussitôt."""
+def correction_dans_la_conversation(texte, memoire, conclusion_precedente, question_precedente, valider=True,
+                                    auteur="Aissa"):
+    """« non, c'est 2340 » juste après une réponse : la bonne réponse devient une correction, révisée aussitôt.
+    valider=False (visiteur) : la correction attend la validation de l'administrateur (pas d'empoisonnement)."""
     m = CORRECTION.search(texte or "")
     if not (m and conclusion_precedente and question_precedente and memoire is not None):
         return None
+    if not valider:
+        from .corrections import valider_reponse
+        officielle = valider_reponse(conclusion_precedente["cle"], m.group(3).strip(" .!"))
+        if officielle is None:
+            return "Je n'ai pas trouvé cette réponse dans ma matière : reformule avec un exemple, s'il te plaît."
+        proposer_correction(memoire, auteur, conclusion_precedente["cle"], question_precedente, officielle)
+        return (f"Merci ! J'ai noté ta correction (« {question_precedente} » → **{officielle}**). "
+                "Mon administrateur la vérifiera avant que je l'apprenne.")
     from .corrections import corriger, reviser
     try:
         r = corriger(memoire, "Aissa", conclusion_precedente["cle"], question_precedente, m.group(3).strip(" .!"),
@@ -589,3 +610,13 @@ def confirmation_ingestion(bilan):
               f"{bilan['passages_lus']} passages (sur {bilan['passages_total']}), soit {bilan['concepts']} concepts : "
               "mon univers s'est agrandi.")
     return lu + " Tout est gardé dans ma mémoire : tu peux supprimer le fichier source !"
+
+
+def proposer_correction(memoire, auteur, cle, question, reponse):
+    memoire.definir_reglage(f"proposition:{int(time.time() * 1000)}", json.dumps(
+        {"auteur": auteur, "matiere": cle, "question": question, "reponse": reponse}, ensure_ascii=False))
+
+
+def propositions(memoire):
+    """Corrections proposées par des visiteurs, en attente de validation : [(clé, proposition)]."""
+    return [(k, json.loads(v)) for k, v in sorted(memoire.reglages("proposition:").items())]

@@ -343,8 +343,8 @@ def curiosites(df, n=8):
 def main():
     """L'application tient désormais dans un seul espace : l'alien IA AISSA et une ligne de conversation.
     Le contrôle de gestion s'y fait en déposant un fichier de chiffres dans la conversation."""
-    from ia_aissa.interface import espace_unique
-    espace_unique()
+    from ia_aissa.interface import application
+    application()
 
 
 if __name__ == "__main__":
