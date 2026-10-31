@@ -17,7 +17,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Accessibilité et mobile : vérifier toutes les pages sur téléphone (largeur 390 px) et corriger
 - [x] Performance : charger les cerveaux à la demande et mesurer le temps d'ouverture de chaque page (objectif < 3 s) — cerveaux déjà chargés au premier usage ; temps d'ouverture par page et démarrage à froid dans le tableau de bord ; SDK anthropic et openai importés à la demande (imports du serveur : 3,7 s → 1,8 s)
 
-- [ ] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée
+- [x] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée — 35 questions (15 nouvelles formulations), deux niveaux mesurés, historique dans data/banc_historique.json et dans l'administration, test de non-régression
 - [x] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
 
 - [ ] Bibliothèque : bouton « Nourrir IA AISSA chaque jour » qui digère un article Wikipédia tiré de ses lacunes à chaque visite, dans la limite d'un appel au moteur
@@ -43,6 +43,9 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [ ] Mises à jour : chaque 1er janvier, IA AISSA lit la loi de finances déposée en PDF et propose à l'administrateur les nouveaux taux trouvés (à valider), au lieu de les saisir à la main
 - [ ] Voix : lire une réponse mixte phrase par phrase, chacune avec la voix de sa langue
+
+- [ ] Banc d'essai : réentraîner l'aiguilleur des cerveaux d'école avec les formulations darija ratées (19/35 seuls), en mesurant avant/après sur le banc
+- [ ] Banc d'essai : ajouter 10 questions sur les nouvelles simulations (statut, profit foncier, solde de tout compte) pour que le chat oriente vers la bonne simulation
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

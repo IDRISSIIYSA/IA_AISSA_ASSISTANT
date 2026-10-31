@@ -135,6 +135,7 @@ def apprentissage(mem, afficher_element):
             mem.supprimer_reglage(cle)
             st.rerun()
     tester_ses_apprentissages(mem)
+    banc_d_essai(mem)
     baremes_historiques(mem)
     mises_a_jour_des_taux(mem)
     st.subheader("📈 Croissance")
@@ -323,6 +324,30 @@ def tracabilite(mem):
             st.success("✅ Rapport authentique : numéro et empreinte correspondent au journal.")
         else:
             st.error("❌ Rapport inconnu ou modifié : l'empreinte ne correspond pas.")
+
+
+def banc_d_essai(mem):
+    """Le banc d'essai permanent : questions libres jamais vues, aux deux niveaux, et l'évolution séance après séance."""
+    from . import banc
+    st.subheader("🧪 Banc d'essai des questions libres")
+    st.caption(f"{len(banc.TOUTES)} questions en français et en darija, jamais vues telles quelles. « Pensée propre » = "
+               "ce qu'un visiteur reçoit sans clé ; « cerveaux d'école » = l'aiguilleur et les matières seuls.")
+    seances = banc.historique(mem)
+    if seances:
+        suivi = pd.DataFrame([{"Séance": s["date"], "Pensée propre (%)": round(100 * s["pensee"] / s["questions"], 1),
+                               "Cerveaux d'école (%)": round(100 * s["ecole"] / s["questions"], 1)} for s in seances])
+        st.line_chart(suivi.set_index("Séance"), y_label="Réussite (%)")
+        derniere = seances[-1]
+        st.caption(f"Dernière séance ({derniere['date']}) : pensée propre {derniere['pensee']}/{derniere['questions']}, "
+                   f"cerveaux d'école {derniere['ecole']}/{derniere['questions']}.")
+    if st.button("▶️ Lancer le banc d'essai maintenant"):
+        with st.spinner("IA AISSA répond aux questions du banc…"):
+            r = banc.evaluer(memoire=mem)
+            banc.garder(r, mem)
+        st.success(f"Pensée propre {r['pensee']}/{r['questions']} · cerveaux d'école {r['ecole']}/{r['questions']}")
+        if r["ratees_pensee"]:
+            st.warning("Ratées par la pensée propre : " + " ; ".join(r["ratees_pensee"]))
+        st.dataframe(pd.DataFrame(r["lignes"]), hide_index=True, width="stretch")
 
 
 def mises_a_jour_des_taux(mem):

@@ -577,3 +577,18 @@ def test_voix_dans_la_langue_de_la_reponse_et_lecture_au_choix(tmp_path, monkeyp
     dites.clear()
     at.chat_input[0].set_value("agadir").run()
     assert not at.exception and dites == []                               # lecture coupée : rien n'est lu
+
+
+def test_banc_d_essai_permanent(tmp_path, monkeypatch):
+    from ia_aissa import banc
+    from ia_aissa.memoire import Memoire
+    assert len(banc.TOUTES) >= 35 and len({q for q, _ in banc.TOUTES}) == len(banc.TOUTES)
+    r = banc.evaluer()
+    assert r["pensee"] >= 0.95 * r["questions"], r["ratees_pensee"]       # ce que reçoit un visiteur sans clé
+    assert r["ecole"] >= 0.45 * r["questions"]                             # les cerveaux d'école seuls ne régressent pas
+    monkeypatch.setattr(banc, "HISTORIQUE", tmp_path / "h.json")
+    banc.garder(r)
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    banc.garder(r, mem)
+    seances = banc.historique(mem)
+    assert len(seances) == 2 and "lignes" not in seances[0] and seances[0]["pensee"] == r["pensee"]

@@ -862,7 +862,8 @@ _enrichir(TVA_OPERATIONS, {
 })
 _enrichir(TEXTES_DE_LOI, {
     "Code du travail (loi 65-99)": ["tred mn lkhdma", "licencier un employé", "congé de l'employé", "الطرد من العمل",
-                                    "contrat de travail du salarié"],
+                                    "contrat de travail du salarié", "lpatron bgha ytredni", "tredni mn lkhdma",
+                                    "mon patron veut me licencier", "renvoyé de mon travail", "طردني الباطرون"],
     "Baux commerciaux (loi 49-16)": ["kra dyal lmahal tijari", "bail du local commercial"],
     "Délais de paiement (loi 69-21)": ["client ma bghach ykhless", "retard de paiement d'une facture client"],
     "Données personnelles (loi 09-08)": ["data dyal clients", "protéger les données des clients"],
