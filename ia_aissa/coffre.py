@@ -12,7 +12,8 @@ import streamlit as st
 JS = """
 export default function(component) {
   const { setStateValue, data } = component;
-  for (const [nom, valeur] of ((data && data.ecrire) || [])) {
+  const ecritures = (data && data.ecrire) || [];
+  for (const [nom, valeur] of ecritures) {
     try { valeur === null ? localStorage.removeItem(nom) : localStorage.setItem(nom, valeur); } catch (e) {}
   }
   const valeurs = {};
@@ -23,9 +24,13 @@ export default function(component) {
     }
   } catch (e) {}
   const empreinte = JSON.stringify(valeurs);
-  if (window.__iaAissaCoffre !== empreinte) {            // n'envoie que les changements (pas de boucle)
+  const premiereLecture = window.__iaAissaCoffre === undefined;
+  if (premiereLecture || window.__iaAissaCoffre !== empreinte) {
     window.__iaAissaCoffre = empreinte;
-    setStateValue('valeurs', valeurs);
+    // Prévenir l'application relance la page : seulement à la première lecture, ou si un autre onglet a changé le
+    // coffre. Jamais après ses propres écritures (elle les connaît déjà) : la relance tuait la demande en cours
+    // (premier message du chat sans réponse, premier choix de simulation perdu).
+    if (premiereLecture || ecritures.length === 0) setStateValue('valeurs', valeurs);
   }
 }
 """
@@ -48,7 +53,10 @@ def ouvrir():
         valeurs = dict(resultat["valeurs"] or {})
     except (KeyError, TypeError):
         valeurs = dict(getattr(resultat, "valeurs", None) or {})
-    for nom, valeur in ecritures:                         # cohérence immédiate, avant le retour du navigateur
+    ecrits = st.session_state.setdefault("coffre_ecrits", {})    # tout ce que cette session a écrit
+    for nom, valeur in ecritures:
+        ecrits[nom] = valeur
+    for nom, valeur in ecrits.items():                    # le navigateur ne renvoie pas nos propres écritures
         if valeur is None:
             valeurs.pop(nom, None)
         else:
