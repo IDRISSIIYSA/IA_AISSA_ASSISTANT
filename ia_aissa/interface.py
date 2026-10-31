@@ -198,11 +198,23 @@ def yeux():
     return Yeux()
 
 
-def _dire(texte, langue):
-    try:
-        return synthetiser(texte, langue)
-    except Exception:
-        return None                # sans service vocal, la voix du navigateur prend le relais
+ATTENTE_VOIX_S = 5                 # au-delà, la voix du navigateur lit tout de suite (en ligne, la synthèse traînait)
+
+
+def _dire(texte, langue, attente=ATTENTE_VOIX_S):
+    """La voix neuronale, si elle arrive à temps ; sinon None et la voix du navigateur prend le relais."""
+    import threading
+    resultat = {}
+
+    def fabriquer():
+        try:
+            resultat["audio"] = synthetiser(texte, langue)
+        except Exception:
+            pass
+    fil = threading.Thread(target=fabriquer, daemon=True)
+    fil.start()
+    fil.join(timeout=attente)
+    return resultat.get("audio")
 
 
 def ouvrir_conversation(utilisateur, conversation_id):
@@ -1165,7 +1177,7 @@ def espace_visiteur():
             fil_voix.start()
         apprendre_de_l_echange(r, utilisateur, texte, reponse)
         if r["vocal"]:
-            fil_voix.join(timeout=20)   # au-delà, la voix du navigateur prend le relais
+            fil_voix.join(timeout=ATTENTE_VOIX_S + 1)   # au-delà, la voix du navigateur prend le relais
         st.session_state["parole"] = {"texte": reponse, "audio": voix.get("audio"),
                                       "voix": LANGUES[langue]["voix"], "nouveau": True, "etat": etat, "meta": meta}
 
