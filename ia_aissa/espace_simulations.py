@@ -56,63 +56,72 @@ def pc(v):
     return f"{v * 100:.2f}".rstrip("0").rstrip(",.").replace(".", ",") + " %"
 
 
+def version():
+    """Numéro des contrôles de navigation (liste, bouton Chat / Simulations, listes de la page). Il change à chaque
+    changement de simulation ou de page : les contrôles sont alors recréés avec la bonne valeur de départ, au lieu
+    d'être modifiés par le programme. Une ancienne valeur renvoyée en retard par le navigateur (serveur lent) vise
+    un contrôle qui n'existe plus et ne peut plus défaire le choix."""
+    return st.session_state.get("version_navigation", 0)
+
+
+def naviguer(simulation=None, mode=None):
+    """Change la simulation (None pour aucune) et la page, puis recrée les contrôles."""
+    if simulation:
+        st.session_state["simulation"] = simulation
+    else:
+        st.session_state.pop("simulation", None)
+    st.session_state["mode_visiteur"] = mode or (MODES[1] if simulation else MODES[0])
+    st.session_state["version_navigation"] = version() + 1
+
+
 def barre_laterale():
     """Toutes les simulations, classées par type, dans une seule liste déroulante de la barre latérale (on peut y
     taper pour chercher). Renvoie la simulation choisie."""
     toutes = [(categorie, nom) for categorie, noms in CATEGORIES.items() for nom in noms]
     libelles = [f"{categorie.split()[0]} {nom}" for categorie, nom in toutes]     # l'icône dit le type : 👥 Paie…
+    noms = [nom for _, nom in toutes]
+    cle = f"sim_liste_{version()}"
 
     def choisir():
-        choix = st.session_state.get("sim_liste")
+        choix = st.session_state.get(cle)
         if choix:
-            st.session_state["simulation"] = toutes[libelles.index(choix)][1]
-            st.session_state["mode_visiteur"] = MODES[1]
-
-    def fermer():
-        st.session_state.pop("simulation", None)
-        st.session_state["sim_liste"] = None
-        st.session_state["mode_visiteur"] = MODES[0]
+            naviguer(noms[libelles.index(choix)])
 
     actuelle = st.session_state.get("simulation")
-    attendu = next((l for l, (_, n) in zip(libelles, toutes) if n == actuelle), None)
-    # N'écrire la valeur de la liste que si elle doit changer : la réécrire à chaque affichage effaçait un choix
-    # fait pendant qu'une relance automatique (coffre de l'appareil) était en cours
-    if attendu and st.session_state.get("sim_liste") != attendu:
-        st.session_state["sim_liste"] = attendu
     with st.sidebar:
         st.markdown("## 🧮 Simulations")
         st.caption(f"{len(toutes)} simulations et guides, classés par type. Résultats justifiés (lois, articles, année, "
                    "taux) et rapport PDF traçable.")
         st.caption(" · ".join(categorie for categorie in CATEGORIES))
-        st.selectbox("Choisir une simulation", libelles, index=None, key="sim_liste", on_change=choisir,
-                     placeholder="🔎 Choisir ou taper (paie, crédit, TVA…)", label_visibility="collapsed")
+        st.selectbox("Choisir une simulation", libelles, index=noms.index(actuelle) if actuelle in noms else None,
+                     key=cle, on_change=choisir, placeholder="🔎 Choisir ou taper (paie, crédit, TVA…)",
+                     label_visibility="collapsed")
         if actuelle:
-            st.button("✖ Fermer la simulation", width="stretch", on_click=fermer)
-    return st.session_state.get("simulation")
+            st.button("✖ Fermer la simulation", width="stretch", on_click=naviguer)
+    return actuelle
 
 
 MODES = ["💬 Chat avec IA AISSA", "🧮 Simulations et guides"]
 
 
 def choix_principal():
-    """Sur mobile, la barre latérale est cachée : le même choix, par type puis par simulation, dans la page. Les deux
-    listes suivent toujours la simulation en cours (choisie ici ou dans la barre latérale)."""
+    """Sur mobile, la barre latérale est cachée : le même choix, par type puis par simulation, dans la page."""
     actuelle = st.session_state.get("simulation") or next(iter(CATEGORIES.values()))[0]
     st.session_state["simulation"] = actuelle
-    for cle, valeur in (("choix_type", categorie_de(actuelle)), ("choix_sim", actuelle)):
-        if st.session_state.get(cle) != valeur:            # seulement si elle doit changer (voir barre_laterale)
-            st.session_state[cle] = valeur
+    categorie = categorie_de(actuelle)
+    types = list(CATEGORIES)
+    cle_type, cle_sim = f"choix_type_{version()}", f"choix_sim_{version()}"
 
     def changer_type():
-        st.session_state["simulation"] = CATEGORIES[st.session_state["choix_type"]][0]
+        naviguer(CATEGORIES[st.session_state[cle_type]][0])
 
     def changer_simulation():
-        st.session_state["simulation"] = st.session_state["choix_sim"]
+        naviguer(st.session_state[cle_sim])
 
     c = st.columns(2)
-    c[0].selectbox("Type", list(CATEGORIES), key="choix_type", on_change=changer_type)
-    c[1].selectbox("Simulation ou guide", CATEGORIES[categorie_de(actuelle)], key="choix_sim",
-                   on_change=changer_simulation)
+    c[0].selectbox("Type", types, index=types.index(categorie), key=cle_type, on_change=changer_type)
+    c[1].selectbox("Simulation ou guide", CATEGORIES[categorie], index=CATEGORIES[categorie].index(actuelle),
+                   key=cle_sim, on_change=changer_simulation)
     return actuelle
 
 

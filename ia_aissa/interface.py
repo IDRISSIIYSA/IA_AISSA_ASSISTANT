@@ -1016,7 +1016,8 @@ def espace_visiteur():
             audio = (darija or b"") + (francais or b"") or None    # deux MP3 bout à bout se lisent d'une traite
         st.session_state["parole"] = {"texte": texte, "audio": audio, "voix": "ar-MA", "nouveau": True}
 
-    from .espace_simulations import MODES, afficher as afficher_simulation, barre_laterale, choix_principal
+    from .espace_simulations import (MODES, afficher as afficher_simulation, barre_laterale, choix_principal,
+                                     naviguer, version)
     barre_laterale()                               # la liste des simulations, classées par type, à gauche
     # La page se décide ici, pas par la valeur du bouton : une simulation choisie dans la liste ouvre toujours la page
     # Simulations ; le bouton ne fait que refléter ce choix et changer de page quand on le touche.
@@ -1025,19 +1026,18 @@ def espace_visiteur():
     if st.session_state.get("simulation"):
         st.session_state["mode_visiteur"] = MODES[1]
 
-    def basculer():
-        choix = st.session_state.get("mode_bouton")
-        if choix == MODES[0]:
-            st.session_state.pop("simulation", None)
-            st.session_state["sim_liste"] = None
-        if choix in MODES:
-            st.session_state["mode_visiteur"] = choix
+    cle_mode = f"mode_bouton_{version()}"
 
-    if st.session_state.get("mode_bouton") != st.session_state["mode_visiteur"]:   # seulement si elle doit changer
-        st.session_state["mode_bouton"] = st.session_state["mode_visiteur"]
+    def basculer():
+        choix = st.session_state.get(cle_mode)
+        if choix == MODES[0]:
+            naviguer()                                 # retour au chat : plus de simulation ouverte
+        elif choix == MODES[1]:
+            naviguer(st.session_state.get("simulation"), MODES[1])
+
     with zone_mode:
-        st.segmented_control("Que veux-tu faire ?", MODES, key="mode_bouton", on_change=basculer,
-                             label_visibility="collapsed", width="stretch")
+        st.segmented_control("Que veux-tu faire ?", MODES, default=st.session_state["mode_visiteur"], key=cle_mode,
+                             on_change=basculer, label_visibility="collapsed", width="stretch")
     mode = st.session_state["mode_visiteur"]
     if mode == MODES[1]:                           # mode Simulations : pas de chat, toute la page pour le calcul
         with st.container(border=True):
