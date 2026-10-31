@@ -147,8 +147,24 @@ def reviser(memoire, cle):
     return bilan
 
 
+def a_reviser(memoire):
+    """Les matières qui ont reçu des corrections depuis leur dernière révision tentée. Une révision non adoptée (pas
+    de progrès) laisse ses corrections « nouvelles » : sans ce garde-fou, chaque message relançait un réentraînement
+    complet, inutile, qui occupait le processeur du serveur."""
+    dernieres = {}
+    for l in memoire.corrections_de(seulement_nouvelles=True):
+        dernieres[l["matiere"]] = max(dernieres.get(l["matiere"], 0), l["id"])
+    return sorted((cle for cle, i in dernieres.items() if i > int(memoire.reglage(f"revision_tentee:{cle}") or 0)),
+                  key=lambda c: c == ORIENTATION)
+
+
 def reviser_tout(memoire):
-    """Révise chaque matière qui a reçu de nouvelles corrections (l'aiguilleur en dernier)."""
-    a_reviser = sorted({l["matiere"] for l in memoire.corrections_de(seulement_nouvelles=True)},
-                       key=lambda c: c == ORIENTATION)
-    return [b for b in (reviser(memoire, cle) for cle in a_reviser) if b]
+    """Révise chaque matière qui a reçu de nouvelles corrections depuis sa dernière tentative (l'aiguilleur en dernier)."""
+    bilans = []
+    for cle in a_reviser(memoire):
+        derniere = max(l["id"] for l in memoire.corrections_de(cle, seulement_nouvelles=True))
+        bilan = reviser(memoire, cle)
+        memoire.definir_reglage(f"revision_tentee:{cle}", str(derniere))
+        if bilan:
+            bilans.append(bilan)
+    return bilans

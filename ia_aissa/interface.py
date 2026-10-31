@@ -24,7 +24,7 @@ from .assistant import (MOTEURS, NIVEAUX, ClientParesseux, client_moteur, conver
 from .autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
 from .avatar import avatar
 from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer, visible_par
-from .corrections import corriger, reviser_tout
+from .corrections import a_reviser, corriger, reviser_tout
 from .croissance import afficher as afficher_croissance
 from .croissance import serie as serie_croissance
 from .ecole import MATIERES, charger, repondre
@@ -911,7 +911,8 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
                 apprendre_de_soi(mem, question, conclusion)
             mem.ajouter_message(utilisateur, conversation, "user", question or "(fichier)")
             mem.ajouter_message(utilisateur, conversation, "assistant", texte)
-            if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)):
+            if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)) \
+                    and a_reviser(mem):            # seulement s'il y a du nouveau depuis la dernière tentative
                 en_arriere_plan("revision", reviser_tout, mem)   # réentraîner ses cerveaux, sans faire attendre
             # Étude autonome avec un grand moteur seulement : un petit modèle local, lent et moins sûr, lui
             # apprendrait des erreurs (elle apprend alors par ses lectures, sa rumination et ses examens)

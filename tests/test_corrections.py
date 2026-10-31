@@ -442,3 +442,22 @@ def test_un_scan_est_envoye_a_l_ocr_d_iwelah_puis_lu_en_texte(labo, tmp_path):
     bilan = ingerer_pdf(mem, "CGI_2026_ocr.txt", texte_ocr, "Bibliothèque", fichier_json=tmp_path / "m.json")
     assert bilan["passages_gardes"] >= 1
     assert "CGI_2026_ocr.txt" in penser("taux de tva sur l'energie electrique", mem)[0]
+
+
+def test_revision_non_adoptee_pas_relancee_sans_nouvelle_correction(tmp_path, monkeypatch):
+    from ia_aissa import corrections as C
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    appels = []
+    monkeypatch.setattr(C, "reviser", lambda m, cle: appels.append(cle) or {"matiere": cle, "adoptee": False})
+    mem.ajouter_correction("Aissa", "pcm", "facture d'eau", "6125 Achats non stockés de matières et fournitures",
+                           "utilisateur")
+    assert C.a_reviser(mem) == ["pcm"]
+    C.reviser_tout(mem)
+    assert appels == ["pcm"] and C.a_reviser(mem) == []          # non adoptée : pas relancée à chaque message
+    C.reviser_tout(mem)
+    assert appels == ["pcm"]
+    mem.ajouter_correction("Aissa", "pcm", "loyer du local", "6131 Locations et charges locatives", "utilisateur")
+    assert C.a_reviser(mem) == ["pcm"]                           # une nouvelle correction : nouvelle tentative
+    C.reviser_tout(mem)
+    assert appels == ["pcm", "pcm"]
