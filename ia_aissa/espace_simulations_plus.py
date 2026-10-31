@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from . import baremes as B
+from . import connaissances as K
 from . import decortiqueur as D
 from . import obligations as O
 from . import projets as P
@@ -897,5 +898,101 @@ def construire_plus(nom, memoire, c):
                        ["Formule de l'annuité constante (mathématiques financières)",
                         "Loi n° 31-08 édictant des mesures de protection du consommateur (crédit, remboursement anticipé)"],
                        remarques=["Plafond légal de l'indemnité non encodé (non vérifié) : saisissez celle de votre contrat."],
+                       conseils=conseils)
+    if nom == "Taux en vigueur et mises à jour":
+        from . import parametres as PR
+        st.caption("Tous les taux et seuils utilisés par les simulations, avec leur texte légal, leur source et leur "
+                   "date de vérification. L'administrateur les met à jour (source obligatoire) : chaque simulation "
+                   "utilise aussitôt la nouvelle valeur.")
+        alertes = PR.alertes(memoire)
+        for alerte in alertes:
+            st.warning(alerte)
+        t = PR.registre(memoire).drop(columns=["Clé"])
+        a_jour = int(t["Statut"].str.startswith(("✅", "🛠️")).sum())
+        return rapport(nom, categorie_de(nom), {"Date de consultation": aujourdhui.strftime("%d/%m/%Y")},
+                       {"Taux et seuils suivis": len(t), "À jour": a_jour, "À revérifier": len(t) - a_jour,
+                        "Barèmes de l'IR couverts": f"{min(B.annees_couvertes('ir', memoire))}–"
+                                                    f"{max(B.annees_couvertes('ir', memoire))}",
+                        "Alertes": len(alertes)},
+                       ["Chaque valeur vient d'un texte légal cité et d'une source consultée, avec sa date de "
+                        "vérification.", "Une valeur est « à revérifier » au changement d'année (nouvelle loi de "
+                        "finances, nouveaux décrets) tant qu'elle n'a pas été confirmée."],
+                       ["Code général des impôts ; lois de finances ; Code du travail ; dahir 1-72-184 (CNSS) ; "
+                        "loi 65-00 (AMO)", f"Vérification générale le {B.VERIFIE_LE}"], aujourdhui.year, tableau=t,
+                       conseils=["Chaque mois de janvier : relisez la loi de finances de l'année et confirmez ou "
+                                 "mettez à jour les taux dans l'administration (onglet 📈 Apprentissage)."])
+    if nom == "Choisir son statut (comparaison)":
+        st.caption("Même activité, trois statuts : ce que vous payez et ce qu'il vous reste, avec les obligations "
+                   "de chacun.")
+        ca = c[0].number_input("Chiffre d'affaires annuel HT (DH)", 0.0, value=180_000.0, step=10_000.0, key="cs_ca")
+        activite = c[1].selectbox("Activité", ["Services", "Commerce, industrie ou artisanat"], key="cs_ac")
+        charges = c[2].number_input("Charges annuelles de l'activité (DH)", 0.0, value=40_000.0, step=5_000.0,
+                                    key="cs_ch", help="Achats, loyer, transport, matériel… (hors votre rémunération).")
+        c2 = st.columns(3)
+        frais_sarl = c2[0].number_input("Frais propres à la société (comptable, juridique) (DH/an)", 0.0,
+                                        value=12_000.0, step=1_000.0, key="cs_fs")
+        amo = c2[1].number_input("Cotisation AMO annuelle de l'indépendant (DH)", 0.0, value=0.0, step=500.0,
+                                 key="cs_amo", help="Forfait de votre catégorie (loi 98-15) : voir l'attestation CNSS.")
+        creation = c2[2].checkbox("Création (moins de 36 mois)", value=True, key="cs_cr",
+                                  help="Exonération de la cotisation minimale pendant 36 mois (CGI, art. 144).")
+        services = activite == "Services"
+        benefice = ca - charges
+        annee = min(aujourdhui.year, max(B.annees_couvertes("ir", memoire)))
+        # Auto-entrepreneur : impôt sur le chiffre d'affaires, aucune charge déductible
+        ae = S.auto_entrepreneur(ca, "services" if services else "commerce")
+        ae_dispo = ca - charges - ae["impot"] - amo
+        # Entreprise individuelle au résultat net réel : IR au barème sur le bénéfice, minimum 0,25 % du CA
+        ir = B.ir_annee(max(benefice, 0), annee, memoire)["ir_annuel"]
+        ir_du = ir if creation else max(ir, ca * K.TAUX_CM)
+        ei_dispo = benefice - ir_du - amo
+        # SARL : IS, puis dividendes soumis à la retenue à la source
+        benef_sarl = benefice - frais_sarl
+        x = K.calculer_is_du(max(benef_sarl, 0), ca)
+        is_du = x["is"] if creation else x["is_du"]
+        distribuable = max(0.0, benef_sarl - is_du)
+        taux_div = S.RAS_DIVIDENDES.get(aujourdhui.year, S.RAS_DIVIDENDES[max(S.RAS_DIVIDENDES)])
+        sarl_dispo = distribuable * (1 - taux_div)
+        lignes = [
+            {"Statut": "Auto-entrepreneur", "Possible ?": "non : plafond dépassé" if ae["depasse_le_plafond"] else "oui",
+             "Impôts": round(ae["impot"], 2), "Autres coûts": round(amo, 2), "Reste pour vous": round(ae_dispo, 2),
+             "Obligations": "déclaration trimestrielle du CA, pas de comptabilité ; plafond "
+                            f"{ae['plafond']:,.0f} DH".replace(",", " ")},
+            {"Statut": "Entreprise individuelle (réel)", "Possible ?": "oui", "Impôts": round(ir_du, 2),
+             "Autres coûts": round(amo, 2), "Reste pour vous": round(ei_dispo, 2),
+             "Obligations": "comptabilité complète, TVA, déclaration du revenu avant le 1er mai ; patrimoine engagé"},
+            {"Statut": "SARL (associé unique)", "Possible ?": "oui", "Impôts": round(is_du + distribuable * taux_div, 2),
+             "Autres coûts": round(frais_sarl, 2), "Reste pour vous": round(sarl_dispo, 2),
+             "Obligations": "comptabilité, liasse fiscale, IS, TVA, assemblée annuelle ; patrimoine personnel protégé"}]
+        tableau = pd.DataFrame(lignes)
+        possibles = tableau[tableau["Possible ?"] == "oui"]
+        meilleur = possibles.loc[possibles["Reste pour vous"].idxmax(), "Statut"]
+        conseils = [f"À ces chiffres, **{meilleur}** vous laisse le plus d'argent."]
+        if not ae["depasse_le_plafond"] and charges > ca * 0.4:
+            conseils.append("Vos charges sont élevées : l'auto-entrepreneur ne les déduit pas, le réel ou la SARL "
+                            "en tiennent compte.")
+        if ae["depasse_le_plafond"]:
+            conseils.append("Auto-entrepreneur impossible : chiffre d'affaires au-delà du plafond.")
+        elif services and ca > 80_000:
+            conseils.append("Auto-entrepreneur : au-delà de 80 000 DH par an avec un même client, ce client retient "
+                            "30 % à la source sur l'excédent (LF 2023) — diversifiez vos clients.")
+        conseils.append("Le choix ne se fait pas qu'au chiffre : la SARL protège votre patrimoine et rassure banques "
+                        "et grands clients ; l'auto-entrepreneur est le plus simple pour démarrer et tester.")
+        return rapport(nom, categorie_de(nom), {"Chiffre d'affaires HT": dh(ca), "Activité": activite,
+                                                "Charges": dh(charges), "Frais propres à la SARL": dh(frais_sarl),
+                                                "AMO de l'indépendant": dh(amo), "Création (< 36 mois)": "oui" if creation else "non"},
+                       {"Auto-entrepreneur : reste pour vous": dh(ae_dispo) + (" (impossible)" if ae["depasse_le_plafond"] else ""),
+                        "Entreprise individuelle : reste pour vous": dh(ei_dispo),
+                        "SARL : reste pour vous (après dividendes)": dh(sarl_dispo), "Le plus avantageux": meilleur},
+                       [f"Auto-entrepreneur : impôt = CA × {pc(ae['taux'])}, sans déduction des charges (CGI, art. "
+                        "42 bis et 73-III).",
+                        f"Entreprise individuelle : IR au barème {annee} sur le bénéfice (CA − charges) ; minimum de "
+                        "0,25 % du CA après 36 mois (art. 144).",
+                        f"SARL : IS sur le bénéfice (après ses frais propres), puis retenue de {pc(taux_div)} sur les "
+                        "dividendes distribués (art. 19 et 73-II).", "Reste pour vous = ce qui sort de l'activité "
+                        "pour votre poche, après impôts et coûts propres au statut."],
+                       ["Loi n° 114-13 (auto-entrepreneur) ; CGI, art. 19, 73, 144 et 247", "Loi n° 5-96 (SARL)",
+                        "Loi n° 98-15 (AMO des indépendants)", B.periode("ir", annee)["loi"]], annee, tableau=tableau,
+                       remarques=["Rémunération du gérant non simulée (tout est distribué en dividendes) ; TVA neutre "
+                                  "dans les trois cas ; taxe professionnelle exonérée les 5 premières années."],
                        conseils=conseils)
     return None

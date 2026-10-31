@@ -61,3 +61,57 @@ PHRASES_PRO_DARIJA = [
     ("l'marchandise wslat f lw9t", "La marchandise est arrivée à temps"),
     ("chokran 3la l'khedma dyalkom", "Merci pour votre travail"),
 ]
+
+
+# ==========================================
+# Langue d'une réponse, pour choisir la voix (écriture d'abord, puis mots caractéristiques)
+# ==========================================
+import re as _re
+
+MOTS = {
+    "Français": {"le", "la", "les", "des", "du", "de", "est", "et", "vous", "je", "tu", "pour", "avec", "une", "un",
+                 "sur", "dans", "pas", "que", "qui", "au", "aux", "ce", "cette", "à", "il", "elle", "sont", "par",
+                 "mais", "ou", "votre", "mon", "ton", "bonjour", "bonsoir", "merci", "impôt", "taux", "être", "avez"},
+    "English": {"the", "is", "and", "you", "of", "to", "in", "for", "with", "this", "that", "are", "it", "your",
+                "what", "how", "hello", "thanks", "can", "will", "have", "has", "be"},
+    "Español": {"el", "los", "las", "es", "y", "usted", "para", "con", "una", "por", "del", "está", "son", "como",
+                "pero", "muy", "hola", "gracias", "tiene", "su", "más", "qué"},
+    "Darija": {"wach", "kifach", "bghit", "dyal", "mzyan", "bzaf", "labas", "chno", "chnou", "daba", "kayn", "walakin",
+               "safi", "hna", "nta", "nti", "ana", "3lik", "3lach", "fin", "kidayr", "ghadi", "machi", "had", "hadchi",
+               "smahli", "baraka", "chokran", "salam", "zwin", "khoya", "khti", "mezyan", "kolchi", "dima"},
+}
+DARIJA_ARABE = {"واش", "ديال", "بغيت", "كيفاش", "دابا", "هاد", "هادشي", "شنو", "بزاف", "كاين", "غادي", "ماشي",
+                "كيداير", "لاباس", "مزيان", "فين", "علاش", "شحال", "واخا", "صافي", "داز", "نهارك", "كنبغي", "ديالك"}
+ARABE = _re.compile(r"[؀-ۿ]")
+LATIN = _re.compile(r"[A-Za-zÀ-ÿ]")
+
+
+def detecter_langue(texte, defaut="Français"):
+    """Langue de la voix pour un texte : Arabe ou Darija pour l'écriture arabe (mots darija reconnus), sinon Français,
+    English ou Español selon les mots caractéristiques. Français par défaut (langue de l'application)."""
+    texte = texte or ""
+    nb_arabe, nb_latin = len(ARABE.findall(texte)), len(LATIN.findall(texte))
+    if nb_arabe > nb_latin:
+        mots_arabes = set(_re.findall(r"[؀-ۿ]+", texte))
+        return "Darija" if mots_arabes & DARIJA_ARABE else "Arabe"
+    # Écriture latine : la voix marocaine lit mal le darija en lettres latines (3lik, l7sab) ; on choisit la voix
+    # française, anglaise ou espagnole qui lit le mieux le texte
+    mots = _re.findall(r"[a-zà-ÿ0-9']+", texte.lower())
+    scores = {langue: sum(1 for m in mots if m in liste) for langue, liste in MOTS.items() if langue != "Darija"}
+    meilleure = max(scores, key=scores.get)
+    return meilleure if scores[meilleure] > 0 else defaut
+
+
+def partie_dans_la_langue(texte, langue):
+    """Ce que la voix doit lire : les lignes écrites dans l'écriture de la langue (le salut en darija n'est pas lu
+    par la voix française, et inversement)."""
+    arabe = langue in ("Arabe", "Darija") and len(ARABE.findall(texte or "")) > 0
+    lignes = []
+    for ligne in (texte or "").splitlines():
+        a, l = len(ARABE.findall(ligne)), len(LATIN.findall(ligne))
+        if (arabe and a >= l and a) or (not arabe and l >= a and l) or (not a and not l):
+            lignes.append(ligne)
+    garde = "\n".join(lignes).strip()
+    if not arabe:                      # dans une ligne mixte, retirer les mots en écriture arabe
+        garde = _re.sub(r"[؀-ۿ][؀-ۿ\s،؟]*", " ", garde)
+    return garde or texte

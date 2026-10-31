@@ -30,7 +30,7 @@ from .ecole import MATIERES, charger, repondre
 from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_controle, detecter_role, intention, \
     reponse_locale, urls
 from .invention import annonce_darija, debattre, evoluer
-from .langues import LANGUES, PHRASES_PRO_DARIJA
+from .langues import LANGUES, PHRASES_PRO_DARIJA, detecter_langue, partie_dans_la_langue
 from .memoire import historique_api
 from .partage import broutage_autonome, etat_memoire, memoire, secret
 from .parole import charger_oreille, synthetiser, transcrire
@@ -417,13 +417,38 @@ def compter_message_visiteur(utilisateur):
     mem.definir_reglage(cle, str(int(mem.reglage(cle) or 0) + 1))
 
 
+MODES_REPONSE = ["✍️ Réponses complètes", "🗣️ Réponses courtes, faites pour l'écoute"]
+
+
+def lecture_activee():
+    return bool(st.session_state.get("lecture_voix", True))
+
+
+def choix_lecture():
+    """L'interrupteur « 🔊 Lecture » : IA AISSA lit ou non ses réponses à voix haute. Choix gardé sur l'appareil."""
+    garde = coffre.lire("ia_aissa_lecture")
+    if garde and not st.session_state.get("lecture_synchro"):        # le coffre de l'appareil arrive après coup
+        st.session_state["lecture_voix"] = garde != "non"
+        st.session_state["lecture_synchro"] = True
+    st.session_state.setdefault("lecture_voix", True)
+
+    def memoriser():
+        coffre.ecrire("ia_aissa_lecture", "oui" if st.session_state["lecture_voix"] else "non")
+        st.session_state["lecture_synchro"] = True
+
+    return st.toggle("🔊 Lecture", key="lecture_voix", on_change=memoriser,
+                     help="IA AISSA lit ses réponses à voix haute, dans la langue de la réponse. Le bouton « Écouter » "
+                          "sous l'alien reste disponible quand la lecture est coupée.")
+
+
 def reglages_visiteur(utilisateur):
     """Le panneau des visiteurs : comment IA AISSA répond, et leurs conversations. Rien d'autre."""
     mem = memoire()
     moteur, config, cle_api, restants = moteur_pour_visiteur(utilisateur)
     with st.popover("⚙️ Réglages", width="content"):
-        modes = ["✍️🔊 Écrites et vocales", "✍️ Écrites", "🔊 Vocales"]
-        mode = st.radio("Réponses", modes, index=modes.index(st.session_state.get("mode_reponse", modes[0])),
+        modes = MODES_REPONSE
+        mode = st.radio("Réponses", modes, index=modes.index(st.session_state.get("mode_reponse", modes[0]))
+                        if st.session_state.get("mode_reponse") in modes else 0,
                         horizontal=True)
         st.session_state["mode_reponse"] = mode
         niveaux = list(NIVEAUX)
@@ -444,7 +469,7 @@ def reglages_visiteur(utilisateur):
         if PAGE_ADMIN is not None:
             st.page_link(PAGE_ADMIN, label="🛡️ Administration")
     return {"moteur": moteur, "config": config, "cle_api": cle_api, "niveau": niveau, "voir_outils": False,
-            "ecrit": "Écrites" in mode, "vocal": "Vocales" in mode or "vocales" in mode, "admin": False}
+            "ecrit": mode == MODES_REPONSE[0], "vocal": lecture_activee(), "admin": False}
 
 
 def reglages(utilisateur):
@@ -496,8 +521,9 @@ def reglages(utilisateur):
                     mem.supprimer_reglage(cle_compte)
                 ecrire_cookie(cookie, None)
                 st.rerun()
-        modes = ["✍️🔊 Écrites et vocales", "✍️ Écrites", "🔊 Vocales"]
-        mode = st.radio("Réponses", modes, index=modes.index(st.session_state.get("mode_reponse", modes[0])),
+        modes = MODES_REPONSE
+        mode = st.radio("Réponses", modes, index=modes.index(st.session_state.get("mode_reponse", modes[0]))
+                        if st.session_state.get("mode_reponse") in modes else 0,
                         horizontal=True)
         st.session_state["mode_reponse"] = mode
         niveaux = list(NIVEAUX)
@@ -546,7 +572,7 @@ def reglages(utilisateur):
             mem.sauver_media("avatar", image.getvalue(), image.type or "image/png")
             st.rerun()
     return {"moteur": moteur, "config": config, "cle_api": cle_api, "niveau": niveau, "voir_outils": voir_outils,
-            "ecrit": "Écrites" in mode, "vocal": "Vocales" in mode or "vocales" in mode, "admin": True}
+            "ecrit": mode == MODES_REPONSE[0], "vocal": lecture_activee(), "admin": True}
 
 
 # ==========================================
@@ -970,6 +996,7 @@ def espace_visiteur():
     zone_alien = st.container()
     haut = st.columns([5, 1.4])
     with haut[1]:
+        choix_lecture()
         r = reglages(utilisateur) if est_admin() else reglages_visiteur(utilisateur)
     role_courant = st.session_state.get("role_ia", "compagnon")
     with haut[0]:
@@ -983,8 +1010,11 @@ def espace_visiteur():
         texte = (f"{salut} — {SALUTATIONS['Français'][moment_de_la_journee()].format(nom=prenom)} Je suis IA AISSA. "
                  "Pose-moi ta question : un problème juridique, comptable, social, financier, technique, un cours… "
                  "ou dis-moi simplement ce qui ne va pas.").replace(" ,", ",").replace("  ", " ")
-        st.session_state["parole"] = {"texte": texte, "audio": _dire(salut, "Darija"), "voix": "ar-MA",
-                                      "nouveau": True}
+        audio = None
+        if lecture_activee():                     # chaque partie avec sa voix : darija (marocaine), puis français
+            darija, francais = _dire(salut, "Darija"), _dire(partie_dans_la_langue(texte, "Français"), "Français")
+            audio = (darija or b"") + (francais or b"") or None    # deux MP3 bout à bout se lisent d'une traite
+        st.session_state["parole"] = {"texte": texte, "audio": audio, "voix": "ar-MA", "nouveau": True}
 
     from .espace_simulations import MODES, afficher as afficher_simulation, barre_laterale, choix_principal
     barre_laterale()                               # la liste des simulations, classées par type, à gauche
@@ -1042,14 +1072,15 @@ def espace_visiteur():
         with st.spinner("🧠 IA AISSA réfléchit…"):
             reponse, elements, journal, role, etat = traiter(r, utilisateur, texte, fichiers)
         st.session_state["role_ia"] = role
-        langue = repondre("langues", reponse[:300])[0]["reponse"]
+        langue = detecter_langue(reponse)              # écriture et mots : fiable, contrairement au petit cerveau
         meta = st.session_state.pop("meta_locale", None) or meta_conscience(journal, time.time() - debut)
         message = {"role": "assistant", "texte": reponse, "elements": elements, "outils": journal, "langue": langue,
                    "meta": meta, "role_ia": role}
         st.session_state["affichage"].append(message)
         afficher_message(message, len(st.session_state["affichage"]) - 1, r["voir_outils"])
         apprendre_de_l_echange(r, utilisateur, texte, reponse)
-        st.session_state["parole"] = {"texte": reponse, "audio": _dire(reponse, langue) if r["vocal"] else None,
+        st.session_state["parole"] = {"texte": reponse,
+                                      "audio": _dire(partie_dans_la_langue(reponse, langue), langue) if r["vocal"] else None,
                                       "voix": LANGUES[langue]["voix"], "nouveau": True, "etat": etat, "meta": meta}
 
     parole = st.session_state["parole"]

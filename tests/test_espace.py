@@ -519,3 +519,61 @@ def test_chaque_simulation_a_ses_propres_cles_de_saisie():
             for cle in re.findall(r'key="([^"{]+)"', ligne):
                 proprietaires.setdefault(cle, set()).add(courante)
     assert not {k: v for k, v in proprietaires.items() if len(v) > 1}
+
+
+def test_registre_des_taux_et_mises_a_jour(tmp_path):
+    import datetime
+    import pytest
+    from ia_aissa import connaissances as K, parametres as P, simulations as S
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    avant = S.paie_complete(3_500)["sous_smig"]
+    assert not avant and len(P.registre(mem)) == len(P.PARAMETRES)
+    with pytest.raises(ValueError, match="source"):
+        P.mettre_a_jour(mem, "smig_horaire", 19.0, "01/01/2027", "décret …", "")
+    with pytest.raises(ValueError, match="décimal"):
+        P.mettre_a_jour(mem, "cnss_salarie", 4.48, "01/01/2027", "décret", "BO")
+    try:
+        P.mettre_a_jour(mem, "smig_horaire", 19.0, "01/01/2027", "Décret de revalorisation 2027", "BO n° …")
+        assert K.SMIG_HORAIRE_2026 == 19.0 and S.paie_complete(3_500)["sous_smig"]     # appliqué aux calculs
+        ligne = P.registre(mem).set_index("Clé").loc["smig_horaire"]
+        assert ligne["Valeur"] == "19 DH/heure" and ligne["Statut"].startswith("🛠️")
+        P.annuler(mem, "smig_horaire")
+        assert K.SMIG_HORAIRE_2026 == 17.92 and not P.historique(mem, "smig_horaire")
+    finally:
+        P.annuler(mem, "smig_horaire")
+        P.appliquer(None)
+    assert P.alertes(mem, datetime.date(2026, 10, 30)) == []
+    nouvelle = P.alertes(mem, datetime.date(2027, 1, 15))
+    assert any("Loi de finances 2027" in a for a in nouvelle) and any("revérifier" in a for a in nouvelle)
+
+
+def test_voix_dans_la_langue_de_la_reponse_et_lecture_au_choix(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa.langues import detecter_langue, partie_dans_la_langue
+    assert detecter_langue("Revenu net imposable **120 000 DH** : taux marginal 34 %, somme à déduire") == "Français"
+    assert detecter_langue("La TVA au Maroc : la taxe sur la valeur ajoutée est un impôt") == "Français"
+    assert detecter_langue("Salam ! Labas 3lik ? Je suis là. Pose-moi une question") == "Français"
+    assert detecter_langue("The capital of Japan is Tokyo.") == "English"
+    assert detecter_langue("El impuesto sobre la renta es progresivo") == "Español"
+    assert detecter_langue("كيداير لاباس عليك؟ واش بغيتي تحسب الضريبة") == "Darija"
+    assert detecter_langue("ما هي نسبة الضريبة على القيمة المضافة") == "Arabe"
+    mixte = "مسا الخير، كيف داز نهارك؟\nBonsoir ! Je suis IA AISSA."
+    assert partie_dans_la_langue(mixte, "Français") == "Bonsoir ! Je suis IA AISSA."
+    assert partie_dans_la_langue(mixte, "Darija") == "مسا الخير، كيف داز نهارك؟"
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    import ia_aissa.parole as P
+    dites = []
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: dites.append(l) or b"ID3")
+    import ia_aissa.interface as I
+    monkeypatch.setattr(I, "synthetiser", lambda t, l: dites.append((l, t)) or b"ID3")
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    assert at.toggle(key="lecture_voix").value is True
+    assert [l for l, _ in dites] == ["Darija", "Français"]               # salut : chaque partie avec sa voix
+    dites.clear()
+    at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
+    assert dites and dites[-1][0] == "Français"                           # une réponse en français : voix française
+    at.toggle(key="lecture_voix").set_value(False).run()
+    dites.clear()
+    at.chat_input[0].set_value("agadir").run()
+    assert not at.exception and dites == []                               # lecture coupée : rien n'est lu

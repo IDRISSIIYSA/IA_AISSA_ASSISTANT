@@ -14,7 +14,8 @@ from .rapports import journaliser, markdown, pdf, rapport
 
 CATEGORIES = {
     "🧭 Mes obligations (guide)": ["Mes impôts et déclarations (calendrier)", "Feuille de route du débutant",
-                                   "Documents et attestations de régularité"],
+                                   "Choisir son statut (comparaison)", "Documents et attestations de régularité",
+                                   "Taux en vigueur et mises à jour"],
     "📚 Impôts décortiqués": ["IR décortiqué", "IS décortiqué", "TVA décortiquée", "État 9421 (traitements et salaires)",
                              "Déclaration du revenu global (personnes physiques)", "Revenus fonciers (loyers) décortiqués"],
     "🧾 Fiscalité": ["IR (impôt sur le revenu)", "IS (impôt sur les sociétés)", "TVA due ou crédit de TVA",

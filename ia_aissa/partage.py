@@ -88,6 +88,11 @@ def memoire():
         m = Memoire(None)
         m.erreur = f"{type(e).__name__} : {str(e).splitlines()[0][:200]}"
     brancher(m)
+    try:                                          # taux mis à jour par l'administrateur : appliqués à tous les calculs
+        from .parametres import appliquer
+        appliquer(m)
+    except Exception:
+        pass
     return m
 
 

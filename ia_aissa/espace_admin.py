@@ -86,6 +86,9 @@ def tableau_de_bord(mem):
         par_jour = freq[freq["jour"] >= aujourdhui - timedelta(days=30)].groupby("jour").agg(
             Conversations=("utilisateur", "size"), Personnes=("utilisateur", "nunique"))
         st.bar_chart(par_jour, y_label="Fréquentation (30 jours)")
+    from .parametres import alertes
+    for alerte in alertes(mem):                         # loi de finances de l'année à intégrer, taux à revérifier
+        st.warning(alerte)
     temps_d_ouverture()
     if etat.get("erreurs"):
         with st.expander(f"⚠️ {len(etat['erreurs'])} souci(s) récent(s) du travailleur autonome"):
@@ -133,6 +136,7 @@ def apprentissage(mem, afficher_element):
             st.rerun()
     tester_ses_apprentissages(mem)
     baremes_historiques(mem)
+    mises_a_jour_des_taux(mem)
     st.subheader("📈 Croissance")
     afficher(st, mem)
     afficher_element({"type": "bulletin", "titre": "📒 Bulletin de notes"}, "adm_bulletin")
@@ -319,6 +323,38 @@ def tracabilite(mem):
             st.success("✅ Rapport authentique : numéro et empreinte correspondent au journal.")
         else:
             st.error("❌ Rapport inconnu ou modifié : l'empreinte ne correspond pas.")
+
+
+def mises_a_jour_des_taux(mem):
+    """Mettre à jour un taux ou un seuil (SMIG, CNSS, AMO…) avec son texte légal et sa source : appliqué aussitôt."""
+    from . import parametres as P
+    st.subheader("📅 Mises à jour des taux et seuils")
+    for alerte in P.alertes(mem):
+        st.warning(alerte)
+    st.dataframe(P.registre(mem).drop(columns=["Clé"]), hide_index=True, width="stretch")
+    with st.form("mise_a_jour_taux"):
+        cles = [p[0] for p in P.PARAMETRES]
+        cle = st.selectbox("Paramètre", cles, format_func=lambda k: P.PAR_CLE[k][3])
+        c = st.columns(2)
+        valeur = c[0].number_input("Nouvelle valeur (un taux en décimal : 0,0448 pour 4,48 %)", 0.0, value=0.0,
+                                   format="%.4f")
+        depuis = c[1].text_input("En vigueur depuis (ex. 01/01/2027)")
+        texte = st.text_input("Texte légal (décret, loi de finances, article…)")
+        source = st.text_input("Source consultée (Bulletin officiel n° …, site de la DGI, de la CNSS…)")
+        if st.form_submit_button("Enregistrer et appliquer"):
+            try:
+                P.mettre_a_jour(mem, cle, valeur, depuis or "—", texte, source)
+                st.success(f"{P.PAR_CLE[cle][3]} : {P.afficher_valeur(valeur, P.PAR_CLE[cle][4])} appliqué à toutes "
+                           "les simulations.")
+            except ValueError as e:
+                st.error(f"Mise à jour refusée : {e}")
+    modifies = [k for k in P.PAR_CLE if P.historique(mem, k)]
+    if modifies:
+        c = st.columns([3, 1])
+        cle = c[0].selectbox("Annuler la dernière mise à jour de", modifies, format_func=lambda k: P.PAR_CLE[k][3])
+        if c[1].button("↩️ Annuler", width="stretch"):
+            P.annuler(mem, cle)
+            st.rerun()
 
 
 def baremes_historiques(mem):

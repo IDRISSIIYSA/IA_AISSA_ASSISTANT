@@ -41,7 +41,11 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Simulations : coefficients de réévaluation du profit foncier lus dans la circulaire de la DGI de l'année (au lieu d'une saisie)
 - [ ] Simulations : comparer deux scénarios côte à côte (deux crédits, deux statuts, deux business plans) dans un même rapport
 
+- [ ] Mises à jour : chaque 1er janvier, IA AISSA lit la loi de finances déposée en PDF et propose à l'administrateur les nouveaux taux trouvés (à valider), au lieu de les saisir à la main
+- [ ] Voix : lire une réponse mixte phrase par phrase, chacune avec la voix de sa langue
+
 ## Fait
+- [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse
 - [x] Simulations : classeur Excel pour chaque rapport (synthèse, tableau, compte de résultat du business plan, échéancier par année) ; plus-value immobilière (profit foncier), solde de tout compte avec préavis légal (décret 2-04-469), remboursement anticipé d'un crédit
 - [x] Indépendance : moteur « Modèle local (Ollama) » sans clé payante (ses faits sûrs d'abord, le modèle ne fait que parler, garde-fou des chiffres non sourcés) et paquet serveur deploy/ (Docker, Ollama 0.40.4, Caddy HTTPS, installer.sh)
 - [x] Choix « Chat » ou « Simulations et guides » ; 62 simulations et guides en 13 types : obligations et feuille de route, impôts décortiqués (IR, IS, TVA, état 9421, revenu global, loyers, attestations et classement), business plan sur 5 ans, sensibilité, plan de financement, échéancier daté avec différé, assurance et TEG, amortissement au prorata (CGI art. 10), bulletin de paie à l'envers depuis le net
