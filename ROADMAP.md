@@ -20,7 +20,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Banc d'essai permanent des questions libres (tests/banc_questions.py) suivi à chaque séance, et nouvelles formulations pour chaque question ratée — 35 questions (15 nouvelles formulations), deux niveaux mesurés, historique dans data/banc_historique.json et dans l'administration, test de non-régression
 - [x] Darija : enrichir la matière « Langues » avec des expressions professionnelles et des chiffres en darija
 
-- [ ] Bibliothèque : bouton « Nourrir IA AISSA chaque jour » qui digère un article Wikipédia tiré de ses lacunes à chaque visite, dans la limite d'un appel au moteur
+- [x] Bibliothèque : bouton « Nourrir IA AISSA chaque jour » qui digère un article Wikipédia tiré de ses lacunes à chaque visite, dans la limite d'un appel au moteur — repas du jour en arrière-plan à la première visite, titre d'article tiré de la question (ou d'un seul appel au moteur), texte rangé dans sa mémoire de lecture, lacune résolue seulement si elle sait y répondre en relisant ; bouton et historique dans 🕹️ Commandes ; extraits de lecture : la phrase qui répond en premier
 
 - [x] Espace unique : afficher les graphiques et tableaux du contrôleur de gestion dans des onglets repliables pour garder la conversation compacte sur téléphone
 
@@ -46,6 +46,9 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [ ] Banc d'essai : réentraîner l'aiguilleur des cerveaux d'école avec les formulations darija ratées (19/35 seuls), en mesurant avant/après sur le banc
 - [ ] Banc d'essai : ajouter 10 questions sur les nouvelles simulations (statut, profit foncier, solde de tout compte) pour que le chat oriente vers la bonne simulation
+
+- [ ] Repas du jour : quand l'article ne suffit pas à résoudre la lacune, essayer le lendemain un second article lié (liens internes de la page) avant de passer à une autre lacune
+- [ ] Pensée propre : utiliser sa mémoire de lecture quand elle est sûre (réponse « Tokyo » tirée de l'article Japon) pour répondre sans appeler le grand moteur
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

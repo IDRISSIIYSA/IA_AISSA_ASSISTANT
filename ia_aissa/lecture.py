@@ -107,9 +107,14 @@ def phrases_utiles(passage, question, n=3):
         if len(p.strip()) > 25 and cle not in vues:
             vues.add(cle)
             phrases.append(p.strip())
-    notees = sorted(phrases, key=lambda p: -len(q & set(jetons(p))))
-    gardees = [p for p in notees[:n] if q & set(jetons(p))]
-    return [p for p in phrases if p in gardees] or phrases[:1]
+    # Un mot de la question présent dans toutes les phrases (le sujet : « Japon ») compte peu ; un mot rare dans le
+    # passage (« capitale ») désigne la phrase qui répond
+    jetons_phrases = [set(jetons(p)) for p in phrases]
+    frequence = collections.Counter(j for js in jetons_phrases for j in js & q)
+    poids = {j: math.log(1 + len(phrases) / f) for j, f in frequence.items()}
+    notes = {p: sum(poids[j] for j in js & q) for p, js in zip(phrases, jetons_phrases)}
+    notees = sorted(phrases, key=lambda p: -notes[p])
+    return [p for p in notees[:n] if notes[p] > 0] or phrases[:1]      # la phrase qui répond en premier
 
 
 SEUIL_LECTURE = 0.45            # part des mots de la question retrouvés dans le meilleur passage

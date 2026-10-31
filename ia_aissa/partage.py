@@ -124,3 +124,18 @@ def broutage_autonome():
         return demarrer(memoire(), None, lambda: None, int(secret("BROUTAGE_PAR_JOUR") or 24))
     cle = secret(MOTEURS[moteur]["secret"])
     return demarrer(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle), par_jour)
+
+
+def repas_du_jour():
+    """À chaque visite : si IA AISSA n'a pas encore mangé aujourd'hui, elle lit en arrière-plan l'article de Wikipédia
+    qui répond à une de ses lacunes (au plus un appel au grand moteur par jour). Secret facultatif :
+    REPAS_DU_JOUR = "non" pour l'arrêter."""
+    if os.environ.get("IA_AISSA_TESTS") or str(secret("REPAS_DU_JOUR") or "oui").lower() in ("non", "false", "0"):
+        return False
+    from .assistant import MOTEURS, client_moteur
+    from .nourrir import nourrir_en_arriere_plan
+    moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"]) and not c.get("local")), None)
+    if moteur is None:
+        return nourrir_en_arriere_plan(memoire())
+    cle = secret(MOTEURS[moteur]["secret"])
+    return nourrir_en_arriere_plan(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle))

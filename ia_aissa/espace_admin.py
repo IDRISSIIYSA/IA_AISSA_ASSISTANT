@@ -282,6 +282,34 @@ def commandes(mem):
     if c[2].button("🪶 Alléger la mémoire vive", width="stretch"):
         b = alleger(plafond=0)
         st.success(f"{b['avant']} Mo → {b['apres']} Mo")
+    repas_du_jour_admin(mem)
+
+
+def repas_du_jour_admin(mem):
+    """Le repas du jour : une lacune, l'article de Wikipédia qui y répond, lu et vérifié."""
+    from .nourrir import historique, nourrir_du_jour
+    st.subheader("🍽️ Nourrir IA AISSA chaque jour")
+    st.caption("À la première visite de la journée, elle choisit une de ses lacunes, lit l'article de Wikipédia qui y "
+               "répond et vérifie qu'elle sait désormais y répondre (au plus un appel au grand moteur par jour).")
+    if st.button("🍽️ Nourrir IA AISSA maintenant (une lacune)"):
+        with st.spinner("Je choisis une lacune et je lis l'article qui y répond…"):
+            from .assistant import MOTEURS, client_moteur
+            from .partage import secret
+            moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"]) and not c.get("local")), None)
+            b = nourrir_du_jour(mem, MOTEURS[moteur] if moteur else None,
+                                client_moteur(moteur, secret(MOTEURS[moteur]["secret"])) if moteur else None, forcer=True)
+        if b["source"]:
+            st.success(f"« {b['lacune']} » → {b['source']} : {b['concepts']} concept(s), "
+                       + ("lacune résolue ✅" if b["resolue"] else "pas encore assez pour y répondre"))
+        else:
+            st.info("Aucune lacune à nourrir aujourd'hui." if not b["essais"] else
+                    "Aucun article trouvé : " + " ; ".join(b["essais"]))
+    repas = historique(mem)
+    if repas:
+        st.dataframe(pd.DataFrame([{"Jour": r["date"], "Lacune": r["lacune"], "Article lu": r["source"],
+                                    "Concepts": r["concepts"], "Résolue": "✅" if r["resolue"] else "—",
+                                    "Appel au moteur": "oui" if r["moteur_utilise"] else "non"} for r in repas]),
+                     hide_index=True, width="stretch")
 
 
 # ==========================================

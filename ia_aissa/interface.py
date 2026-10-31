@@ -32,7 +32,7 @@ from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_cont
 from .invention import annonce_darija, debattre, evoluer
 from .langues import LANGUES, PHRASES_PRO_DARIJA, detecter_langue, partie_dans_la_langue
 from .memoire import historique_api
-from .partage import broutage_autonome, etat_memoire, memoire, secret
+from .partage import broutage_autonome, etat_memoire, memoire, repas_du_jour, secret
 from .parole import charger_oreille, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
@@ -1006,6 +1006,7 @@ def application():
         st.markdown(STYLE, unsafe_allow_html=True)
         coffre.ouvrir()                 # ce que cet appareil retient : identité, connexion, clé API
         broutage_autonome()             # le travailleur autonome (démarré une seule fois par serveur)
+        repas_du_jour()                 # une lacune nourrie par jour, en arrière-plan
         from .espace_admin import espace_admin
         visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)
         PAGE_ADMIN = st.Page(espace_admin, title="Administration", icon="🛡️", url_path="admin")

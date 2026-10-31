@@ -643,3 +643,51 @@ def test_pensee_propre_sure_repond_sans_api_et_source_affichee(tmp_path, monkeyp
     assert appels and "Tokyo" in at.chat_message[-1].markdown[1].value              # le grand moteur, et il le dit
     assert "grand moteur" in at.chat_message[-1].caption[0].value
     assert int(memoire().reglage(quota) or 0) == int(avant or 0) + 1               # le moteur, lui, compte
+
+
+def test_nourrir_ia_aissa_chaque_jour_avec_une_lacune(tmp_path):
+    import datetime
+    from ia_aissa import nourrir
+    from ia_aissa.bibliotheque import ErreurBroutage
+    from ia_aissa.memoire import Memoire
+    assert nourrir.titres_candidats("Quelle est la capitale du Japon ?")[0] == "Japon"
+    assert nourrir.titres_candidats("Parle-moi de Ibn Khaldoun")[0] == "Ibn Khaldoun"
+    assert nourrir.titres_candidats("qui a construit la koutoubia ?") == ["koutoubia"]
+
+    class FauxBrouteur:
+        def __init__(self):
+            self.demandes = []
+
+        def wikipedia(self, titre):
+            self.demandes.append(titre)
+            if titre != "Japon":
+                raise ErreurBroutage(f"Pas d'article « {titre} »")
+            return "Wikipédia — Japon", ("Le Japon est un pays insulaire d'Asie de l'Est. Sa capitale est Tokyo, "
+                                         "la plus grande ville du pays. ") * 20
+
+    class FauxClient:                           # le grand moteur, appelé au plus une fois par jour
+        appels = 0
+
+        class messages:
+            @staticmethod
+            def create(**k):
+                from types import SimpleNamespace
+                FauxClient.appels += 1
+                return SimpleNamespace(content=[SimpleNamespace(type="text", text="Japon")])
+
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.ajouter_lacune("Quelle est la capitale du Japon ?", "geographie", 0.2)
+    mem.ajouter_lacune("Parle-moi de Ibn Khaldoun", "histoire", 0.2)
+    b = FauxBrouteur()
+    jour = datetime.date(2026, 10, 31)
+    r = nourrir.nourrir_du_jour(mem, {"type": "anthropic", "modele": "claude-opus-5-5"}, FauxClient, b, jour)
+    assert r["source"] == "Wikipédia — Japon" and r["resolue"] and r["moteur_utilise"] and FauxClient.appels == 1
+    assert b.demandes == ["Japon"]
+    assert [l["question"] for l in mem.lacunes_ouvertes()] == ["Parle-moi de Ibn Khaldoun"]   # lacune résolue
+    from ia_aissa.lecture import repondre_par_lecture
+    assert "Tokyo" in repondre_par_lecture("Quelle est la capitale du Japon ?", mem)["reponse"]
+    deja = nourrir.nourrir_du_jour(mem, {"type": "anthropic", "modele": "x"}, FauxClient, b, jour)
+    assert deja["deja"] and FauxClient.appels == 1                                       # une fois par jour
+    lendemain = nourrir.nourrir_du_jour(mem, None, None, b, jour + datetime.timedelta(days=1))
+    assert lendemain["source"] is None and "Ibn Khaldoun" in " ".join(lendemain["essais"])   # sans moteur ni article
+    assert len(nourrir.historique(mem)) == 2
