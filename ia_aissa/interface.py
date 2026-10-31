@@ -899,12 +899,29 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
     # Étude autonome avec un grand moteur seulement : un petit modèle local, lent et moins sûr, lui apprendrait des
     # erreurs (elle apprend alors par ses lectures, sa rumination et ses examens)
     if r["cle_api"] and not r["config"].get("local") and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
+        etude_en_arriere_plan(mem, r["moteur"], r["config"], r["cle_api"])
+
+
+_ETUDE = {"en_cours": False}
+
+
+def etude_en_arriere_plan(mem, moteur, config, cle_api):
+    """L'étude autonome appelle le grand moteur : en arrière-plan, pour que le visiteur n'attende jamais (la saisie
+    du chat restait bloquée plus de 30 s après la réponse). Une seule étude à la fois par serveur."""
+    import threading
+    if _ETUDE["en_cours"]:
+        return False
+    _ETUDE["en_cours"] = True
+
+    def etudier():
         try:
-            etude = etudier_seule(mem, r["config"], client_moteur(r["moteur"], r["cle_api"]))
-            st.toast(f"🧠 J'ai étudié seule {etude['etudiees']} question(s) : {etude['apprises']} nouvelle(s) "
-                     "connaissance(s).")
+            etudier_seule(mem, config, client_moteur(moteur, cle_api))
         except Exception:
             pass          # l'étude autonome reprendra à la prochaine occasion
+        finally:
+            _ETUDE["en_cours"] = False
+    threading.Thread(target=etudier, daemon=True, name="ia-aissa-etude").start()
+    return True
 
 
 @st.fragment(run_every="60s")

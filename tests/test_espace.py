@@ -691,3 +691,24 @@ def test_nourrir_ia_aissa_chaque_jour_avec_une_lacune(tmp_path):
     lendemain = nourrir.nourrir_du_jour(mem, None, None, b, jour + datetime.timedelta(days=1))
     assert lendemain["source"] is None and "Ibn Khaldoun" in " ".join(lendemain["essais"])   # sans moteur ni article
     assert len(nourrir.historique(mem)) == 2
+
+
+def test_etude_autonome_en_arriere_plan_sans_bloquer(tmp_path, monkeypatch):
+    import threading
+    import time
+    import ia_aissa.interface as I
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    feu = threading.Event()
+    monkeypatch.setattr(I, "etudier_seule", lambda *a, **k: feu.wait(5))       # une étude qui dure
+    monkeypatch.setattr(I, "client_moteur", lambda *a, **k: object())
+    debut = time.time()
+    assert I.etude_en_arriere_plan(mem, "GPT-4o (OpenAI)", {"type": "openai"}, "sk-test") is True
+    assert time.time() - debut < 0.5                                            # la page n'attend pas
+    assert I.etude_en_arriere_plan(mem, "GPT-4o (OpenAI)", {"type": "openai"}, "sk-test") is False   # une à la fois
+    feu.set()
+    for _ in range(50):
+        if not I._ETUDE["en_cours"]:
+            break
+        time.sleep(0.05)
+    assert not I._ETUDE["en_cours"]
