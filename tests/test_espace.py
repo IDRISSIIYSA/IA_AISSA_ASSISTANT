@@ -571,7 +571,7 @@ def test_voix_dans_la_langue_de_la_reponse_et_lecture_au_choix(tmp_path, monkeyp
     monkeypatch.setattr(I, "_PANNE_VOIX", {"echecs": 0, "jusqu_a": 0.0})   # ni panne laissée par un autre test
     at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
     assert at.toggle(key="lecture_voix").value is True
-    assert [l for l, _ in dites] == ["Darija", "Français"]               # salut : chaque partie avec sa voix
+    assert sorted(l for l, _ in dites) == ["Darija", "Français"]         # salut : chaque partie avec sa voix (faites en parallèle)
     dites.clear()
     at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
     assert dites and dites[-1][0] == "Français"                           # une réponse en français : voix française

@@ -387,10 +387,13 @@ def calculer(texte):
     if re.search(r"\b(tva|ttc|ht)\b", t):
         v = max(valeurs)
         taux = next((x / 100 for x in valeurs if x in (7, 10, 14, 20) and x != v), None)
+        if taux is None and re.search(r"\b(normal|standard|g[ée]n[ée]ral|droit commun)\b", t):
+            taux = 0.2                              # « au taux normal » : 20 %, jamais un nom de produit
         if taux is None:
             regime = repondre("tva", texte, top=1)[0]
             produit = set(mots(texte)) - set(mots("tva sur de du la le les un une pour dh dirhams ht ttc montant prix "
-                                                  "calcule calcul calculer combien fait vente achat facture")) - {
+                                                  "calcule calcul calculer combien fait vente achat facture au taux quel quelle est sur avec "
+                                                  "applique appliquer")) - {
                 m for m in mots(texte) if m.isdigit()}
             if not produit or regime["confiance"] < 0.5:  # aucun produit nommé, ou inconnu : taux normal
                 taux = 0.2

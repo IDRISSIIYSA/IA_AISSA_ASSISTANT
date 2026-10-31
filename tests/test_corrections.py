@@ -461,3 +461,13 @@ def test_revision_non_adoptee_pas_relancee_sans_nouvelle_correction(tmp_path, mo
     assert C.a_reviser(mem) == ["pcm"]                           # une nouvelle correction : nouvelle tentative
     C.reviser_tout(mem)
     assert appels == ["pcm", "pcm"]
+
+
+def test_tva_au_taux_normal_vaut_20_pour_cent():
+    """« au taux normal » ne doit jamais être pris pour un produit exonéré (erreur vue en ligne le 31/10/2026)."""
+    from ia_aissa.pensee import penser
+    for q in ("Combien fait la TVA sur 1000 dirhams au taux normal ?", "TVA au taux standard sur 1000 DH",
+              "quelle est la TVA sur 1000 dh"):
+        assert "TVA 200 DH" in penser(q, None)[0], q
+    assert "TVA 100 DH" in penser("TVA 1000 DH taux 10%", None)[0]
+    assert "taux de 0%" in penser("TVA sur 1000 dirhams de médicaments", None)[0]
