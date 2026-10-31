@@ -895,33 +895,46 @@ def apprendre_de_l_echange(r, utilisateur, question, texte):
     mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "user", question or "(fichier)")
     mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "assistant", texte)
     if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)):
-        reviser_tout(mem)               # les corrections d'une personne comptent tout de suite
+        en_arriere_plan("revision", reviser_tout, mem)  # réentraîner ses cerveaux : sans faire attendre la page
     # Étude autonome avec un grand moteur seulement : un petit modèle local, lent et moins sûr, lui apprendrait des
     # erreurs (elle apprend alors par ses lectures, sa rumination et ses examens)
     if r["cle_api"] and not r["config"].get("local") and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
         etude_en_arriere_plan(mem, r["moteur"], r["config"], r["cle_api"])
 
 
-_ETUDE = {"en_cours": False}
+_EN_COURS = set()
+SYNCHRONE = bool(__import__("os").environ.get("IA_AISSA_TESTS"))   # tests : aucun fil ne survit au test
+
+
+def en_arriere_plan(nom, fonction, *args):
+    """Les travaux longs après une réponse (étude avec le grand moteur, réentraînement de ses cerveaux) partent dans
+    un fil d'arrière-plan : la saisie du chat restait bloquée plus de 90 s en ligne. Un seul travail de chaque sorte
+    à la fois par serveur ; un échec sera repris à la prochaine occasion."""
+    import threading
+    if SYNCHRONE:
+        try:
+            fonction(*args)
+        except Exception:
+            pass
+        return True
+    if nom in _EN_COURS:
+        return False
+    _EN_COURS.add(nom)
+
+    def travailler():
+        try:
+            fonction(*args)
+        except Exception:
+            pass
+        finally:
+            _EN_COURS.discard(nom)
+    threading.Thread(target=travailler, daemon=True, name=f"ia-aissa-{nom}").start()
+    return True
 
 
 def etude_en_arriere_plan(mem, moteur, config, cle_api):
-    """L'étude autonome appelle le grand moteur : en arrière-plan, pour que le visiteur n'attende jamais (la saisie
-    du chat restait bloquée plus de 30 s après la réponse). Une seule étude à la fois par serveur."""
-    import threading
-    if _ETUDE["en_cours"]:
-        return False
-    _ETUDE["en_cours"] = True
-
-    def etudier():
-        try:
-            etudier_seule(mem, config, client_moteur(moteur, cle_api))
-        except Exception:
-            pass          # l'étude autonome reprendra à la prochaine occasion
-        finally:
-            _ETUDE["en_cours"] = False
-    threading.Thread(target=etudier, daemon=True, name="ia-aissa-etude").start()
-    return True
+    """L'étude autonome appelle le grand moteur : en arrière-plan, une seule à la fois."""
+    return en_arriere_plan("etude", lambda: etudier_seule(mem, config, client_moteur(moteur, cle_api)))
 
 
 @st.fragment(run_every="60s")

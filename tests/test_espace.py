@@ -700,6 +700,7 @@ def test_etude_autonome_en_arriere_plan_sans_bloquer(tmp_path, monkeypatch):
     from ia_aissa.memoire import Memoire
     mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
     feu = threading.Event()
+    monkeypatch.setattr(I, "SYNCHRONE", False)                                  # comme en ligne
     monkeypatch.setattr(I, "etudier_seule", lambda *a, **k: feu.wait(5))       # une étude qui dure
     monkeypatch.setattr(I, "client_moteur", lambda *a, **k: object())
     debut = time.time()
@@ -708,7 +709,7 @@ def test_etude_autonome_en_arriere_plan_sans_bloquer(tmp_path, monkeypatch):
     assert I.etude_en_arriere_plan(mem, "GPT-4o (OpenAI)", {"type": "openai"}, "sk-test") is False   # une à la fois
     feu.set()
     for _ in range(50):
-        if not I._ETUDE["en_cours"]:
+        if "etude" not in I._EN_COURS:
             break
         time.sleep(0.05)
-    assert not I._ETUDE["en_cours"]
+    assert "etude" not in I._EN_COURS
