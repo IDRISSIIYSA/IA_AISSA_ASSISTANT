@@ -201,9 +201,15 @@ def yeux():
 ATTENTE_VOIX_S = 3                 # au-delà, la voix du navigateur lit tout de suite (en ligne, la synthèse traînait)
 
 
+_VOIX_GARDEES = {}                 # texte et langue → audio : un salut ou une phrase déjà dits ne se refabriquent pas
+
+
 def _dire(texte, langue, attente=ATTENTE_VOIX_S):
     """La voix neuronale, si elle arrive à temps ; sinon None et la voix du navigateur prend le relais."""
     import threading
+    cle = (texte, langue)
+    if cle in _VOIX_GARDEES:
+        return _VOIX_GARDEES[cle]
     resultat = {}
 
     def fabriquer():
@@ -214,6 +220,10 @@ def _dire(texte, langue, attente=ATTENTE_VOIX_S):
     fil = threading.Thread(target=fabriquer, daemon=True)
     fil.start()
     fil.join(timeout=attente)
+    if resultat.get("audio"):
+        if len(_VOIX_GARDEES) > 300:
+            _VOIX_GARDEES.clear()
+        _VOIX_GARDEES[cle] = resultat["audio"]
     return resultat.get("audio")
 
 
@@ -1120,7 +1130,11 @@ def espace_visiteur():
                  "ou dis-moi simplement ce qui ne va pas.").replace(" ,", ",").replace("  ", " ")
         audio = None
         if lecture_activee():                     # chaque partie avec sa voix : darija (marocaine), puis français
-            darija, francais = _dire(salut, "Darija"), _dire(partie_dans_la_langue(texte, "Français"), "Français")
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(2) as fabrique:          # les deux voix en même temps
+                darija = fabrique.submit(_dire, salut, "Darija")
+                francais = fabrique.submit(_dire, partie_dans_la_langue(texte, "Français"), "Français")
+                darija, francais = darija.result(), francais.result()
             audio = (darija or b"") + (francais or b"") or None    # deux MP3 bout à bout se lisent d'une traite
         st.session_state["parole"] = {"texte": texte, "audio": audio, "voix": "ar-MA", "nouveau": True}
 

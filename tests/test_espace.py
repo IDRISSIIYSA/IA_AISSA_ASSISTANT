@@ -567,12 +567,17 @@ def test_voix_dans_la_langue_de_la_reponse_et_lecture_au_choix(tmp_path, monkeyp
     monkeypatch.setattr(P, "synthetiser", lambda t, l: dites.append(l) or b"ID3")
     import ia_aissa.interface as I
     monkeypatch.setattr(I, "synthetiser", lambda t, l: dites.append((l, t)) or b"ID3")
+    I._VOIX_GARDEES.clear()                                               # voix gardées par un test précédent
     at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
     assert at.toggle(key="lecture_voix").value is True
     assert [l for l, _ in dites] == ["Darija", "Français"]               # salut : chaque partie avec sa voix
     dites.clear()
     at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
     assert dites and dites[-1][0] == "Français"                           # une réponse en français : voix française
+    dites.clear()
+    I._dire("Bonjour", "Français")
+    I._dire("Bonjour", "Français")
+    assert dites == [("Français", "Bonjour")]                             # une phrase déjà dite n'est pas refabriquée
     at.toggle(key="lecture_voix").set_value(False).run()
     dites.clear()
     at.chat_input[0].set_value("agadir").run()
