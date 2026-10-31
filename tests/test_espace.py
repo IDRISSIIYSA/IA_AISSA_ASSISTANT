@@ -631,13 +631,15 @@ def test_pensee_propre_sure_repond_sans_api_et_source_affichee(tmp_path, monkeyp
     appels = []
     monkeypatch.setattr(I, "converser_moteur", lambda *a, **k: appels.append(1) or "La capitale du Japon est Tokyo.")
     at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    from datetime import date
+    from ia_aissa.partage import memoire
+    quota = f"quota:{date.today().isoformat()}:{at.session_state['utilisateur']}"
+    avant = memoire().reglage(quota)
     at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
     assert not appels and "18 800" in at.chat_message[-1].markdown[1].value          # sa pensée propre, sans API
     assert "pensée propre" in at.chat_message[-1].caption[0].value
-    from datetime import date
-    from ia_aissa.partage import memoire
-    cle_quota = [k for k in memoire().reglages("quota:") if k.startswith(f"quota:{date.today().isoformat()}")]
-    assert not cle_quota                                                           # quota non entamé
+    assert memoire().reglage(quota) == avant                                        # quota non entamé
     at.chat_input[0].set_value("Quelle est la capitale du Japon ?").run()
     assert appels and "Tokyo" in at.chat_message[-1].markdown[1].value              # le grand moteur, et il le dit
     assert "grand moteur" in at.chat_message[-1].caption[0].value
+    assert int(memoire().reglage(quota) or 0) == int(avant or 0) + 1               # le moteur, lui, compte
