@@ -17,6 +17,10 @@ Chaque semaine, IA AISSA lit les indicateurs du Maroc publiés par la Banque mon
 PIB, croissance, inflation, chômage, population, commerce extérieur, dette, transferts des Marocains du monde. Ils sont
 rangés dans sa mémoire de lecture : elle répond « l'inflation au Maroc » en citant la source et l'année, sans clé API.
 
+Données officielles marocaines (`ia_aissa/donnees_maroc.py`) : chaque semaine, le portail national data.gov.ma (API
+publique, licence ODbL) lui donne les catalogues du HCP, de Bank Al-Maghrib et de la CNSS, et des tableaux sur le
+chômage, les prix, le PIB, les crédits et les salariés (« taux de chômage à Casablanca : 17,7 % en 2025, HCP »).
+
 ## Deux espaces : visiteurs et administration
 
 | Espace visiteurs (page d'accueil, ouverte à tous) | Administration (`/admin`, réservée au propriétaire) |

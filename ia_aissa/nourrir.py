@@ -119,6 +119,11 @@ def nourrir_en_arriere_plan(memoire, moteur_config=None, fabrique_client=lambda:
             repas_donnees_ouvertes(memoire)
         except Exception:
             pass
+        try:                                            # et les données officielles marocaines (data.gov.ma)
+            from .donnees_maroc import repas_donnees_maroc
+            repas_donnees_maroc(memoire)
+        except Exception:
+            pass
         finally:
             _EN_COURS.release()
     threading.Thread(target=repas, daemon=True, name="ia-aissa-repas-du-jour").start()

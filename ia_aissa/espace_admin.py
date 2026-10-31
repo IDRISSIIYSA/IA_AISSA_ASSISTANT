@@ -313,6 +313,20 @@ def repas_du_jour_admin(mem):
                            "mémoire de lecture.")
             except Exception as e:
                 st.error(f"Impossible pour l'instant : {e}")
+    if st.button("🇲🇦 Mettre à jour les données officielles marocaines (HCP, Bank Al-Maghrib, CNSS)"):
+        from .donnees_maroc import repas_donnees_maroc
+        with st.spinner("Je lis les catalogues et les tableaux de data.gov.ma…"):
+            try:
+                b = repas_donnees_maroc(mem, forcer=True)
+                st.success(f"Catalogues : {b['catalogues']} ; {len(b['tableaux'])} tableau(x) lu(s)."
+                           + (f" Refus : {' ; '.join(b['refus'])}" if b["refus"] else ""))
+            except Exception as e:
+                st.error(f"Impossible pour l'instant : {e}")
+    maroc = mem.reglage("donnees_maroc:derniere")
+    if maroc:
+        d = json.loads(maroc)
+        st.caption(f"Données officielles marocaines lues le {d['date']} : catalogues {d['catalogues']}, "
+                   + ", ".join(f"{t['institution']} — {t['titre']}" for t in d["tableaux"]) + " (licence ODbL).")
     derniere = mem.reglage("donnees_ouvertes:derniere")
     if derniere:
         d = json.loads(derniere)

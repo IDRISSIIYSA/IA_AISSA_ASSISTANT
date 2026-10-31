@@ -767,3 +767,51 @@ def test_donnees_ouvertes_banque_mondiale_dans_sa_memoire_de_lecture(tmp_path):
     assert FauxBrouteur.visites == 1
     D.repas_donnees_ouvertes(mem, FauxBrouteur(), jour + datetime.timedelta(days=8))
     assert FauxBrouteur.visites == 2
+
+
+def test_donnees_officielles_marocaines_data_gov_ma(tmp_path):
+    import datetime
+    import json
+    import openpyxl
+    from ia_aissa import donnees_maroc as D
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.pensee import penser
+
+    def classeur(chemin):
+        w = openpyxl.Workbook()
+        f = w.active
+        f.append(["Taux de chômage selon les Provinces/Préfectures et le Milieu (POURCENTAGE)"])
+        f.append(["Milieu de résidence", "Province", 2025, 2024, 2023])
+        f.append(["National", "Casablanca", 17.7, 18.1, 17.9])
+        f.append(["National", "Agadir Ida-Ou-Tanane", 15.2, 16.0, 15.4])
+        f.append(["Total", 9879.86173017, 188312.98])                    # un en-tête numérique ne fait pas étiquette
+        w.save(chemin)
+
+    class FauxBrouteur:
+        def visiter(self, url, params=None):
+            assert url == D.API and params["fq"].startswith("organization:")
+            if params["fq"] != "organization:haut-commissariat-au-plan":
+                return json.dumps({"result": {"results": []}})
+            return json.dumps({"result": {"results": [
+                {"name": "data_i1", "title": "Taux de chômage selon les Provinces/Préfectures et le Milieu",
+                 "metadata_modified": "2026-10-30T10:00:00", "license_title": "Open Data Commons Open Database License (ODbL)",
+                 "notes": "BDS en ligne", "resources": [
+                     {"format": "XLSX", "url": "https://data.gov.ma/x/i_i1_metadata.xlsx"},
+                     {"format": "XLSX", "url": "https://data.gov.ma/x/i_i1_data.xlsx"}]},
+                {"name": "data_i2", "title": "Population légale des communes", "metadata_modified": "2026-10-30",
+                 "license_title": "ODbL", "resources": []}]}})
+
+        def telecharger(self, url, chemin, max_octets=None):
+            assert "metadata" not in url                                  # le fichier de données, pas les métadonnées
+            classeur(chemin)
+            return 1
+
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    b = D.repas_donnees_maroc(mem, FauxBrouteur(), datetime.date(2026, 10, 31))
+    assert b["catalogues"]["HCP"] == 2 and b["tableaux"][0]["lignes"] == 3
+    textes = " ".join(p["texte"] for p in mem.passages())
+    assert "Casablanca : 17,7 (2025) ; 18,1 (2024)" in textes and "9879" not in textes.split("Total :")[1][:40]
+    assert "data.gov.ma/data/fr/dataset/data_i2" in textes                # le catalogue indique où trouver la donnée
+    reponse, _, confiance = penser("taux de chômage à Casablanca", mem)
+    assert confiance >= 0.85 and "17,7 (2025)" in reponse and "HCP" in reponse and "ODbL" in reponse
+    assert D.repas_donnees_maroc(mem, FauxBrouteur(), datetime.date(2026, 11, 2))["deja"]   # une fois par semaine
