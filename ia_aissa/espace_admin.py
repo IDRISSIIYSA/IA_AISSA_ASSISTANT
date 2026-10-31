@@ -304,6 +304,20 @@ def repas_du_jour_admin(mem):
         else:
             st.info("Aucune lacune à nourrir aujourd'hui." if not b["essais"] else
                     "Aucun article trouvé : " + " ; ".join(b["essais"]))
+    if st.button("📊 Mettre à jour les données ouvertes (Banque mondiale)"):
+        from .donnees_ouvertes import repas_donnees_ouvertes
+        with st.spinner("Je lis les derniers indicateurs du Maroc…"):
+            try:
+                b = repas_donnees_ouvertes(mem, forcer=True)
+                st.success(f"{b['indicateurs']} indicateurs lus (jusqu'à {b['annee_la_plus_recente']}) et rangés dans ma "
+                           "mémoire de lecture.")
+            except Exception as e:
+                st.error(f"Impossible pour l'instant : {e}")
+    derniere = mem.reglage("donnees_ouvertes:derniere")
+    if derniere:
+        d = json.loads(derniere)
+        st.caption(f"Données ouvertes : {d['indicateurs']} indicateurs de la Banque mondiale, lus le {d['date']} "
+                   "(mises à jour chaque semaine, licence CC BY 4.0).")
     repas = historique(mem)
     if repas:
         st.dataframe(pd.DataFrame([{"Jour": r["date"], "Lacune": r["lacune"], "Article lu": r["source"],

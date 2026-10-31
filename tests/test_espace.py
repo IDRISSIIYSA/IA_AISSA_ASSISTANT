@@ -732,3 +732,38 @@ def test_service_vocal_en_panne_ne_fait_plus_attendre(monkeypatch):
     debut = time.time()
     assert I._dire("trois", "Français") is None and appels == ["un", "deux"]     # suspendu : pas d'attente
     assert time.time() - debut < 0.1 and I._PANNE_VOIX["jusqu_a"] > time.time() + 500
+
+
+def test_donnees_ouvertes_banque_mondiale_dans_sa_memoire_de_lecture(tmp_path):
+    import datetime
+    import json
+    from ia_aissa import donnees_ouvertes as D
+    from ia_aissa.bibliotheque import AGENT
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.pensee import penser
+    assert AGENT.isascii()                                   # un en-tête accentué est rejeté (403) par certains sites
+
+    class FauxBrouteur:
+        visites = 0
+
+        def visiter(self, url, params=None):
+            FauxBrouteur.visites += 1
+            assert url.startswith("https://api.worldbank.org/v2/country/MAR/indicator/") and params["format"] == "json"
+            lignes = [{"indicator": {"id": "FP.CPI.TOTL.ZG"}, "date": "2025", "value": 0.7},
+                      {"indicator": {"id": "FP.CPI.TOTL.ZG"}, "date": "2024", "value": 0.9},
+                      {"indicator": {"id": "SL.UEM.TOTL.ZS"}, "date": "2025", "value": 9.0},
+                      {"indicator": {"id": "NY.GDP.MKTP.CD"}, "date": "2025", "value": 182374250612.28},
+                      {"indicator": {"id": "SP.POP.TOTL"}, "date": "2025", "value": None}]
+            return json.dumps([{"lastupdated": "2026-10-08"}, lignes])
+
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    jour = datetime.date(2026, 10, 31)
+    b = D.repas_donnees_ouvertes(mem, FauxBrouteur(), jour)
+    assert b["indicateurs"] == 3 and b["annee_la_plus_recente"] == 2025
+    reponse, _, confiance = penser("Quelle est l'inflation au Maroc ?", mem)
+    assert confiance >= 0.85 and "0,7 % en 2025" in reponse and "Banque mondiale" in reponse
+    assert "182,4 milliards de dollars" in " ".join(p["texte"] for p in mem.passages())
+    assert D.repas_donnees_ouvertes(mem, FauxBrouteur(), jour + datetime.timedelta(days=3))["deja"]   # une fois par semaine
+    assert FauxBrouteur.visites == 1
+    D.repas_donnees_ouvertes(mem, FauxBrouteur(), jour + datetime.timedelta(days=8))
+    assert FauxBrouteur.visites == 2

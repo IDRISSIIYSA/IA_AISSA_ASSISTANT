@@ -11,6 +11,12 @@ Sans clé d'API payante : le moteur « Modèle local (Ollama) » est activé par
 fiches vérifiées répondent d'abord ; le petit modèle ne fait que parler, à partir de ses lectures, et tout chiffre non
 sourcé est signalé. Installation sur un VPS en une commande (Docker, Ollama, HTTPS) : voir [deploy/README.md](deploy/README.md).
 
+## Données ouvertes (`ia_aissa/donnees_ouvertes.py`)
+
+Chaque semaine, IA AISSA lit les indicateurs du Maroc publiés par la Banque mondiale (API publique, licence CC BY 4.0) :
+PIB, croissance, inflation, chômage, population, commerce extérieur, dette, transferts des Marocains du monde. Ils sont
+rangés dans sa mémoire de lecture : elle répond « l'inflation au Maroc » en citant la source et l'année, sans clé API.
+
 ## Deux espaces : visiteurs et administration
 
 | Espace visiteurs (page d'accueil, ouverte à tous) | Administration (`/admin`, réservée au propriétaire) |

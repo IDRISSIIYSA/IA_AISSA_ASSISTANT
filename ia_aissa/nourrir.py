@@ -114,6 +114,11 @@ def nourrir_en_arriere_plan(memoire, moteur_config=None, fabrique_client=lambda:
             nourrir_du_jour(memoire, moteur_config, fabrique_client())
         except Exception:
             pass
+        try:                                            # et, une fois par semaine, les données ouvertes à jour
+            from .donnees_ouvertes import repas_donnees_ouvertes
+            repas_donnees_ouvertes(memoire)
+        except Exception:
+            pass
         finally:
             _EN_COURS.release()
     threading.Thread(target=repas, daemon=True, name="ia-aissa-repas-du-jour").start()

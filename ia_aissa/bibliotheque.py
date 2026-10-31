@@ -24,7 +24,7 @@ from .corrections import corriger, reviser_tout
 from .ecole import vectoriser_mixte
 from .invention import lire_objet
 
-AGENT = "IA-AISSA/1.0 (assistant pédagogique ; https://github.com/IDRISSIIYSA/ia_aissa_assistant)"
+AGENT = "IA-AISSA/1.0 (assistant pedagogique; https://github.com/IDRISSIIYSA/ia_aissa_assistant)"   # ASCII : un en-tete accentue est rejete par certains pare-feux (403)
 TAILLE_MAX = 3_000_000          # octets téléchargés au plus
 TAILLE_MORCEAU = 6_000          # caractères par bouchée
 FAMILLES_DIGESTION = ["Sciences formelles", "Sciences naturelles", "Sciences humaines et gestion", "Sciences appliquées"]

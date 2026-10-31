@@ -24,7 +24,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [x] Espace unique : afficher les graphiques et tableaux du contrôleur de gestion dans des onglets repliables pour garder la conversation compacte sur téléphone
 
-- [ ] Broutage : ajouter des sources ouvertes marocaines et financières via leurs API ou flux publics (ex. publications statistiques), en vérifiant leurs conditions d'utilisation
+- [x] Broutage : ajouter des sources ouvertes marocaines et financières via leurs API ou flux publics (ex. publications statistiques), en vérifiant leurs conditions d'utilisation — première source : Banque mondiale (API publique, licence CC BY 4.0, pas de robots.txt) : PIB, croissance, inflation, chômage, population, commerce extérieur, dette, transferts des MRE, rangés chaque semaine dans sa mémoire de lecture avec source et année
+- [ ] Sources marocaines officielles : HCP (indice des prix, emploi), Bank Al-Maghrib (taux directeur, réserves) et DEPF (finances publiques) — lire leurs conditions de réutilisation et leurs formats (pages, PDF, portail API de Bank Al-Maghrib avec clé) avant de les brouter
 - [ ] Contrôle de gestion : prévision robuste aux dérives (tendance sur les 12 dernières périodes) et mesure de la couverture réelle de l'intervalle
 - [ ] École : entraînement de l'orientation avec un pas d'apprentissage adaptatif (lr 1e-3 donne 96 % contre 64 % à 2e-3 avec 42 matières)
 - [ ] Langues : choisir dans l'atelier la phrase où le score est le plus faible (répétition espacée) et proposer la version en écriture arabe
