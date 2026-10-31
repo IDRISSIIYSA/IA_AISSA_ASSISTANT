@@ -613,8 +613,27 @@ def test_grand_moteur_trop_lent_la_pensee_propre_prend_le_relais(tmp_path, monke
         raise anthropic.APITimeoutError(request=httpx2.Request("POST", "https://api.anthropic.com/v1/messages"))
     monkeypatch.setattr(I, "converser_moteur", trop_lent)
     at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
-    at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
+    at.chat_input[0].set_value("Quelle est la capitale du Japon ?").run()
     texte = at.chat_message[-1].markdown[1].value
-    assert not at.exception and "trop de temps" in texte and "18 800" in texte     # réponse quand même, et juste
+    assert not at.exception and "trop de temps" in texte                            # une réponse quand même
     from ia_aissa.partage import memoire
     assert json.loads(memoire().reglage("moteur:dernier_appel"))["statut"] == "délai dépassé"
+
+
+def test_pensee_propre_sure_repond_sans_api_et_source_affichee(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    import ia_aissa.interface as I
+    monkeypatch.setattr(I, "synthetiser", lambda t, l: b"ID3")
+    appels = []
+    monkeypatch.setattr(I, "converser_moteur", lambda *a, **k: appels.append(1) or "La capitale du Japon est Tokyo.")
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
+    assert not appels and "18 800" in at.chat_message[-1].markdown[1].value          # sa pensée propre, sans API
+    assert "pensée propre" in at.chat_message[-1].caption[0].value
+    at.chat_input[0].set_value("Quelle est la capitale du Japon ?").run()
+    assert appels and "Tokyo" in at.chat_message[-1].markdown[1].value              # le grand moteur, et il le dit
+    assert "grand moteur" in at.chat_message[-1].caption[0].value

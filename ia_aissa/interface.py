@@ -652,7 +652,8 @@ def afficher_message(m, i, voir_outils):
                     st.markdown(f"**{o['outil']}** `{o['entree']}`")
                     st.code(o["resultat"], language="json")
         if m.get("meta"):
-            st.caption(f"🧠 Méta-conscience : confiance {m['meta']['confiance']:.0%} · {m['meta']['details']}")
+            st.caption(f"🧠 Méta-conscience : confiance {m['meta']['confiance']:.0%} · {m['meta']['details']}"
+                       + (f" · Réponse de {m['source']}" if m.get("source") else ""))
 
 
 # ==========================================
@@ -701,6 +702,7 @@ def converser_avec_moteur(r, utilisateur, question, role, journal):
                            "délai dépassé" if expire else f"erreur : {type(e).__name__} {str(e)[:160]}")
         from .pensee import penser                 # la conversation continue avec sa pensée propre
         propre = penser(question, mem, utilisateur=utilisateur)[0]
+        journal.append({"outil": "pensee_propre", "entree": question, "resultat": "relais du grand moteur"})
         return ("⏳ Mon grand moteur met trop de temps à répondre" if expire else
                 "⚠️ Mon grand moteur ne répond pas pour l'instant") + " : je te réponds avec mon propre cerveau.\n\n" + propre
 
@@ -850,6 +852,17 @@ def traiter(r, utilisateur, texte, fichiers):
         return (f"{texte_darija}\n\n### 🏆 {finale['titre']}\n{finale.get('description', '')}\n\n_Proverbe : {sens}_",
                 elements, journal, "inventeur", "hyper")
 
+    if client and not fichiers and role not in ("programmeur", "inventeur", "psy"):
+        # Rapide et gratuit : quand sa pensée propre est sûre (calculs exacts, fiches vérifiées, conversation),
+        # IA AISSA répond elle-même, sans attendre le grand moteur
+        from .assistant import SEUIL_REPONSE_PROPRE
+        from .pensee import penser
+        propre, _, confiance = penser(texte, mem, utilisateur=utilisateur)
+        if confiance >= SEUIL_REPONSE_PROPRE:
+            journal.append({"outil": "pensee_propre", "entree": texte, "resultat": f"sûre à {confiance:.0%}"})
+            st.session_state.setdefault("messages_api", []).extend(        # le moteur garde le fil de la conversation
+                [{"role": "user", "content": texte}, {"role": "assistant", "content": propre}])
+            return propre, [], journal, role, "normal"
     if client:
         return converser_avec_moteur(r, utilisateur, texte, role, journal), [], journal, role, \
             "hyper" if role == "inventeur" else "normal"
@@ -1095,8 +1108,11 @@ def espace_visiteur():
         st.session_state["role_ia"] = role
         langue = detecter_langue(reponse)              # écriture et mots : fiable, contrairement au petit cerveau
         meta = st.session_state.pop("meta_locale", None) or meta_conscience(journal, time.time() - debut)
+        source = ("⚡ sa pensée propre (sans API)" if not r["cle_api"] or any(o["outil"] == "pensee_propre" for o in journal)
+                  else f"🌐 grand moteur : {r['moteur']}" + (" + ses calculateurs" if any(
+                      o["outil"].startswith("calculer") for o in journal) else ""))
         message = {"role": "assistant", "texte": reponse, "elements": elements, "outils": journal, "langue": langue,
-                   "meta": meta, "role_ia": role}
+                   "meta": meta, "role_ia": role, "source": source}
         st.session_state["affichage"].append(message)
         afficher_message(message, len(st.session_state["affichage"]) - 1, r["voir_outils"])
         apprendre_de_l_echange(r, utilisateur, texte, reponse)
