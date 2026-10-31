@@ -30,7 +30,9 @@ export default function(component) {
     // Prévenir l'application relance la page : seulement à la première lecture, ou si un autre onglet a changé le
     // coffre. Jamais après ses propres écritures (elle les connaît déjà) : la relance tuait la demande en cours
     // (premier message du chat sans réponse, premier choix de simulation perdu).
-    if (premiereLecture || ecritures.length === 0) setStateValue('valeurs', valeurs);
+    // Coffre vide à la première lecture (nouvel appareil) : rien à apprendre au serveur, pas de relance.
+    const vide = Object.keys(valeurs).length === 0;
+    if ((premiereLecture && !vide) || (!premiereLecture && ecritures.length === 0)) setStateValue('valeurs', valeurs);
   }
 }
 """

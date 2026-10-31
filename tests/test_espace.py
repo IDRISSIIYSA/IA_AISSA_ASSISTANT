@@ -568,6 +568,7 @@ def test_voix_dans_la_langue_de_la_reponse_et_lecture_au_choix(tmp_path, monkeyp
     import ia_aissa.interface as I
     monkeypatch.setattr(I, "synthetiser", lambda t, l: dites.append((l, t)) or b"ID3")
     I._VOIX_GARDEES.clear()                                               # voix gardées par un test précédent
+    monkeypatch.setattr(I, "_PANNE_VOIX", {"echecs": 0, "jusqu_a": 0.0})   # ni panne laissée par un autre test
     at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
     assert at.toggle(key="lecture_voix").value is True
     assert [l for l, _ in dites] == ["Darija", "Français"]               # salut : chaque partie avec sa voix
@@ -718,3 +719,16 @@ def test_etude_autonome_en_arriere_plan_sans_bloquer(tmp_path, monkeypatch):
             break
         time.sleep(0.05)
     assert "etude" not in I._EN_COURS
+
+
+def test_service_vocal_en_panne_ne_fait_plus_attendre(monkeypatch):
+    import time
+    import ia_aissa.interface as I
+    appels = []
+    monkeypatch.setattr(I, "synthetiser", lambda t, l: appels.append(t) or (_ for _ in ()).throw(OSError("panne")))
+    monkeypatch.setattr(I, "_PANNE_VOIX", {"echecs": 0, "jusqu_a": 0.0})
+    I._VOIX_GARDEES.clear()
+    assert I._dire("un", "Français") is None and I._dire("deux", "Français") is None
+    debut = time.time()
+    assert I._dire("trois", "Français") is None and appels == ["un", "deux"]     # suspendu : pas d'attente
+    assert time.time() - debut < 0.1 and I._PANNE_VOIX["jusqu_a"] > time.time() + 500

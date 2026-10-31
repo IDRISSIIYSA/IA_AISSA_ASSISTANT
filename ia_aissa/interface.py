@@ -201,6 +201,7 @@ def yeux():
 ATTENTE_VOIX_S = 3                 # au-delà, la voix du navigateur lit tout de suite (en ligne, la synthèse traînait)
 
 
+_PANNE_VOIX = {"echecs": 0, "jusqu_a": 0.0}
 _VOIX_GARDEES = {}                 # texte et langue → audio : un salut ou une phrase déjà dits ne se refabriquent pas
 
 
@@ -210,6 +211,8 @@ def _dire(texte, langue, attente=ATTENTE_VOIX_S):
     cle = (texte, langue)
     if cle in _VOIX_GARDEES:
         return _VOIX_GARDEES[cle]
+    if time.time() < _PANNE_VOIX["jusqu_a"]:      # service vocal en panne : la voix du navigateur, sans attendre
+        return None
     resultat = {}
 
     def fabriquer():
@@ -224,6 +227,11 @@ def _dire(texte, langue, attente=ATTENTE_VOIX_S):
         if len(_VOIX_GARDEES) > 300:
             _VOIX_GARDEES.clear()
         _VOIX_GARDEES[cle] = resultat["audio"]
+        _PANNE_VOIX["echecs"] = 0
+    else:                                          # deux échecs de suite : on laisse le service 10 minutes
+        _PANNE_VOIX["echecs"] += 1
+        if _PANNE_VOIX["echecs"] >= 2:
+            _PANNE_VOIX.update(echecs=0, jusqu_a=time.time() + 600)
     return resultat.get("audio")
 
 
