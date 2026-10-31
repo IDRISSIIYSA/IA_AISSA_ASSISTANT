@@ -48,7 +48,9 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Banc d'essai : ajouter 10 questions sur les nouvelles simulations (statut, profit foncier, solde de tout compte) pour que le chat oriente vers la bonne simulation
 
 - [ ] Repas du jour : quand l'article ne suffit pas à résoudre la lacune, essayer le lendemain un second article lié (liens internes de la page) avant de passer à une autre lacune
-- [ ] Pensée propre : utiliser sa mémoire de lecture quand elle est sûre (réponse « Tokyo » tirée de l'article Japon) pour répondre sans appeler le grand moteur
+- [x] Pensée propre : utiliser sa mémoire de lecture quand elle est sûre (réponse « Tokyo » tirée de l'article Japon) pour répondre sans appeler le grand moteur — sa pensée lit déjà ses lectures (confiance 0,95) et répond désormais avant le moteur ; réponses plus rapides (client du moteur paresseux, préchauffage, voix limitée au début et fabriquée en parallèle)
+
+- [ ] Voix : fabriquer la lecture à voix haute après l'affichage, dans une relance séparée, pour que la page ne l'attende jamais
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

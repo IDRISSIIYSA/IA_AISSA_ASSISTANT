@@ -39,6 +39,16 @@ def texte_a_dire(texte, limite=2500):
     return t[:limite]
 
 
+def extrait_a_lire(texte, limite=700):
+    """Le début de la réponse, coupé à une fin de phrase : la voix se fabrique vite et ne fait pas de monologue
+    (le texte complet reste affiché)."""
+    t = texte_a_dire(texte, limite + 200)
+    if len(t) <= limite:
+        return t
+    coupe = max(t.rfind(f, 0, limite) for f in (". ", "! ", "? ", " : "))
+    return t[:coupe + 1] if coupe > limite // 3 else t[:limite]
+
+
 def synthetiser(texte, langue):
     """Renvoie l'audio MP3 de la réponse dite par IA AISSA dans la langue demandée."""
     import edge_tts

@@ -34,7 +34,7 @@ from .invention import annonce_darija, debattre, evoluer
 from .langues import LANGUES, PHRASES_PRO_DARIJA, detecter_langue, partie_dans_la_langue
 from .memoire import historique_api
 from .partage import broutage_autonome, etat_memoire, memoire, repas_du_jour, secret
-from .parole import charger_oreille, synthetiser, transcrire
+from .parole import charger_oreille, extrait_a_lire, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
 from .autodidacte import apprendre_de_soi
@@ -1127,9 +1127,16 @@ def espace_visiteur():
                    "meta": meta, "role_ia": role, "source": source}
         st.session_state["affichage"].append(message)
         afficher_message(message, len(st.session_state["affichage"]) - 1, r["voir_outils"])
+        voix = {}
+        if r["vocal"]:                  # la voix se fabrique pendant que l'échange est appris (en parallèle)
+            import threading
+            fil_voix = threading.Thread(target=lambda: voix.update(
+                audio=_dire(extrait_a_lire(partie_dans_la_langue(reponse, langue)), langue)), daemon=True)
+            fil_voix.start()
         apprendre_de_l_echange(r, utilisateur, texte, reponse)
-        st.session_state["parole"] = {"texte": reponse,
-                                      "audio": _dire(partie_dans_la_langue(reponse, langue), langue) if r["vocal"] else None,
+        if r["vocal"]:
+            fil_voix.join(timeout=20)   # au-delà, la voix du navigateur prend le relais
+        st.session_state["parole"] = {"texte": reponse, "audio": voix.get("audio"),
                                       "voix": LANGUES[langue]["voix"], "nouveau": True, "etat": etat, "meta": meta}
 
     parole = st.session_state["parole"]
