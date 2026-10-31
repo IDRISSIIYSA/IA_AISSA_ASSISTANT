@@ -278,6 +278,38 @@ def client_moteur(moteur, cle_api):
     return openai.OpenAI(api_key=cle_api, base_url=config.get("base_url"), timeout=DELAI_MOTEUR_S, max_retries=1)
 
 
+class ClientParesseux:
+    """Le client du grand moteur, créé seulement quand on s'en sert vraiment : importer son SDK et l'initialiser
+    coûtait plusieurs secondes même quand IA AISSA répondait seule."""
+
+    def __init__(self, moteur, cle_api):
+        self._moteur, self._cle, self._client = moteur, cle_api, None
+
+    def __getattr__(self, nom):
+        if self._client is None:
+            self._client = client_moteur(self._moteur, self._cle)
+        return getattr(self._client, nom)
+
+
+def prechauffer():
+    """Au démarrage du serveur, en arrière-plan : les SDK des moteurs et l'aiguilleur sont chargés d'avance, pour
+    que le premier visiteur n'attende pas."""
+    import threading
+
+    def chauffer():
+        for module in ("openai", "anthropic"):
+            try:
+                __import__(module)
+            except Exception:
+                pass
+        try:
+            from .ecole import charger
+            charger("orientation")
+        except Exception:
+            pass
+    threading.Thread(target=chauffer, daemon=True, name="ia-aissa-prechauffage").start()
+
+
 def adresse_ollama(adresse):
     """« http://ollama:11434 », « localhost:11434 » ou « …/v1 » : toujours l'API compatible OpenAI (…/v1)."""
     adresse = (adresse or "http://localhost:11434").strip().rstrip("/")

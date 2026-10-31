@@ -19,7 +19,8 @@ import streamlit as st
 
 from . import coffre
 from .acces import verifier_acces
-from .assistant import MOTEURS, NIVEAUX, client_moteur, converser_moteur, meta_conscience, profil_conversation
+from .assistant import (MOTEURS, NIVEAUX, ClientParesseux, client_moteur, converser_moteur, meta_conscience,
+                        profil_conversation)
 from .autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
 from .avatar import avatar
 from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer, visible_par
@@ -727,7 +728,7 @@ def traiter(r, utilisateur, texte, fichiers):
     if r["niveau"] and NIVEAUX.get(r["niveau"]) == "invention" and role == "compagnon":
         role = "inventeur"
     elements, journal = [], []
-    client = client_moteur(r["moteur"], r["cle_api"]) if r["cle_api"] else None
+    client = ClientParesseux(r["moteur"], r["cle_api"]) if r["cle_api"] else None   # créé au premier vrai usage
     grand = None if r["config"].get("local") else client   # écoute, lecture, invention : grands moteurs seulement
 
     from .ecoute import SECURITE, ecoute_locale, en_detresse
@@ -997,6 +998,15 @@ def identite_visiteur():
     return nom
 
 
+@st.cache_resource(show_spinner=False)
+def prechauffage_unique():
+    import os
+    if not os.environ.get("IA_AISSA_TESTS"):
+        from .assistant import prechauffer
+        prechauffer()
+    return True
+
+
 def application():
     """Deux espaces : les visiteurs parlent avec IA AISSA ; l'administrateur la nourrit, la commande et la suit."""
     global PAGE_ADMIN
@@ -1007,6 +1017,7 @@ def application():
         coffre.ouvrir()                 # ce que cet appareil retient : identité, connexion, clé API
         broutage_autonome()             # le travailleur autonome (démarré une seule fois par serveur)
         repas_du_jour()                 # une lacune nourrie par jour, en arrière-plan
+        prechauffage_unique()           # SDK des moteurs et aiguilleur chargés d'avance (une fois par serveur)
         from .espace_admin import espace_admin
         visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)
         PAGE_ADMIN = st.Page(espace_admin, title="Administration", icon="🛡️", url_path="admin")
