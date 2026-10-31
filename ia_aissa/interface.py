@@ -679,6 +679,8 @@ def converser_avec_moteur(r, utilisateur, question, role, journal):
             st.session_state["messages_api"].append({"role": "assistant", "content": sure})
             journal.append({"outil": "pensee_propre", "entree": question, "resultat": "réponse sûre d'IA AISSA"})
             return sure
+    if not r.get("admin") and not r["config"].get("local"):
+        compter_message_visiteur(utilisateur)           # quota du grand moteur : seulement quand il est appelé
     taille = len(st.session_state["messages_api"]) - 1          # pour revenir proprement en arrière en cas d'échec
     debut = time.time()
     try:
@@ -727,8 +729,6 @@ def traiter(r, utilisateur, texte, fichiers):
     elements, journal = [], []
     client = client_moteur(r["moteur"], r["cle_api"]) if r["cle_api"] else None
     grand = None if r["config"].get("local") else client   # écoute, lecture, invention : grands moteurs seulement
-    if client and not r.get("admin"):
-        compter_message_visiteur(utilisateur)           # quota quotidien du grand moteur pour les visiteurs
 
     from .ecoute import SECURITE, ecoute_locale, en_detresse
     if en_detresse(texte):                              # la sécurité d'abord, avant toute autre réponse

@@ -634,6 +634,10 @@ def test_pensee_propre_sure_repond_sans_api_et_source_affichee(tmp_path, monkeyp
     at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
     assert not appels and "18 800" in at.chat_message[-1].markdown[1].value          # sa pensée propre, sans API
     assert "pensée propre" in at.chat_message[-1].caption[0].value
+    from datetime import date
+    from ia_aissa.partage import memoire
+    cle_quota = [k for k in memoire().reglages("quota:") if k.startswith(f"quota:{date.today().isoformat()}")]
+    assert not cle_quota                                                           # quota non entamé
     at.chat_input[0].set_value("Quelle est la capitale du Japon ?").run()
     assert appels and "Tokyo" in at.chat_message[-1].markdown[1].value              # le grand moteur, et il le dit
     assert "grand moteur" in at.chat_message[-1].caption[0].value
