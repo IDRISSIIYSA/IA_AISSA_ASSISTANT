@@ -89,6 +89,11 @@ def tableau_de_bord(mem):
     from .parametres import alertes
     for alerte in alertes(mem):                         # loi de finances de l'année à intégrer, taux à revérifier
         st.warning(alerte)
+    dernier = mem.reglage("moteur:dernier_appel")
+    if dernier:
+        d = json.loads(dernier)
+        (st.caption if d["statut"] == "réponse reçue" else st.warning)(
+            f"🧠 Dernier appel au grand moteur ({d['moteur']}) le {d['date']} : {d['statut']} en {d['duree_s']} s.")
     temps_d_ouverture()
     if etat.get("erreurs"):
         with st.expander(f"⚠️ {len(etat['erreurs'])} souci(s) récent(s) du travailleur autonome"):

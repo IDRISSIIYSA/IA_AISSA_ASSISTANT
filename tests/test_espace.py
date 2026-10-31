@@ -592,3 +592,29 @@ def test_banc_d_essai_permanent(tmp_path, monkeypatch):
     banc.garder(r, mem)
     seances = banc.historique(mem)
     assert len(seances) == 2 and "lignes" not in seances[0] and seances[0]["pensee"] == r["pensee"]
+
+
+def test_grand_moteur_trop_lent_la_pensee_propre_prend_le_relais(tmp_path, monkeypatch):
+    import json
+    import anthropic
+    import httpx2
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa import assistant
+    assert assistant.DELAI_MOTEUR_S <= 120                                 # plus d'attente de 10 minutes
+    assert assistant.client_anthropic("sk-test").timeout == assistant.DELAI_MOTEUR_S
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    import ia_aissa.interface as I
+    monkeypatch.setattr(I, "synthetiser", lambda t, l: b"ID3")
+
+    def trop_lent(*a, **k):
+        raise anthropic.APITimeoutError(request=httpx2.Request("POST", "https://api.anthropic.com/v1/messages"))
+    monkeypatch.setattr(I, "converser_moteur", trop_lent)
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    at.chat_input[0].set_value("Calcule mon IR pour un revenu net imposable de 120000 DH").run()
+    texte = at.chat_message[-1].markdown[1].value
+    assert not at.exception and "trop de temps" in texte and "18 800" in texte     # réponse quand même, et juste
+    from ia_aissa.partage import memoire
+    assert json.loads(memoire().reglage("moteur:dernier_appel"))["statut"] == "délai dépassé"

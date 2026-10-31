@@ -235,9 +235,15 @@ def profil_conversation(utilisateur, niveau, reponse_vocale, souvenirs=()):
     return "\n".join(lignes)
 
 
+# Délai maximal d'une requête au grand moteur (le SDK attend 10 minutes par défaut, avec 2 nouvelles tentatives :
+# la page restait figée sans rien dire). Au-delà, IA AISSA répond avec sa pensée propre.
+DELAI_MOTEUR_S = 90
+
+
 def client_anthropic(cle_api=None):
     import anthropic                  # importé à la demande : 1,3 s de moins au démarrage du serveur
-    return anthropic.Anthropic(api_key=cle_api) if cle_api else anthropic.Anthropic()
+    options = {"timeout": DELAI_MOTEUR_S, "max_retries": 1}
+    return anthropic.Anthropic(api_key=cle_api, **options) if cle_api else anthropic.Anthropic(**options)
 
 
 # ==========================================
@@ -269,7 +275,7 @@ def client_moteur(moteur, cle_api):
     import openai
     if config.get("local"):           # pas de clé : l'adresse du serveur Ollama (temps de réponse d'un CPU)
         return openai.OpenAI(api_key="ollama", base_url=adresse_ollama(cle_api), timeout=180, max_retries=1)
-    return openai.OpenAI(api_key=cle_api, base_url=config.get("base_url"))
+    return openai.OpenAI(api_key=cle_api, base_url=config.get("base_url"), timeout=DELAI_MOTEUR_S, max_retries=1)
 
 
 def adresse_ollama(adresse):

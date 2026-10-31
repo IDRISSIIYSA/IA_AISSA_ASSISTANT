@@ -678,20 +678,41 @@ def converser_avec_moteur(r, utilisateur, question, role, journal):
             st.session_state["messages_api"].append({"role": "assistant", "content": sure})
             journal.append({"outil": "pensee_propre", "entree": question, "resultat": "réponse sûre d'IA AISSA"})
             return sure
+    taille = len(st.session_state["messages_api"]) - 1          # pour revenir proprement en arrière en cas d'échec
+    debut = time.time()
     try:
-        return converser_moteur(r["moteur"], client_moteur(r["moteur"], r["cle_api"]), st.session_state["messages_api"],
+        reponse = converser_moteur(r["moteur"], client_moteur(r["moteur"], r["cle_api"]), st.session_state["messages_api"],
                                 contexte=contexte,
                                 journal=journal, profil=profil,
                                 memoriser=lambda fait: mem.memoriser(utilisateur, fait),
                                 corriger=lambda cle, q, rep: corriger(mem, utilisateur, cle, q, rep),
                                 bibliotheque=lambda q: chercher(mem, q, utilisateur=utilisateur),
                                 execution_code=role == "programmeur" and r["config"]["type"] == "anthropic")
+        noter_appel_moteur(mem, r["moteur"], time.time() - debut, "réponse reçue")
+        return reponse
     except (anthropic.AuthenticationError, openai.AuthenticationError):
-        st.session_state["messages_api"].pop()
+        del st.session_state["messages_api"][taille:]
+        noter_appel_moteur(mem, r["moteur"], time.time() - debut, "clé refusée")
         return "🔑 Ma clé API est refusée : vérifie-la dans ⚙️ Réglages."
     except (anthropic.APIError, openai.APIError) as e:
-        st.session_state["messages_api"].pop()
-        return f"Je n'arrive pas à joindre mon grand moteur ({e}). Réessaie dans un instant."
+        del st.session_state["messages_api"][taille:]
+        expire = isinstance(e, (anthropic.APITimeoutError, openai.APITimeoutError))
+        noter_appel_moteur(mem, r["moteur"], time.time() - debut,
+                           "délai dépassé" if expire else f"erreur : {type(e).__name__} {str(e)[:160]}")
+        from .pensee import penser                 # la conversation continue avec sa pensée propre
+        propre = penser(question, mem, utilisateur=utilisateur)[0]
+        return ("⏳ Mon grand moteur met trop de temps à répondre" if expire else
+                "⚠️ Mon grand moteur ne répond pas pour l'instant") + " : je te réponds avec mon propre cerveau.\n\n" + propre
+
+
+def noter_appel_moteur(mem, moteur, duree, statut):
+    """Le dernier appel au grand moteur (durée, statut), affiché dans le tableau de bord de l'administration."""
+    try:
+        mem.definir_reglage("moteur:dernier_appel", json.dumps(
+            {"moteur": moteur, "duree_s": round(duree, 1), "statut": statut,
+             "date": time.strftime("%d/%m/%Y %H:%M:%S", time.gmtime()) + " UTC"}, ensure_ascii=False))
+    except Exception:
+        pass
 
 
 def traiter(r, utilisateur, texte, fichiers):
