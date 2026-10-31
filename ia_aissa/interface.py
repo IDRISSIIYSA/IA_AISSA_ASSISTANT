@@ -198,7 +198,7 @@ def yeux():
     return Yeux()
 
 
-ATTENTE_VOIX_S = 5                 # au-delà, la voix du navigateur lit tout de suite (en ligne, la synthèse traînait)
+ATTENTE_VOIX_S = 3                 # au-delà, la voix du navigateur lit tout de suite (en ligne, la synthèse traînait)
 
 
 def _dire(texte, langue, attente=ATTENTE_VOIX_S):
@@ -896,24 +896,43 @@ def traiter(r, utilisateur, texte, fichiers):
 
 
 def apprendre_de_l_echange(r, utilisateur, question, texte):
-    """Boucle d'auto-évolution : chaque échange nourrit ses lacunes, ses corrections et son étude autonome."""
+    """Boucle d'auto-évolution : chaque échange nourrit ses lacunes, ses corrections et son étude autonome.
+    L'enregistrement part en arrière-plan (plusieurs allers-retours vers la base) : la page n'attend pas."""
     mem = memoire()
-    if question:
-        noter_si_lacune(mem, question)
-        if apprendre_de_soi(mem, question, st.session_state.pop("conclusion_locale", None)):
-            st.toast("🌱 J'ai appris de ma propre réponse : je reconnaîtrai mieux cette façon de dire.")
+    conclusion = st.session_state.pop("conclusion_locale", None)
     if not st.session_state.get("conversation_id"):
         st.session_state["conversation_id"] = mem.nouvelle_conversation(utilisateur, question or "Fichier")
-    mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "user", question or "(fichier)")
-    mem.ajouter_message(utilisateur, st.session_state["conversation_id"], "assistant", texte)
-    if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)):
-        en_arriere_plan("revision", reviser_tout, mem)  # réentraîner ses cerveaux : sans faire attendre la page
-    # Étude autonome avec un grand moteur seulement : un petit modèle local, lent et moins sûr, lui apprendrait des
-    # erreurs (elle apprend alors par ses lectures, sa rumination et ses examens)
-    if r["cle_api"] and not r["config"].get("local") and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
-        etude_en_arriere_plan(mem, r["moteur"], r["config"], r["cle_api"])
+    conversation = st.session_state["conversation_id"]
+
+    def enregistrer():
+        with _ORDRE:                                   # les échanges restent dans l'ordre
+            if question:
+                noter_si_lacune(mem, question)
+                apprendre_de_soi(mem, question, conclusion)
+            mem.ajouter_message(utilisateur, conversation, "user", question or "(fichier)")
+            mem.ajouter_message(utilisateur, conversation, "assistant", texte)
+            if any(c["source"] != "auto-apprentissage" for c in mem.corrections_de(seulement_nouvelles=True)):
+                en_arriere_plan("revision", reviser_tout, mem)   # réentraîner ses cerveaux, sans faire attendre
+            # Étude autonome avec un grand moteur seulement : un petit modèle local, lent et moins sûr, lui
+            # apprendrait des erreurs (elle apprend alors par ses lectures, sa rumination et ses examens)
+            if r["cle_api"] and not r["config"].get("local") and len(mem.lacunes_ouvertes(SEUIL_ETUDE)) >= SEUIL_ETUDE:
+                etude_en_arriere_plan(mem, r["moteur"], r["config"], r["cle_api"])
+
+    if SYNCHRONE:
+        enregistrer()
+    else:
+        import threading
+        threading.Thread(target=lambda: _sans_erreur(enregistrer), daemon=True, name="ia-aissa-echange").start()
 
 
+def _sans_erreur(fonction):
+    try:
+        fonction()
+    except Exception:
+        pass
+
+
+_ORDRE = __import__("threading").Lock()
 _EN_COURS = set()
 SYNCHRONE = bool(__import__("os").environ.get("IA_AISSA_TESTS"))   # tests : aucun fil ne survit au test
 
