@@ -1,7 +1,7 @@
 """
 Les données officielles marocaines, lues sur le portail national des données ouvertes data.gov.ma.
 
-Conditions vérifiées le 31/10/2026 : l'API du portail (CKAN, /data/api/3/) est publique et n'est pas interdite par son
+Conditions vérifiées le 31/10/2026 (et le 01/11/2026 pour ACAPS, CMR, CNRA, CNOPS) : l'API du portail (CKAN, /data/api/3/) est publique et n'est pas interdite par son
 robots.txt ; les jeux de données du HCP (82), de Bank Al-Maghrib (43) et de la CNSS (12) sont publiés sous licence
 ouverte ODbL (réutilisation libre, avec obligation de citer la source et de partager à l'identique une base dérivée),
 au format Excel. IA AISSA cite donc toujours l'institution, le jeu de données et la licence.
@@ -22,9 +22,23 @@ from .bibliotheque import ErreurBroutage
 PORTAIL = "https://data.gov.ma"
 API = PORTAIL + "/data/api/3/action/package_search"
 LICENCE = "licence ouverte ODbL, data.gov.ma"
-INSTITUTIONS = {"haut-commissariat-au-plan": "HCP", "bank-al-maghrib": "Bank Al-Maghrib", "cnss": "CNSS"}
+INSTITUTIONS = {"haut-commissariat-au-plan": "HCP", "bank-al-maghrib": "Bank Al-Maghrib", "cnss": "CNSS",
+                "autorite-de-controle-des-assurances-et-de-la-prevoyance-sociale": "ACAPS",
+                "caisse-marocaine-des-retraites": "CMR", "caisse-nationale-de-retraites-et-d-assurances": "CNRA",
+                "caisse-nationale-des-organismes-de-prevoyance-sociale": "CNOPS"}   # toutes en ODbL (vérifié le 01/11/2026)
 THEMES = ("chômage", "prix", "inflation", "pib", "crédit", "salari", "masse salariale", "emploi", "épargne",
+          "cotisation", "pension", "retraite", "assurance maladie", "amo", "rente", "prestation", "tarification",
           "valeur ajoutée", "activité")                     # du plus demandé au moins demandé
+
+# Sources examinées et NON lues, faute d'autorisation de réutilisation (vérifié le 01/11/2026) : IA AISSA renvoie
+# vers elles par leur lien, sans copier leur contenu.
+SOURCES_NON_LUES = {
+    "DEPF (Direction des études et des prévisions financières)": (
+        "https://www.finances.gov.ma", "site du ministère « © Tous droits réservés », sans licence ouverte ; "
+        "le serveur depf.finances.gov.ma coupe les connexions automatiques"),
+    "Office des changes (balance commerciale, transferts)": (
+        "https://www.oc.gov.ma", "le site rejette les robots (page « Request Rejected »)"),
+}
 MAX_TABLEAUX = 8
 MAX_LIGNES = 80
 MAX_OCTETS = 3_000_000
@@ -99,10 +113,10 @@ def rang_theme(titre):
 
 
 def ressource_donnees(jeu):
-    """Le fichier de données du jeu (pas celui des métadonnées), en Excel."""
+    """Le fichier de données du jeu (pas celui des métadonnées), en Excel moderne (XLSX)."""
     for r in jeu.get("resources", []):
         url = r.get("url") or ""
-        if (r.get("format") or "").upper() in ("XLSX", "XLS") and "metadata" not in url.lower():
+        if (r.get("format") or "").upper() == "XLSX" and "metadata" not in url.lower():   # l'ancien XLS : illisible
             return url
     return None
 
@@ -118,6 +132,9 @@ def repas_donnees_maroc(memoire, brouteur=None, aujourdhui=None, forcer=False, m
         from .broutage import Brouteur
         brouteur = Brouteur()
     bilan = {"date": aujourdhui.isoformat(), "catalogues": {}, "tableaux": [], "refus": []}
+    memoire.garder_passages("IA AISSA", "Sources officielles marocaines à consulter directement",
+                            [f"{nom} : je ne recopie pas ses publications ({raison}) ; consultez-les à la source : {lien}."
+                             for nom, (lien, raison) in SOURCES_NON_LUES.items()])
     a_lire = []
     for organisation, sigle in INSTITUTIONS.items():
         try:

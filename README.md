@@ -20,6 +20,8 @@ rangés dans sa mémoire de lecture : elle répond « l'inflation au Maroc » en
 Données officielles marocaines (`ia_aissa/donnees_maroc.py`) : chaque semaine, le portail national data.gov.ma (API
 publique, licence ODbL) lui donne les catalogues du HCP, de Bank Al-Maghrib et de la CNSS, et des tableaux sur le
 chômage, les prix, le PIB, les crédits et les salariés (« taux de chômage à Casablanca : 17,7 % en 2025, HCP »).
+S'y ajoutent l'ACAPS (retraites, AMO), la CMR, la CNRA et la CNOPS. La DEPF et l'Office des changes ne sont pas lus
+(pas de licence de réutilisation, robots refusés) : IA AISSA donne leur lien sans recopier leurs publications.
 
 ## Deux espaces : visiteurs et administration
 

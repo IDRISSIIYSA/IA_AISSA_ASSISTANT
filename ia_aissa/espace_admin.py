@@ -322,6 +322,9 @@ def repas_du_jour_admin(mem):
                            + (f" Refus : {' ; '.join(b['refus'])}" if b["refus"] else ""))
             except Exception as e:
                 st.error(f"Impossible pour l'instant : {e}")
+    from .donnees_maroc import SOURCES_NON_LUES
+    st.caption("Non lues, faute d'autorisation de réutilisation : "
+               + " ; ".join(f"{nom} ({raison})" for nom, (_, raison) in SOURCES_NON_LUES.items()) + ".")
     maroc = mem.reglage("donnees_maroc:derniere")
     if maroc:
         d = json.loads(maroc)

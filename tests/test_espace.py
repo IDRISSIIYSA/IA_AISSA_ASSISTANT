@@ -815,3 +815,7 @@ def test_donnees_officielles_marocaines_data_gov_ma(tmp_path):
     reponse, _, confiance = penser("taux de chômage à Casablanca", mem)
     assert confiance >= 0.85 and "17,7 (2025)" in reponse and "HCP" in reponse and "ODbL" in reponse
     assert D.repas_donnees_maroc(mem, FauxBrouteur(), datetime.date(2026, 11, 2))["deja"]   # une fois par semaine
+    assert len(b["catalogues"]) == len(D.INSTITUTIONS) == 7                # HCP, BAM, CNSS, ACAPS, CMR, CNRA, CNOPS
+    assert "www.oc.gov.ma" in textes and "je ne recopie pas" in textes    # sources sans licence : un lien, pas de copie
+    assert D.ressource_donnees({"resources": [{"format": "XLS", "url": "a.xls"}]}) is None   # l'ancien XLS : ignoré
+    assert D.rang_theme("Cotisations des régimes de retraite") is not None
