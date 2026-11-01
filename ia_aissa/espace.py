@@ -179,7 +179,9 @@ def analyser_controle(nom, contenu, n_episodes=None):
               + ("" if previsions.empty else
                  f" Prévision du réalisé pour {previsions['periode'].iloc[0]} : "
                  + ", ".join(f"{p.centre} {montant(p.prevision)} (entre {montant(p.bas_95)} et {montant(p.haut_95)})"
-                             for p in previsions.itertuples()) + "."))
+                             for p in previsions.itertuples()) + ". Tendance tirée des 12 dernières périodes ; "
+                 "couverture réelle de l'intervalle, mesurée en rejouant le passé : "
+                 + ", ".join(f"{p.centre} {p.couverture_reelle}" for p in previsions.itertuples()) + "."))
     elements = [
         {"type": "metriques", "valeurs": [("Budget", f"{budget:,.0f}".replace(",", " ")),
                                          ("Réalisé", f"{reel:,.0f}".replace(",", " ")),

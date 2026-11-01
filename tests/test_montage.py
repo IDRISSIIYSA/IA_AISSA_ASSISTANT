@@ -102,3 +102,30 @@ def test_prevision_du_mois_suivant_avec_intervalle():
     assert ((p["bas_95"] < p["prevision"]) & (p["prevision"] < p["haut_95"])).all()
     assert (p["saisonnalite"] == "oui").all()
     assert (cg.prevoir(cg.preparer(cg.generer_donnees_exemple(12)))["saisonnalite"] != "oui").all()
+
+
+def test_prevision_robuste_aux_derives_et_couverture_mesuree():
+    """Une dérive récente est suivie (tendance sur 12 périodes) ; la couverture de l'intervalle est mesurée en
+    rejouant le passé et l'intervalle est élargi s'il s'est montré trop étroit."""
+    import numpy as np
+    import pandas as pd
+    import controle_gestion_ia as cg
+    rng = np.random.default_rng(0)
+    periodes = [str(p) for p in pd.period_range("2023-01", periods=36, freq="M")]
+    stable = 100_000 + rng.normal(0, 1_000, 36)
+    derive = stable.copy()
+    derive[24:] += np.arange(1, 13) * 5_000                    # un centre qui dérape sur la dernière année
+    df = pd.DataFrame({"periode": periodes * 2, "centre": ["Stable"] * 36 + ["Dérive"] * 36,
+                       "reel": np.concatenate([stable, derive])})
+    p = cg.prevoir(df).set_index("centre")
+    assert p.loc["Dérive", "prevision"] > 160_000                # la droite sur 36 mois prévoirait ~140 000
+    assert p.loc["Stable", "bas_95"] < 100_000 < p.loc["Stable", "haut_95"]
+    couverture, essais, _ = cg.couverture_reelle(stable)
+    assert essais == 30 and couverture >= 0.8                     # un intervalle à 95 % qui couvre vraiment
+    assert "sur 30 essai(s)" in p.loc["Stable", "couverture_reelle"]
+    ruptures = np.r_[np.full(20, 100.0), np.full(20, 300.0)] + rng.normal(0, 1, 40)
+    trop_etroit, _, rapports = cg.couverture_reelle(ruptures)
+    assert trop_etroit < 0.95
+    large = cg.prevoir(pd.DataFrame({"periode": [str(x) for x in pd.period_range("2023-01", periods=40, freq="M")],
+                                     "centre": "Rupture", "reel": ruptures}))
+    assert "élargi" in large["couverture_reelle"].iloc[0]

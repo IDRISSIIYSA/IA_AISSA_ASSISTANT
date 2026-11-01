@@ -212,9 +212,11 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
   conseil, à prédire si sa propre décision est juste : ✅ Sûr, 🟡 À confirmer, 🤔 Je ne sais pas.
   S'il doute de plus de 10 % de ses décisions, il demande à réapprendre.
 - **Curiosité** : l'agent signale aussi les écarts sous les seuils d'alerte mais inhabituels pour leur centre.
-- **Prévision** : réalisé de la période suivante par centre (tendance linéaire + saisonnalité mensuelle dès
-  24 périodes) avec un intervalle de confiance à 95 %. Sur les données d'exemple (dérives et incidents
-  ponctuels), le vrai réalisé tombe dans l'intervalle environ 83 % du temps : un incident imprévisible reste imprévisible.
+- **Prévision** : réalisé de la période suivante par centre (saisonnalité mensuelle dès 24 périodes, tendance
+  tirée des 12 dernières périodes pour suivre une dérive récente) avec un intervalle de confiance à 95 %. Sa
+  couverture réelle est mesurée en rejouant le passé (chaque période prévue avec les seules données d'avant) : sur
+  les données d'exemple, 80 à 87 % ; l'intervalle est alors élargi d'après les erreurs constatées, et la colonne
+  « couverture_reelle » le dit. Un incident imprévisible reste imprévisible.
 
 ## Penser avec son propre cerveau (`ia_aissa/pensee.py`)
 
