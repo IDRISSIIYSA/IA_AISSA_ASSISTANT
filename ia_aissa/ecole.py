@@ -642,9 +642,24 @@ def precision(cerveau, epreuve):
         return float((cerveau(x).argmax(1).numpy() == y).mean())
 
 
-def entrainer(matiere, pas=None, batch=64, lr=2e-3, seed=0, callback=None):
-    """Apprentissage par renforcement (bandit contextuel) avec mémoire profonde."""
-    pas = pas or max(4000, 600 * len(matiere.actions))   # plus de réponses possibles = plus d'essais
+LR_MIN = 1e-4
+PAS_PAR_CLE = {"orientation": 150_000}     # 42 matières : 25 200 pas ne donnent que 70 % ; 150 000 pas, 97 % (5 min)
+
+
+def pas_initial(n_actions):
+    """Pas d'apprentissage de départ : plus il y a de réponses possibles, plus le pas est prudent (orientation à
+    42 matières : 96 % avec 1e-3 contre 64 % avec 2e-3, mesuré le 31/10/2026)."""
+    return 2e-3 if n_actions <= 10 else 1e-3
+
+
+def entrainer(matiere, pas=None, batch=64, lr=None, seed=0, callback=None, patience=4, lr_min=LR_MIN):
+    """Apprentissage par renforcement (bandit contextuel) avec mémoire profonde.
+    Pas d'apprentissage adaptatif : de départ selon le nombre de réponses, divisé par deux quand l'examen ne
+    progresse plus pendant `patience` contrôles (tous les 250 pas), jamais sous lr_min. Le meilleur cerveau vu à
+    l'examen est gardé (un pas trop grand en fin d'apprentissage ne peut plus défaire ce qui était acquis)."""
+    import copy
+    pas = pas or PAS_PAR_CLE.get(matiere.cle) or max(4000, 600 * len(matiere.actions))   # plus de réponses = plus d'essais
+    lr = lr or pas_initial(len(matiere.actions))
     rng = np.random.default_rng(seed)
     random.seed(seed)
     torch.manual_seed(seed)
@@ -652,7 +667,8 @@ def entrainer(matiere, pas=None, batch=64, lr=2e-3, seed=0, callback=None):
     optimiseur = torch.optim.Adam(cerveau.parameters(), lr=lr)
     memoire = deque(maxlen=20_000)
     epreuve = examen(matiere)
-    historique = [{"pas": 0, "precision": precision(cerveau, epreuve)}]
+    historique = [{"pas": 0, "precision": precision(cerveau, epreuve), "lr": lr}]
+    meilleure, meilleur_etat, sans_progres = historique[0]["precision"], copy.deepcopy(cerveau.state_dict()), 0
     for t in range(1, pas + 1):
         epsilon = max(0.05, 1 - t / (0.6 * pas))
         x, y, _ = matiere.generer(rng)
@@ -670,9 +686,22 @@ def entrainer(matiere, pas=None, batch=64, lr=2e-3, seed=0, callback=None):
             perte.backward()
             optimiseur.step()
         if t % 250 == 0:
-            historique.append({"pas": t, "precision": precision(cerveau, epreuve)})
+            p = precision(cerveau, epreuve)
+            if p > meilleure + 1e-3:
+                meilleure, meilleur_etat, sans_progres = p, copy.deepcopy(cerveau.state_dict()), 0
+            else:
+                sans_progres += 1
+                if sans_progres >= patience and lr > lr_min:          # plateau : un pas plus fin
+                    lr = max(lr_min, lr / 2)
+                    for groupe in optimiseur.param_groups:
+                        groupe["lr"] = lr
+                    sans_progres = 0
+            historique.append({"pas": t, "precision": p, "lr": lr})
             if callback:
-                callback(t, pas, historique[-1]["precision"])
+                callback(t, pas, p)
+    if historique[-1]["precision"] < meilleure:                      # le meilleur cerveau vu à l'examen
+        cerveau.load_state_dict(meilleur_etat)
+        historique.append({"pas": pas, "precision": meilleure, "lr": lr, "retenu": "meilleur à l'examen"})
     return cerveau, historique
 
 

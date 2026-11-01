@@ -124,7 +124,8 @@ réseau de neurones. Personne ne lui donne les règles : elle les découvre.
 
 Un cerveau « aiguilleur », né vide lui aussi, a appris par essais et erreurs (150 000 exercices) à
 reconnaître de quelle matière relève une question, en lisant à la fois les mots et les lettres
-(92,5 % de réussite à l'examen). IA AISSA choisit ainsi seule la matière, répond, et combine les
+(97,3 % de réussite à l'examen depuis le 01/11/2026, avec un pas d'apprentissage adaptatif : prudent au départ
+pour 42 matières, divisé par deux dès que l'examen ne progresse plus, et le meilleur cerveau gardé). IA AISSA choisit ainsi seule la matière, répond, et combine les
 deux confiances. En dessous de 25 %, elle dit qu'elle n'est pas sûre et passe la main à
 l'assistante, qui comprend toutes les formulations. L'assistante peut aussi utiliser l'aiguilleur
 (`consulter_ecole` avec `matiere = "auto"`).

@@ -94,3 +94,18 @@ def test_orientation_automatique_sans_rubrique():
         meilleure = repondre_automatiquement(question)[0]
         assert meilleure["reponse"] == attendu and meilleure["confiance"] >= SEUIL_CONFIANCE
     assert repondre_automatiquement("zzz qwerty xyz")[0]["confiance"] < 0.9
+
+
+def test_pas_d_apprentissage_adaptatif_et_meilleur_cerveau_garde():
+    """Pas de départ selon le nombre de réponses, divisé par deux sur un plateau, meilleur cerveau à l'examen gardé.
+    Rien n'est écrit dans ia_aissa/cerveaux (le cerveau entraîné reste en mémoire)."""
+    from ia_aissa.ecole import LR_MIN, PAR_CLE, entrainer, examen, pas_initial, precision
+    assert pas_initial(3) == 2e-3 and pas_initial(42) == 1e-3
+    m = PAR_CLE["elasticite"]
+    cerveau, historique = entrainer(m, pas=4000, patience=1)
+    taux = [h["lr"] for h in historique]
+    assert taux[0] == 2e-3 and min(taux) < 2e-3 and min(taux) >= LR_MIN          # baisse sur plateau, jamais sous le plancher
+    assert all(a >= b for a, b in zip(taux, taux[1:]))                           # le pas ne remonte jamais
+    meilleure = max(h["precision"] for h in historique)
+    assert precision(cerveau, examen(m)) == meilleure                           # le cerveau rendu est le meilleur vu
+    assert historique[-1]["precision"] == meilleure
