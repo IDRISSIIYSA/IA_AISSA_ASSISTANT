@@ -819,3 +819,52 @@ def test_donnees_officielles_marocaines_data_gov_ma(tmp_path):
     assert "www.oc.gov.ma" in textes and "je ne recopie pas" in textes    # sources sans licence : un lien, pas de copie
     assert D.ressource_donnees({"resources": [{"format": "XLS", "url": "a.xls"}]}) is None   # l'ancien XLS : ignoré
     assert D.rang_theme("Cotisations des régimes de retraite") is not None
+
+
+def test_donnees_maroc_rotation_et_ligne_nationale(tmp_path):
+    """Chaque semaine des tableaux différents jusqu'à couvrir le catalogue ; sans région nommée, la ligne d'ensemble."""
+    import datetime
+    import json
+    import openpyxl
+    from ia_aissa import donnees_maroc as D
+    from ia_aissa.lecture import agregation, repondre_par_lecture
+    from ia_aissa.memoire import Memoire
+
+    titres = ["Taux de chômage par sexe", "Indice des prix", "Population des communes", "Taux de chômage par région"]
+
+    class FauxBrouteur:
+        lus = []
+
+        def visiter(self, url, params=None):
+            if params["fq"] != "organization:haut-commissariat-au-plan":
+                return json.dumps({"result": {"results": []}})
+            return json.dumps({"result": {"results": [
+                {"name": f"jeu{i}", "title": t, "license_title": "ODbL",
+                 "resources": [{"format": "XLSX", "url": f"https://data.gov.ma/x/jeu{i}.xlsx"}]}
+                for i, t in enumerate(titres)]}})
+
+        def telecharger(self, url, chemin, max_octets=None):
+            self.lus.append(url.rsplit("/", 1)[1])
+            w = openpyxl.Workbook()
+            f = w.active
+            f.append(["Taux de chômage (%)"])
+            f.append(["Milieu", "Région", 2025, 2024])
+            f.append(["National", "Casablanca", 17.7, 18.1])
+            f.append(["Ensemble", "Total", 12.9, 13.3])
+            f.append(["National", "Fès", 15.0, 15.5])
+            w.save(chemin)
+
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    b = FauxBrouteur()
+    premiere = D.repas_donnees_maroc(mem, b, datetime.date(2026, 11, 1), max_tableaux=2)
+    assert b.lus == ["jeu0.xlsx", "jeu3.xlsx"]                          # les thèmes demandés d'abord (chômage)
+    assert premiere["couverture"] == {"lus": 2, "total": 4}
+    D.repas_donnees_maroc(mem, b, datetime.date(2026, 11, 8), max_tableaux=2)
+    assert b.lus[2:] == ["jeu1.xlsx", "jeu2.xlsx"]                      # la semaine suivante : les autres
+    D.repas_donnees_maroc(mem, b, datetime.date(2026, 11, 15), max_tableaux=2)
+    assert b.lus[4:] == ["jeu0.xlsx", "jeu3.xlsx"]                      # puis les plus anciennement lus
+    assert agregation("HCP — T — Ensemble, Total : 12,9 (2025).") == 1
+    assert agregation("HCP — T — National, Casablanca : 17,7 (2025).") == 0.5 and agregation("texte libre") == 0
+    sans_region = repondre_par_lecture("taux de chômage par sexe", mem)["reponse"]
+    assert "Ensemble, Total : 12,9" in sans_region and "Casablanca" not in sans_region
+    assert "Casablanca : 17,7" in repondre_par_lecture("taux de chômage par sexe à Casablanca", mem)["reponse"]

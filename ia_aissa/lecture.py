@@ -117,6 +117,19 @@ def phrases_utiles(passage, question, n=3):
     return [p for p in notees[:n] if notes[p] > 0] or phrases[:1]      # la phrase qui répond en premier
 
 
+ENSEMBLES = {"national", "ensemble", "total", "maroc", "tous", "toutes", "global", "total général", "royaume"}
+
+
+def agregation(texte):
+    """Part des étiquettes d'une ligne de tableau (« … — National, Total : … ») qui désignent un ensemble plutôt
+    qu'une région ou une catégorie : « Ensemble, Total » → 1 ; « National, Casablanca » → 0,5 ; autre texte → 0."""
+    etiquettes = re.findall(r" — ([^—:]+) : ", texte)
+    if not etiquettes:
+        return 0.0
+    mots = [e.strip().lower() for e in etiquettes[-1].split(",") if e.strip() not in ("", "-")]
+    return sum(m in ENSEMBLES for m in mots) / len(mots) if mots else 0.0
+
+
 SEUIL_LECTURE = 0.45            # part des mots de la question retrouvés dans le meilleur passage
 
 
@@ -125,7 +138,7 @@ def repondre_par_lecture(question, memoire, utilisateur=None, n=6, strict=False)
     Renvoie None si rien d'assez proche n'a été lu."""
     if memoire is None:
         return None
-    resultats = index(memoire, utilisateur).chercher(question, n=n * 6)
+    resultats = index(memoire, utilisateur).chercher(question, n=n * 30)   # assez de lignes d'un même tableau
     seuil = 0.6 if strict else SEUIL_LECTURE
     resultats = [r for r in resultats if r["mots_trouves"] >= seuil and r["part_entiers"] >= seuil
                  and r["mots_entiers"] >= 2]          # au moins deux vrais mots de la question, pas une racine seule
@@ -133,12 +146,14 @@ def repondre_par_lecture(question, memoire, utilisateur=None, n=6, strict=False)
         return None
     par_source = {}
     for r in resultats:                                   # le meilleur passage de chaque document
-        par_source.setdefault(r["source"], r)
+        meilleur = par_source.setdefault(r["source"], r)
+        if r["mots_trouves"] >= meilleur["mots_trouves"] and agregation(r["texte"]) > agregation(meilleur["texte"]):
+            par_source[r["source"]] = r                   # question qui ne nomme ni région ni catégorie : l'ensemble
     annees = set(re.findall(r"\b(?:19|20)\d\d\b", question))
     datees = {src: r for src, r in par_source.items() if annees & set(re.findall(r"(?:19|20)\d\d", src))}
     if datees:                                             # « en 2026 », « de 2021 à 2026 » : les éditions de ces années
         par_source = datees
-    choisis = sorted(par_source.values(), key=lambda r: r["source"])[:n] if len(par_source) > 1 else [resultats[0]]
+    choisis = sorted(par_source.values(), key=lambda r: r["source"])[:n] if len(par_source) > 1 else list(par_source.values())
     lignes = [f"**{r['source']}** (passage {r['numero'] + 1}) : « {' '.join(phrases_utiles(r['texte'], question))} »"
               for r in choisis]
     confiance = round(min(0.95, max(r["mots_trouves"] for r in choisis)), 3)

@@ -329,7 +329,9 @@ def repas_du_jour_admin(mem):
     if maroc:
         d = json.loads(maroc)
         st.caption(f"Données officielles marocaines lues le {d['date']} : catalogues {d['catalogues']}, "
-                   + ", ".join(f"{t['institution']} — {t['titre']}" for t in d["tableaux"]) + " (licence ODbL).")
+                   + ", ".join(f"{t['institution']} — {t['titre']}" for t in d["tableaux"]) + " (licence ODbL)."
+                   + (f" Rotation : {d['couverture']['lus']} tableaux lus sur {d['couverture']['total']}."
+                      if d.get("couverture") else ""))
     derniere = mem.reglage("donnees_ouvertes:derniere")
     if derniere:
         d = json.loads(derniere)

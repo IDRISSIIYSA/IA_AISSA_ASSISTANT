@@ -6,8 +6,8 @@ robots.txt ; les jeux de données du HCP (82), de Bank Al-Maghrib (43) et de la 
 ouverte ODbL (réutilisation libre, avec obligation de citer la source et de partager à l'identique une base dérivée),
 au format Excel. IA AISSA cite donc toujours l'institution, le jeu de données et la licence.
 
-Chaque semaine : le catalogue de chaque institution (titre, date, lien) et quelques tableaux sur ses thèmes
-(chômage, emploi, PIB, prix, crédits, salariés…) sont lus et rangés dans sa mémoire de lecture, une phrase par ligne
+Chaque semaine : le catalogue de chaque institution (titre, date, lien) et quelques tableaux, à tour de rôle (les
+jamais lus d'abord, les thèmes les plus demandés en tête : chômage, prix, PIB, crédits, salariés…), sont lus et rangés dans sa mémoire de lecture, une phrase par ligne
 de tableau, pour qu'elle puisse répondre en citant l'institution et l'année.
 """
 
@@ -112,6 +112,13 @@ def rang_theme(titre):
     return next((i for i, t in enumerate(THEMES) if t in titre), None)
 
 
+def ordre_de_lecture(jeu, lus):
+    """Rotation : d'abord les jeux jamais lus (les thèmes les plus demandés en tête), puis les plus anciennement lus.
+    Semaine après semaine, tout le catalogue est lu ; ce qui a été lu reste dans sa mémoire."""
+    rang = rang_theme(jeu["title"])
+    return lus.get(jeu["name"], ""), len(THEMES) if rang is None else rang
+
+
 def ressource_donnees(jeu):
     """Le fichier de données du jeu (pas celui des métadonnées), en Excel moderne (XLSX)."""
     for r in jeu.get("resources", []):
@@ -136,6 +143,7 @@ def repas_donnees_maroc(memoire, brouteur=None, aujourdhui=None, forcer=False, m
                             [f"{nom} : je ne recopie pas ses publications ({raison}) ; consultez-les à la source : {lien}."
                              for nom, (lien, raison) in SOURCES_NON_LUES.items()])
     a_lire = []
+    lus = json.loads(memoire.reglage("donnees_maroc:lus") or "{}")     # jeu → date de sa dernière lecture
     for organisation, sigle in INSTITUTIONS.items():
         try:
             jeux = catalogue(brouteur, organisation)
@@ -145,8 +153,8 @@ def repas_donnees_maroc(memoire, brouteur=None, aujourdhui=None, forcer=False, m
         memoire.garder_passages("IA AISSA", f"data.gov.ma — catalogue {sigle} ({LICENCE})",
                                 [fiche(sigle, j) for j in jeux])
         bilan["catalogues"][sigle] = len(jeux)
-        a_lire.append((sigle, sorted((j for j in jeux if rang_theme(j["title"]) is not None),
-                                     key=lambda j: rang_theme(j["title"]))))
+        lisibles = [j for j in jeux if ressource_donnees(j)]
+        a_lire.append((sigle, sorted(lisibles, key=lambda j: ordre_de_lecture(j, lus))))
     choisis = []                                    # les thèmes les plus demandés, en alternant les institutions
     while len(choisis) < max_tableaux and any(jeux for _, jeux in a_lire):
         for sigle, jeux in a_lire:
@@ -154,8 +162,7 @@ def repas_donnees_maroc(memoire, brouteur=None, aujourdhui=None, forcer=False, m
                 choisis.append((sigle, jeux.pop(0)))
     for sigle, jeu in choisis:
         url = ressource_donnees(jeu)
-        if not url:
-            continue
+        lus[jeu["name"]] = bilan["date"]               # lu ou refusé : la rotation passe au suivant
         descripteur, chemin = tempfile.mkstemp(suffix=".xlsx")
         os.close(descripteur)
         try:
@@ -170,5 +177,7 @@ def repas_donnees_maroc(memoire, brouteur=None, aujourdhui=None, forcer=False, m
         if phrases:
             memoire.garder_passages("IA AISSA", f"{sigle} — {jeu['title']} ({LICENCE})", phrases)
             bilan["tableaux"].append({"institution": sigle, "titre": jeu["title"], "lignes": len(phrases)})
+    memoire.definir_reglage("donnees_maroc:lus", json.dumps(lus))
+    bilan["couverture"] = {"lus": len(lus), "total": sum(len(j) for _, j in a_lire) + len(choisis)}
     memoire.definir_reglage("donnees_maroc:derniere", json.dumps(bilan, ensure_ascii=False))
     return bilan
