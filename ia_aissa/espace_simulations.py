@@ -213,20 +213,27 @@ def construire(nom, memoire):
         benefice = c[0].number_input("Résultat fiscal (DH)", value=500_000.0, step=10_000.0, key="is_ben")
         produits = c[1].number_input("Produits / chiffre d'affaires HT (DH)", 0.0, value=3_000_000.0, step=100_000.0,
                                      key="is_prod")
-        secteur = c[2].selectbox("Secteur", ["Droit commun", "Établissements de crédit et assurances"], key="is_sect")
-        debut = st.date_input("Début d'activité de la société", value=datetime.date(2015, 1, 1), key="is_debut")
-        mois_activite = (2026 - debut.year) * 12 + (12 - debut.month + 1)
+        from . import taux_exercice as TE
+        categorie = c[2].selectbox("Catégorie de société", list(TE.CATEGORIES_IS), key="is_sect",
+                                   format_func=lambda k: TE.CATEGORIES_IS[k].split(" (")[0],
+                                   help="Taux plafonné : exportatrices, hôtelières, minières, artisanales, enseignement "
+                                        "privé, sportives, exploitations agricoles… (note circulaire DGI n° 733).")
+        c2 = st.columns(3)
+        exercice = c2[0].selectbox("Exercice (ouvert à compter du 1er janvier)", [2026, 2025, 2024, 2023], key="is_ex")
+        debut = c2[1].date_input("Début d'activité de la société", value=datetime.date(2015, 1, 1), key="is_debut")
+        secteur = TE.CATEGORIES_IS[categorie].split(" (")[0]
+        mois_activite = (exercice - debut.year) * 12 + (12 - debut.month + 1)
         x = K.calculer_is_du(benefice, produits)
+        transitoire = TE.taux_is(benefice, exercice, categorie)        # taux de l'exercice (2023-2026)
+        x["taux"] = transitoire["taux"]
+        x["is"] = round(max(benefice, 0) * x["taux"], 2)
+        x["is_du"] = max(x["is"], x["cotisation_minimale"])
+        x["retenu"] = "cotisation minimale" if x["cotisation_minimale"] > x["is"] else "IS proportionnel"
         nouvelle = mois_activite <= 36                     # CGI art. 144 : exonération de cotisation minimale 36 mois
         if nouvelle:
             x["cotisation_minimale"] = 0.0
             x["is_du"] = x["is"]
             x["retenu"] = "IS proportionnel (cotisation minimale exonérée : société de moins de 36 mois)"
-        if secteur != "Droit commun":                       # CGI art. 19 : taux de 40 % pour ce secteur
-            x["taux"] = 0.40
-            x["is"] = round(max(benefice, 0) * 0.40, 2)
-            x["is_du"] = max(x["is"], x["cotisation_minimale"])
-            x["retenu"] = "cotisation minimale" if x["cotisation_minimale"] > x["is"] else "IS proportionnel"
         conseils = []
         if x["retenu"] == "cotisation minimale":
             conseils.append("La cotisation minimale dépasse l'IS : la marge est faible ou négative. Priorité : rétablir la "
@@ -235,27 +242,30 @@ def construire(nom, memoire):
             conseils.append("Vérifiez que toutes les charges déductibles sont comptabilisées (amortissements, provisions "
                             "justifiées, dotations) : chaque 100 000 DH de charge déductible réduit l'IS de "
                             f"{dh(100_000 * x['taux'])}.")
-        if benefice >= 90_000_000 and secteur == "Droit commun":
+        if 90_000_000 <= benefice < 100_000_000 and categorie in ("droit commun", "industriel", "plafonné"):
             conseils.append("Bénéfice proche du seuil de 100 millions DH : au-delà, tout le bénéfice passe à 35 %. "
                             "Anticipez avec votre conseil (calendrier des produits et charges, investissements).")
-        return rapport(nom, categorie_de(nom), {"Année de référence": 2026, "Secteur": secteur,
+        return rapport(nom, categorie_de(nom), {"Exercice": exercice, "Catégorie": secteur,
                                                 "Début d'activité": debut.strftime("%d/%m/%Y"),
                                                 "Résultat fiscal": dh(benefice), "Produits": dh(produits)},
-                       {"Taux d'IS": pc(x["taux"]), "IS proportionnel": dh(x["is"]),
+                       {"Taux d'IS": TE.pct(x["taux"]), "IS proportionnel": dh(x["is"]),
                         "Cotisation minimale": dh(x["cotisation_minimale"]), "IS dû": dh(x["is_du"]),
                         "Retenu": x["retenu"]},
-                       [f"Taux 2026 : {pc(0.20)} si bénéfice < 100 millions DH, {pc(0.35)} au-delà, {pc(0.40)} "
-                        "pour les banques et assurances.",
-                        f"IS proportionnel = {dh(max(benefice, 0))} × {pc(x['taux'])} = {dh(x['is'])}.",
+                       [f"Taux de l'exercice {exercice} ({transitoire['regle']}) : {TE.pct(x['taux'])}, appliqué à "
+                        "tout le bénéfice (taux proportionnel, transitoire 2023-2026 : 20 %, 35 % ou 40 % en 2026).",
+                        f"IS proportionnel = {dh(max(benefice, 0))} × {TE.pct(x['taux'])} = {dh(x['is'])}.",
                         f"Cotisation minimale = max(3 000 DH ; 0,25 % × {dh(produits)}) = {dh(x['cotisation_minimale'])}.",
                         f"IS dû = le plus élevé des deux = {dh(x['is_du'])}."],
-                       [p["loi"], p["cotisation_minimale"]["loi"] + " (cotisation minimale)",
+                       [p["loi"], TE.SOURCE_IS + " (taux de chaque exercice, lus le 04/11/2026)",
+                        p["cotisation_minimale"]["loi"] + " (cotisation minimale)",
                         *(f"Source consultée : {s}" for s in p["sources"]), f"Vérifié le {B.VERIFIE_LE}."],
-                       2026, remarques=["Années 2023-2025 : barème de transition (les sources divergent sur 2025), "
-                                        "non encodé.", "Régimes particuliers non appliqués : sociétés exportatrices, zones "
-                                        "d'accélération industrielle, Casablanca Finance City, entreprises agricoles, "
-                                        "réductions d'impôt spécifiques. Appliqué : exonération de cotisation minimale "
-                                        "pendant les 36 premiers mois d'activité (CGI, art. 144)."], conseils=conseils)
+                       exercice, remarques=[
+                           "Cotisation minimale calculée avec les paramètres 2026 (0,25 %, minimum 3 000 DH) : pour un "
+                           "exercice antérieur, vérifiez le taux dans le CGI de l'année.",
+                           "Non appliqués : sociétés conventionnées à 1,5 milliard de DH (20 % permanent), maintien à "
+                           "35 % pendant trois exercices après un bénéfice ≥ 100 MDH, réductions d'impôt spécifiques. "
+                           "Appliqué : exonération de cotisation minimale pendant les 36 premiers mois d'activité "
+                           "(CGI, art. 144)."], conseils=conseils)
     if nom == "TVA due ou crédit de TVA":
         annee = c[0].selectbox("Année de référence", B.annees_couvertes("tva")[::-1], key="tva_annee")
         coll = c[1].number_input("TVA collectée sur les ventes", 0.0, value=50_000.0, key="tva_coll")

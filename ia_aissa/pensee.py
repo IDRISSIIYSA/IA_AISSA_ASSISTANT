@@ -280,6 +280,11 @@ def simuler(t, valeurs):
     return None
 
 
+def _langue(texte):
+    from .langues import detecter_langue
+    return detecter_langue(texte)
+
+
 def valeur_apres(texte, motif, portee=40):
     """Le premier nombre qui suit un mot-clé (à moins de 40 caractères) : « bénéfice de 500 000 dh » -> 500000."""
     m = re.search(motif, texte, re.I)
@@ -304,6 +309,13 @@ def calculer(texte):
     sans_annees = annees.sub(" ", t) if re.search(r"\b(de|à|a|en|depuis|entre|et|jusqu'à|année|annee|loi de finances)\s+"
                                                   r"(19|20)\d\d\b", t) else t
     valeurs = [v for v in nombres(sans_annees) if v > 0]
+    from .taux_exercice import exercice_dans, repondre_par_exercice
+    exercice = exercice_dans(t)
+    if exercice:                            # « taux IS 2024 », « TVA électricité 2025 » : les taux de cet exercice
+        sans_exercice = re.sub(rf"(?<![\d.,]){exercice}(?![\d.,])(?!\s*(dh|dhs|dirhams?|mad)\b)", " ", t)
+        reponse = repondre_par_exercice(t, [v for v in nombres(sans_exercice) if v > 0], exercice)
+        if reponse:                         # (l'année de l'exercice n'est jamais un montant)
+            return reponse
     simulation = simuler(t, valeurs)
     if simulation:
         return simulation
@@ -370,7 +382,9 @@ def calculer(texte):
                     ["Chiffres trouvés : résultat fiscal et produits (chiffre d'affaires).",
                      "IS proportionnel (20 %, 35 % au-delà de 100 MDH) comparé à la cotisation minimale.",
                      "Le plus élevé des deux est dû (CGI, art. 144)."])
-    if re.search(r"(\bis\b|impôt sur les sociétés|bénéfice|benefice|rb7)", t):
+    if re.search(r"(\bis\b|impôt sur les sociétés|bénéfice|benefice|rb7)", t) and not (
+            re.search(r"\bis\b", t) and _langue(texte) == "English" and not re.search(
+                r"(impôt|bénéfice|benefice|rb7|\bdh\b|dirham)", t)):     # « what is … » : anglais, pas l'IS
         v = max(valeurs)
         r = K.calculer_is(v)
         return (f"Bénéfice fiscal **{montant(v)}** → **IS {montant(r['is'])}** (taux {r['taux']:.0%}). _{r['remarque']}_",
@@ -393,7 +407,8 @@ def calculer(texte):
             regime = repondre("tva", texte, top=1)[0]
             produit = set(mots(texte)) - set(mots("tva sur de du la le les un une pour dh dirhams ht ttc montant prix "
                                                   "calcule calcul calculer combien fait vente achat facture au taux quel quelle est sur avec "
-                                                  "applique appliquer")) - {
+                                                  "applique appliquer en a à et des au aux pour par mon ma mes "
+                                                  "notre son sa ce cette")) - {
                 m for m in mots(texte) if m.isdigit()}
             if not produit or regime["confiance"] < 0.5:  # aucun produit nommé, ou inconnu : taux normal
                 taux = 0.2

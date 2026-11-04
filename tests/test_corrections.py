@@ -471,3 +471,37 @@ def test_tva_au_taux_normal_vaut_20_pour_cent():
         assert "TVA 200 DH" in penser(q, None)[0], q
     assert "TVA 100 DH" in penser("TVA 1000 DH taux 10%", None)[0]
     assert "taux de 0%" in penser("TVA sur 1000 dirhams de médicaments", None)[0]
+
+
+def test_taux_is_et_tva_par_exercice_selon_les_notes_circulaires_dgi():
+    """Taux recopiés des notes circulaires DGI n° 733 (IS, LF 2023) et n° 735 (TVA, LF 2024), lues le 04/11/2026."""
+    from ia_aissa import taux_exercice as TE
+    from ia_aissa.decortiqueur import taux_is_par_exercice, taux_tva_par_produit
+    from ia_aissa.pensee import penser
+    # IS : bénéfice ≤ 300 000 DH (10 % → 20 %), > 1 MDH et < 100 MDH (31 % → 20 %), ≥ 100 MDH (31 % → 35 %)
+    assert [TE.taux_is(250_000, a)["taux"] for a in (2023, 2024, 2025, 2026)] == [.125, .15, .175, .20]
+    assert [TE.taux_is(5_000_000, a)["taux"] for a in (2023, 2024, 2025, 2026)] == [.2825, .255, .2275, .20]
+    assert [TE.taux_is(150_000_000, a)["taux"] for a in (2023, 2024, 2025, 2026)] == [.32, .33, .34, .35]
+    assert TE.taux_is(500_000, 2024)["taux"] == .20                                    # 300 001 à 1 MDH : 20 %
+    assert TE.taux_is(5_000_000, 2025, "industriel")["taux"] == .215
+    assert TE.taux_is(5_000_000, 2025, "plafonné")["taux"] == .20                       # maintenu à 20 %
+    assert TE.taux_is(150_000_000, 2024, "plafonné")["taux"] == .275
+    assert TE.taux_is(1, 2025, "zai/cfc")["taux"] == .1875 and TE.taux_is(1, 2024, "crédit/assurance")["taux"] == .385
+    assert TE.taux_is(1, 2019) is None                                                   # rien d'inventé
+    # TVA : électricité 14 → 16 → 18 → 20 % ; transport urbain et routier 14 → 13 → 12 → 10 % ; eau domestique 0 %
+    assert [TE.taux_tva("énergie électrique", a) for a in (2023, 2024, 2025, 2026)] == [.14, .16, .18, .20]
+    assert TE.taux_tva(TE.produit_dans("transport urbain"), 2025) == .12
+    assert TE.taux_tva(TE.produit_dans("eau potable"), 2024) == 0.0 and TE.taux_tva("inconnu", 2025) is None
+    # La pensée propre répond par exercice, sans prendre l'année pour un montant
+    assert "**18 %**" in penser("TVA sur 1000 dh d'électricité en 2025", None)[0]
+    assert "TVA 180 DH" in penser("TVA sur 1000 dh d'électricité en 2025", None)[0]
+    assert "**25,5 %**" in penser("taux IS 2024", None)[0] and "2 024 DH" not in penser("taux IS 2024", None)[0]
+    assert "IS 1 275 000 DH" in penser("IS sur un bénéfice de 5 000 000 dh en 2024", None)[0]
+    assert "12,5 %" in penser("chhal dariba 3la rb7 dyal charika 2023 200000 dh", None)[0]
+    assert "38,5 %" in penser("IS banque 2024", None)[0]
+    assert "IS" not in penser("what is the population in 2024", None)[0][:20]           # « is » anglais
+    assert "taux de 20%" in penser("TVA sur 1000 dh en 2025", None)[0]                  # « en » n'est pas un produit
+    # Tableaux du décortiqueur
+    t = taux_is_par_exercice()
+    assert list(t.columns) == ["Situation", "2022", "2023", "2024", "2025", "2026"] and t.iloc[0]["2023"] == "12,5 %"
+    assert taux_tva_par_produit().iloc[0]["2025"] == "18 %"

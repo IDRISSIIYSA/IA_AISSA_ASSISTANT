@@ -29,8 +29,24 @@ def taux_tva_par_exercice():
 
 
 def taux_is_par_exercice():
-    return pd.DataFrame([{"Exercices": f"{p['de']}–{p['a']}", **{k: f"{v:.0%}" for k, v in p["taux"].items()},
-                          "Cotisation minimale": f"{p['cotisation_minimale']['taux']:.2%} (min. 3 000 DH)"} for p in B.IS])
+    """Taux d'IS par situation et par exercice (2022-2026), lus dans la note circulaire DGI n° 733."""
+    from . import taux_exercice as TE
+    situations = [("Bénéfice ≤ 300 000 DH", "droit commun", 1), ("300 001 à 1 000 000 DH", "droit commun", 500_000),
+                  ("> 1 MDH et < 100 MDH (droit commun)", "droit commun", 10_000_000),
+                  ("> 1 MDH et < 100 MDH (industriel)", "industriel", 10_000_000),
+                  ("≥ 100 MDH (droit commun et industriel)", "droit commun", 200_000_000),
+                  ("≥ 100 MDH (anciennement plafonné à 20 %)", "plafonné", 200_000_000),
+                  ("ZAI et Casablanca Finance City", "zai/cfc", 1),
+                  ("Banques, BAM, CDG, assurances", "crédit/assurance", 1)]
+    return pd.DataFrame([{"Situation": nom, **{str(a): TE.pct(TE.taux_is(b, a, cat)["taux"]) for a in TE.EXERCICES}}
+                         for nom, cat, b in situations])
+
+
+def taux_tva_par_produit():
+    """Taux de TVA des produits touchés par la réforme, par année (note circulaire DGI n° 735)."""
+    from . import taux_exercice as TE
+    return pd.DataFrame([{"Produit ou opération": p, **{str(a): TE.pct(v) for a, v in t.items()}}
+                         for p, t in TE.TVA_PAR_EXERCICE.items()])
 
 
 # Pour chaque impôt : sections (titre, lignes) ; par secteur : {secteur: ligne}
@@ -139,7 +155,7 @@ FICHES = {
             "Immobilier et promotion immobilière": "Logement social : exonération sous conditions (art. 92) ; "
                                                    "livraison à soi-même de construction : art. 89-I.",
         },
-        "tableau": taux_tva_par_exercice,
+        "tableau": taux_tva_par_produit,
         "simulations": ["TVA due ou crédit de TVA", "Prix de vente et marges"],
         "references": ["CGI, art. 87 à 125 (TVA)", "Réforme des taux : lois de finances 2024 à 2026"],
     },
