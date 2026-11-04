@@ -183,6 +183,29 @@ STYLE = """<style>
     [data-testid="stChatInputTextArea"]::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     [data-testid="stChatInput"]:has([data-testid="stChatInputApproveButton"])::before {
       content: "● Enregistrement… ✅ envoyer · ✖ annuler"; } }
+  /* ---------- Petits Android (360 px) et téléphone en paysage ---------- */
+  @media (max-width: 380px) {
+    .block-container { padding-left: 8px; padding-right: 8px; }
+    [data-testid="stChatInputMicButton"], [data-testid="stChatInputSubmitButton"],
+    [data-testid="stChatInputFileUploadButton"] button { width: 36px !important; height: 36px !important;
+      min-width: 36px !important; }
+    [data-testid="stChatInputTextArea"] { font-size: 14px !important; } }
+  @media (orientation: landscape) and (max-height: 500px) {
+    /* l'alien entier, réduit, au-dessus de la barre de saisie (au lieu d'un alien coupé par la barre) */
+    [data-testid="stIFrame"] { height: 640px !important; transform: scale(.33); transform-origin: top center; }
+    [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) { height: 215px !important; max-height: 215px !important;
+      min-height: 0 !important; overflow: hidden; }
+    a.remonter-alien { bottom: 148px !important; width: 44px; height: 44px; font-size: 14px; } }
+  /* ---------- Bouton « remonter à l'alien » quand la conversation est longue ---------- */
+  [data-testid="stMain"], html { scroll-behavior: smooth; }
+  a.remonter-alien { position: fixed; right: 16px; bottom: 150px; z-index: 1000; width: 48px; height: 48px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; white-space: nowrap;
+    letter-spacing: -2px;
+    text-decoration: none !important; background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff !important;
+    box-shadow: 0 6px 16px rgba(99,102,241,.38); }
+  a.remonter-alien:hover { transform: translateY(-2px); }
+  a.remonter-alien:focus-visible { outline: 3px solid #fde68a; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { [data-testid="stMain"], html { scroll-behavior: auto; } }
   @media (prefers-reduced-motion: reduce) { [data-testid="stChatInputMicButton"],
     [data-testid="stChatInputApproveButton"], [data-testid="stChatInput"] { animation: none !important; } }
 </style>"""
@@ -199,6 +222,7 @@ def yeux():
 
 
 ATTENTE_VOIX_S = 3                 # au-delà, la voix du navigateur lit tout de suite (en ligne, la synthèse traînait)
+SEUIL_REMONTER = 6               # messages affichés à partir desquels le bouton « remonter à l'alien » apparaît
 
 
 _PANNE_VOIX = {"echecs": 0, "jusqu_a": 0.0}
@@ -1189,6 +1213,9 @@ def espace_visiteur():
                     '📎 pour déposer un fichier · ou écris simplement</p>', unsafe_allow_html=True)
     for i, m in enumerate(st.session_state["affichage"]):
         afficher_message(m, i, r["voir_outils"])
+    if len(st.session_state["affichage"]) >= SEUIL_REMONTER:       # conversation longue : l'alien d'un geste
+        st.markdown('<a class="remonter-alien" href="#alien" title="Remonter à l\'alien" '
+                    'aria-label="Remonter à l\'alien">⬆️👽</a>', unsafe_allow_html=True)
 
     saisie = st.chat_input("Parle-moi, écris, ou dépose un fichier (chiffres, livre, image)…",
                            accept_file="multiple", accept_audio=True, submit_mode="disable",
@@ -1232,6 +1259,7 @@ def espace_visiteur():
     parole = st.session_state["parole"]
     image, type_image = mem.media("avatar")
     with zone_alien:
+        st.markdown('<div id="alien"></div>', unsafe_allow_html=True)      # cible du bouton « remonter à l'alien »
         st.iframe(avatar(parole["texte"][:400] + ("…" if len(parole["texte"]) > 400 else ""), parole.get("audio"),
                          parole.get("voix", "fr-FR"), image, type_image or "image/png",
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),

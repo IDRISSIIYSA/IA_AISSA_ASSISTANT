@@ -32,7 +32,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] École : entraînement de l'orientation avec un pas d'apprentissage adaptatif (lr 1e-3 donne 96 % contre 64 % à 2e-3 avec 42 matières) — pas de départ selon le nombre de réponses (2e-3 jusqu'à 10, 1e-3 au-delà), divisé par deux sur plateau d'examen (plancher 1e-4), meilleur cerveau gardé ; orientation réentraînée (150 000 pas, 5 min) : 97,3 % à l'examen contre 96,3 %, banc d'essai école 21/35 contre 19/35, pensée 35/35
 - [x] Langues : choisir dans l'atelier la phrase où le score est le plus faible (répétition espacée) et proposer la version en écriture arabe — phrase_a_travailler : moyenne des 2 derniers essais par phrase, jamais essayée = 60/100, la dernière essayée attend son tour ; les 10 phrases ont leur écriture arabe (ECRITURE_ARABE), affichée de droite à gauche sous l'atelier
 - [x] Urgence (04/11/2026) : le site restait en erreur 502 au réveil — l'index de lecture gardait un compteur de mots par passage (≈ 14 Ko chacun, +571 Mo pour 40 000 passages), au-delà de la mémoire du serveur gratuit. Index inversé compact (tableaux numpy, scores vectorisés) : +89 Mo pour 40 000 passages, mêmes résultats (test contre un BM25 naïf) ; l'examen de lecture ne recharge plus toute la bibliothèque
-- [ ] Mobile : tester aussi en 360 px (petits Android) et en mode paysage ; bouton « remonter à l'alien » quand la conversation est longue
+- [x] Mobile : tester aussi en 360 px (petits Android) et en mode paysage ; bouton « remonter à l'alien » quand la conversation est longue — mesuré au navigateur (360×740 et 740×360) : aucun débordement ; en paysage l'alien entier réduit au tiers au-dessus de la barre (il était coupé par elle) ; à 380 px boutons de 36 px ; bouton ⬆️👽 dès 6 messages, sans chevaucher la barre, défilement doux (sauf « mouvement réduit »)
 
 - [ ] Fiscalité : faire vérifier par la lecture du CGI de chaque exercice (PDF déposés) les taux sectoriels de TVA à 10 % et les régimes transitoires d'IS, puis les encoder exercice par exercice
 - [ ] Obligations : rappel de la prochaine échéance dans le chat (« qu'est-ce que je dois payer ce mois-ci ? ») à partir du profil enregistré
@@ -67,6 +67,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Langues : passer de 10 à 30 phrases professionnelles darija (banque, administration, douane), chacune avec son écriture arabe vérifiée
 - [ ] Mémoire du serveur : afficher dans l'administration le nombre de passages et la mémoire de l'index, et alerter au-delà de 60 000 passages (oubli des lectures web jamais utilisées)
 - [ ] Lecture : construire l'index une seule fois puis l'enrichir des nouveaux passages au lieu de tout relire (11 s de calcul à chaque ajout pour 40 000 passages)
+- [ ] Alien : la bulle affiche le Markdown brut (« **Almohades** », « _…_ ») ; la convertir en gras et italique avant de l'envoyer à l'avatar
+- [ ] Mobile : en 360 px, raccourcir l'invite de la barre de saisie (« Parle-moi ou dépose un fichier… ») pour qu'elle ne soit pas coupée
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

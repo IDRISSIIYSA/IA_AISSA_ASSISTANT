@@ -80,3 +80,15 @@ def test_atelier_repetition_espacee_et_ecriture_arabe():
     assert phrase_a_travailler([], phrases, random.Random(1))[2] is None        # rien d'essayé : au hasard
     jamais = [{"phrase": b, "score": 90}, {"phrase": c, "score": 95}]
     assert phrase_a_travailler(jamais, phrases, random.Random(0))[0] == a and SCORE_INCONNU < 90
+
+
+def test_mobile_360_paysage_et_bouton_remonter_a_l_alien():
+    """Petits Android et paysage : règles dédiées ; bouton « remonter à l'alien » au-delà de SEUIL_REMONTER messages,
+    dont la cible existe au-dessus de l'alien (vérifié aussi au navigateur : 360×740 et 740×360, sans débordement)."""
+    import inspect
+    from ia_aissa import interface
+    source = inspect.getsource(interface)
+    assert "@media (max-width: 380px)" in source and "@media (orientation: landscape) and (max-height: 500px)" in source
+    assert interface.SEUIL_REMONTER == 6
+    assert 'class="remonter-alien" href="#alien"' in source and '<div id="alien"></div>' in source
+    assert "a.remonter-alien { position: fixed" in source and "prefers-reduced-motion" in source

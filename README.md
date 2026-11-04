@@ -359,6 +359,9 @@ aux 5 précédents et courbe de vos scores.
 Répétition espacée : l'atelier vous redonne la phrase où votre score récent est le plus faible (jamais celle que
 vous venez d'essayer), et l'affiche aussi en écriture arabe (« شكرا على الخدمة ديالكم »).
 
+Sur téléphone : vérifié en 360 px (petits Android) et en paysage, où l'alien entier est réduit au-dessus de la barre de
+saisie ; dès 6 messages, un bouton ⬆️👽 ramène à l'alien.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :
