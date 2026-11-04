@@ -63,3 +63,20 @@ def test_bulle_une_ligne_par_langue_et_remontee_au_premier_affichage():
     h = avatar("مسا الخير، كيداير؟ — Bon après-midi ! Je suis IA AISSA.", lecture_auto=False, en_haut=True)
     assert '<p dir="auto">مسا الخير، كيداير؟</p><p dir="auto">Bon après-midi ! Je suis IA AISSA.</p>' in h
     assert "stAppScrollToBottomContainer" in h and "stAppScrollToBottomContainer" not in avatar("x", lecture_auto=False)
+
+
+def test_atelier_repetition_espacee_et_ecriture_arabe():
+    """L'atelier redonne la phrase au score le plus faible (pas celle qu'on vient d'essayer) et l'écrit en arabe."""
+    import random
+    from ia_aissa.langues import ECRITURE_ARABE, PHRASES_PRO_DARIJA, SCORE_INCONNU, phrase_a_travailler
+    assert set(ECRITURE_ARABE) == {p for p, _ in PHRASES_PRO_DARIJA}            # chaque phrase a son écriture arabe
+    assert all(any("؀" <= c <= "ۿ" for c in a) for a in ECRITURE_ARABE.values())
+    phrases = PHRASES_PRO_DARIJA[:3]
+    (a, _), (b, _), (c, _) = phrases
+    essais = [{"phrase": a, "score": 40}, {"phrase": b, "score": 90}, {"phrase": c, "score": 75}]
+    assert phrase_a_travailler(essais, phrases, random.Random(0))[:1] == (a,)    # la plus faible (40)
+    essais.append({"phrase": a, "score": 45})                                   # on vient de la travailler
+    assert phrase_a_travailler(essais, phrases, random.Random(0))[0] == c       # elle attend : ensuite la plus faible
+    assert phrase_a_travailler([], phrases, random.Random(1))[2] is None        # rien d'essayé : au hasard
+    jamais = [{"phrase": b, "score": 90}, {"phrase": c, "score": 95}]
+    assert phrase_a_travailler(jamais, phrases, random.Random(0))[0] == a and SCORE_INCONNU < 90

@@ -31,7 +31,7 @@ from .ecole import MATIERES, charger, repondre
 from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_controle, detecter_role, intention, \
     reponse_locale, urls
 from .invention import annonce_darija, debattre, evoluer
-from .langues import LANGUES, PHRASES_PRO_DARIJA, detecter_langue, partie_dans_la_langue
+from .langues import ECRITURE_ARABE, LANGUES, detecter_langue, partie_dans_la_langue, phrase_a_travailler
 from .memoire import historique_api
 from .partage import broutage_autonome, etat_memoire, memoire, repas_du_jour, secret
 from .parole import charger_oreille, extrait_a_lire, synthetiser, transcrire
@@ -647,6 +647,9 @@ def afficher_element(e, cle):
     elif t == "atelier" and e.get("suivi"):
         utilisateur = st.session_state.get("utilisateur", "Aissa")
         essai = atelier_suivi(st, e["phrase"], LANGUES[e["langue"]]["voix"], e.get("sens", ""), cle=f"atelier{cle}")
+        if e.get("arabe"):
+            st.markdown(f"<div dir='rtl' lang='ar' style='font-size:1.35rem;text-align:right'>✍️ {e['arabe']}</div>",
+                        unsafe_allow_html=True)
         if essai and essai.get("quand"):
             noter_prononciation(memoire(), utilisateur, e["langue"], essai)
         essais = [x for x in suivi_prononciation(memoire(), utilisateur) if x["langue"] == e["langue"]]
@@ -859,10 +862,13 @@ def traiter(r, utilisateur, texte, fichiers):
     if voulu == "prononciation":
         langue = next((l for l in LANGUES if l.lower() in texte.lower()), "Darija")
         if langue == "Darija":          # phrases du quotidien professionnel, score suivi dans le temps
-            phrase, sens = random.choice(PHRASES_PRO_DARIJA)
-            return ("Écoute-moi, puis répète : je te note sur 100 et je suis tes progrès en darija.",
-                    [{"type": "atelier", "langue": langue, "phrase": phrase, "sens": sens, "suivi": True}], [],
-                    "savant", "normal")
+            essais = [x for x in suivi_prononciation(mem, utilisateur) if x["langue"] == langue]
+            phrase, sens, score = phrase_a_travailler(essais)     # répétition espacée : la plus difficile d'abord
+            pourquoi = (f" Je te redonne celle où ton score est le plus faible ({score:.0f}/100)." if score is not None
+                        else " Une phrase que tu n'as pas encore travaillée." if essais else "")
+            return ("Écoute-moi, puis répète : je te note sur 100 et je suis tes progrès en darija." + pourquoi,
+                    [{"type": "atelier", "langue": langue, "phrase": phrase, "sens": sens, "suivi": True,
+                      "arabe": ECRITURE_ARABE.get(phrase)}], [], "savant", "normal")
         phrase = random.choice(LANGUES[langue]["phrases"])
         return (f"Écoute-moi, puis répète : je te note sur 100 ({langue}).",
                 [{"type": "atelier", "langue": langue, "phrase": phrase}], [], "savant", "normal")

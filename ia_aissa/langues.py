@@ -62,6 +62,39 @@ PHRASES_PRO_DARIJA = [
     ("chokran 3la l'khedma dyalkom", "Merci pour votre travail"),
 ]
 
+# La même phrase en écriture arabe (darija telle qu'on l'écrit au Maroc, mots français gardés tels qu'ils se disent)
+ECRITURE_ARABE = {
+    "salam, bghit nhder m3a lmoudir 3afak": "سلام، بغيت نهضر مع المدير عافاك",
+    "l'facture ghadi nsifetha lik lyoum": "الفاكتورة غادي نصيفطها ليك اليوم",
+    "chhal taman dyal had l'commande": "شحال ثمن ديال هاد الكوموند",
+    "3ndna ijtima3 ghda m3a l9 dyal sba7": "عندنا اجتماع غدا مع التسعة ديال الصباح",
+    "lclient ba9i ma khlsch": "الكليان باقي ما خلصش",
+    "khasna n9ess mn lmasarif had chhar": "خاصنا نقص من المصاريف هاد الشهر",
+    "wach lbudget wajed": "واش البودجي واجد",
+    "sift lia devis 3afak": "صيفط ليا الدوفي عافاك",
+    "l'marchandise wslat f lw9t": "الماركانديز وصلات فالوقت",
+    "chokran 3la l'khedma dyalkom": "شكرا على الخدمة ديالكم",
+}
+SCORE_INCONNU = 60      # une phrase jamais essayée : ni facile ni difficile, elle passe avant une phrase bien maîtrisée
+
+
+def phrase_a_travailler(essais, phrases=None, rng=None):
+    """Répétition espacée : la phrase dont le score récent (moyenne des 2 derniers essais) est le plus faible ; une
+    phrase jamais essayée compte pour SCORE_INCONNU ; la phrase qui vient d'être essayée attend son tour.
+    Renvoie (phrase, sens, score récent ou None)."""
+    import random as _random
+    phrases = phrases or PHRASES_PRO_DARIJA
+    rng = rng or _random.Random()
+    par_phrase = {}
+    for e in essais:
+        par_phrase.setdefault(e["phrase"], []).append(e["score"])
+    recent = {p: sum(par_phrase[p][-2:]) / len(par_phrase[p][-2:]) for p, _ in phrases if p in par_phrase}
+    derniere = essais[-1]["phrase"] if essais else None
+    candidates = [(p, s) for p, s in phrases if p != derniere] or list(phrases)
+    plus_faible = min(recent.get(p, SCORE_INCONNU) for p, _ in candidates)
+    phrase, sens = rng.choice([(p, s) for p, s in candidates if recent.get(p, SCORE_INCONNU) == plus_faible])
+    return phrase, sens, recent.get(phrase)
+
 
 # ==========================================
 # Langue d'une réponse, pour choisir la voix (écriture d'abord, puis mots caractéristiques)
