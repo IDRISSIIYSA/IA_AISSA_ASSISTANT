@@ -868,3 +868,33 @@ def test_donnees_maroc_rotation_et_ligne_nationale(tmp_path):
     sans_region = repondre_par_lecture("taux de chômage par sexe", mem)["reponse"]
     assert "Ensemble, Total : 12,9" in sans_region and "Casablanca" not in sans_region
     assert "Casablanca : 17,7" in repondre_par_lecture("taux de chômage par sexe à Casablanca", mem)["reponse"]
+
+
+def test_index_de_lecture_compact_donne_les_memes_resultats():
+    """L'index inversé compact (moins de mémoire sur le serveur) classe exactement comme un BM25 naïf."""
+    import collections
+    import math
+    import random
+    from ia_aissa.lecture import Index, jetons
+    r = random.Random(3)
+    vocab = ["impôt", "taux", "société", "bénéfice", "casablanca", "chômage", "salaire", "retraite", "exonération",
+             "dirhams", "2025", "province", "crédit", "banque", "facture", "loyer"]
+    lignes = [{"id": i, "utilisateur": "IA AISSA", "source": f"s{i % 7}", "numero": i,
+               "texte": " ".join(r.choice(vocab) for _ in range(r.randint(5, 40)))} for i in range(300)]
+    idx = Index(lignes)
+    assert not hasattr(idx, "docs") and len(idx) == 300
+    docs = [collections.Counter(jetons(l["texte"])) for l in lignes]
+    moyenne = sum(sum(d.values()) for d in docs) / len(docs)
+    for question in ["impôt sur le bénéfice de la société", "taux de chômage à casablanca en 2025", "loyer facture"]:
+        q = [t for t in set(jetons(question)) if t in idx.idf]
+        naif = {}
+        for i, d in enumerate(docs):
+            s = sum(idx.idf[t] * d[t] * 2.4 / (d[t] + 1.4 * (0.25 + 0.75 * sum(d.values()) / moyenne)) for t in q if d[t])
+            if s:
+                naif[i] = s
+        attendus = sorted(naif, key=lambda i: (-round(naif[i], 4), i))[:10]
+        obtenus = idx.chercher(question, n=10)
+        assert [o["id"] for o in obtenus] == attendus
+        assert all(abs(o["score"] - round(naif[o["id"]], 3)) < 2e-3 for o in obtenus)
+        assert all(0 < o["mots_trouves"] <= 1 for o in obtenus)
+    assert idx.chercher("mot inconnu du vocabulaire") == []

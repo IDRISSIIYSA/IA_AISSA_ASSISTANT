@@ -269,7 +269,7 @@ Avec une clé API, la rumination et l'étude des lacunes passent par le grand mo
 ## Mémoire de lecture : elle répond avec ce qu'elle a lu (`ia_aissa/lecture.py`)
 
 Chaque livre ou document lu (CGI, codes, cours…) est gardé **mot pour mot**, en passages de ~900 caractères, dans la
-base de données. Pour une question, un index BM25 retrouve les passages, elle cite les phrases exactes et le document
+base de données. Pour une question, un index BM25 (inversé et compact : environ 90 Mo pour 40 000 passages) retrouve les passages, elle cite les phrases exactes et le document
 (« D'après mes lectures : **CGI_2026.pdf** … »). Plusieurs éditions (CGI 2021, CGI 2026) : un extrait par document
 pour comparer, filtré sur les années de la question. Ses lectures passent avant les connaissances écrites dans son
 code, qui sont signalées « connaissance intégrée ». Les livres déposés par l'administrateur sont lus en entier

@@ -11,6 +11,7 @@ La mémoire de lecture d'IA AISSA : ce qu'elle lit, elle le garde mot pour mot, 
 """
 
 import collections
+from array import array
 import json
 import math
 import random
@@ -53,36 +54,62 @@ def jetons(texte):
 
 
 class Index:
-    """BM25 sur les passages : [(id, utilisateur, source, numero, texte)]."""
+    """BM25 sur les passages : [(id, utilisateur, source, numero, texte)].
+    Index inversé compact (mot → tableaux de numéros de passage et de fréquences) : environ 10 fois moins de mémoire
+    qu'un compteur de mots par passage, ce qui compte quand sa bibliothèque grandit chaque jour (le serveur en ligne
+    a peu de mémoire). Les scores sont calculés d'un bloc avec numpy ; les mots retrouvés ne sont recomptés que pour
+    les meilleurs passages."""
 
     def __init__(self, lignes, k1=1.4, b=0.75):
-        self.lignes, self.k1, self.b = lignes, k1, b
-        self.docs = [collections.Counter(jetons(l["texte"])) for l in lignes]
-        self.longueurs = [sum(d.values()) for d in self.docs]
-        self.moyenne = sum(self.longueurs) / max(1, len(self.docs))
-        frequences = collections.Counter(t for d in self.docs for t in d)
-        n = len(self.docs)
-        self.idf = {t: math.log(1 + (n - f + .5) / (f + .5)) for t, f in frequences.items()}
-        self.index = collections.defaultdict(list)
-        for i, d in enumerate(self.docs):
-            for t in d:
-                self.index[t].append(i)
+        import numpy as np
+        self.k1, self.b = k1, b
+        self.champs = ("id", "utilisateur", "source", "numero")
+        self.meta = [tuple(l[c] for c in self.champs) for l in lignes]
+        self.textes = [l["texte"] for l in lignes]
+        postings = collections.defaultdict(lambda: (array("I"), array("H")))
+        longueurs = array("I")
+        for i, texte in enumerate(self.textes):
+            compte = collections.Counter(jetons(texte))
+            longueurs.append(sum(compte.values()))
+            for t, f in compte.items():
+                ids, tfs = postings[t]
+                ids.append(i)
+                tfs.append(min(f, 65535))
+        n = len(self.textes)
+        self.longueurs = np.frombuffer(longueurs, dtype=np.uint32).astype(np.float32) if n else np.zeros(0, np.float32)
+        self.moyenne = float(self.longueurs.mean()) if n else 0.0
+        self.postings = {t: (np.frombuffer(ids, dtype=np.uint32), np.frombuffer(tfs, dtype=np.uint16))
+                         for t, (ids, tfs) in postings.items()}
+        self.idf = {t: math.log(1 + (n - len(ids) + .5) / (len(ids) + .5)) for t, (ids, _) in self.postings.items()}
+
+    def __len__(self):
+        return len(self.textes)
 
     def chercher(self, question, n=5):
+        import numpy as np
         q = [t for t in set(jetons(question)) if t in self.idf]
-        scores = collections.defaultdict(float)
+        if not q or not self.textes:
+            return []
+        scores = np.zeros(len(self.textes), dtype=np.float32)
+        normes = self.k1 * (1 - self.b + self.b * self.longueurs / max(self.moyenne, 1e-9))
         for t in q:
-            for i in self.index[t]:
-                f = self.docs[i][t]
-                scores[i] += self.idf[t] * f * (self.k1 + 1) / (f + self.k1 * (1 - self.b + self.b * self.longueurs[i] / self.moyenne))
+            ids, tfs = self.postings[t]
+            f = tfs.astype(np.float32)
+            scores[ids] += self.idf[t] * f * (self.k1 + 1) / (f + normes[ids])
+        touches = np.flatnonzero(scores)
+        meilleurs = touches[np.argsort(-scores[touches], kind="stable")[:n]]
         maximum = sum(self.idf[t] for t in q) * (self.k1 + 1) or 1
-        meilleurs = sorted(scores.items(), key=lambda e: -e[1])[:n]
         entiers = [t for t in q if not t.startswith("<")]
-        return [{**self.lignes[i], "score": round(s, 3), "couverture": round(s / maximum, 3),
-                 "mots_trouves": sum(1 for t in q if t in self.docs[i]) / max(1, len(q)),
-                 "mots_entiers": sum(1 for t in entiers if t in self.docs[i]),
-                 "part_entiers": sum(1 for t in entiers if t in self.docs[i]) / max(1, len(entiers))}
-                for i, s in meilleurs]
+        resultats = []
+        for i in meilleurs:
+            presents = set(jetons(self.textes[i]))
+            s = float(scores[i])
+            resultats.append({**dict(zip(self.champs, self.meta[i])), "texte": self.textes[i], "score": round(s, 3),
+                              "couverture": round(s / maximum, 3),
+                              "mots_trouves": sum(1 for t in q if t in presents) / max(1, len(q)),
+                              "mots_entiers": sum(1 for t in entiers if t in presents),
+                              "part_entiers": sum(1 for t in entiers if t in presents) / max(1, len(entiers))})
+        return resultats
 
 
 _INDEX = {}
@@ -167,13 +194,13 @@ def examen_lecture(memoire, n=20, rng=None):
     """Tire n phrases de ses lectures, cache un mot-clé (de préférence un nombre ou un mot rare), lui pose la phrase
     à trous, et vérifie qu'elle retrouve le passage d'origine et le mot caché. Le résultat est gardé."""
     rng = rng or random.Random()
-    lignes = memoire.passages()
-    if not lignes:
+    idx = index(memoire)                    # les passages sont pris dans l'index : la bibliothèque n'est lue qu'une fois
+    if not len(idx):
         return {"questions": 0, "passage_retrouve": 0, "mot_retrouve": 0, "score": 0.0, "exemples": []}
-    idx = index(memoire)
     retrouves = mots_ok = 0
     exemples = []
-    for ligne in rng.sample(lignes, min(n, len(lignes))):
+    for i in rng.sample(range(len(idx)), min(n, len(idx))):
+        ligne = {**dict(zip(idx.champs, idx.meta[i])), "texte": idx.textes[i]}
         phrases = [p for p in re.split(r"(?<=[.;!?])\s+", ligne["texte"]) if len(p.split()) >= 8]
         if not phrases:
             continue
