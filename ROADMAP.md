@@ -35,7 +35,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Mobile : tester aussi en 360 px (petits Android) et en mode paysage ; bouton « remonter à l'alien » quand la conversation est longue — mesuré au navigateur (360×740 et 740×360) : aucun débordement ; en paysage l'alien entier réduit au tiers au-dessus de la barre (il était coupé par elle) ; à 380 px boutons de 36 px ; bouton ⬆️👽 dès 6 messages, sans chevaucher la barre, défilement doux (sauf « mouvement réduit »)
 
 - [x] Fiscalité : faire vérifier par la lecture du CGI de chaque exercice (PDF déposés) les taux sectoriels de TVA à 10 % et les régimes transitoires d'IS, puis les encoder exercice par exercice — lus le 04/11/2026 dans les notes circulaires DGI n° 733 (IS, LF 2023) et n° 735 (TVA, LF 2024) : module taux_exercice (IS 2022-2026 par catégorie et par tranche, TVA 2023-2026 des produits de la réforme, exonérations 2024) ; la pensée propre répond « taux IS 2024 », « TVA électricité 2025 » (elle répondait 20 % et calculait l'IS de 2 024 DH) ; simulation IS avec choix de l'exercice et de la catégorie ; tableaux du décortiqueur
-- [ ] Obligations : rappel de la prochaine échéance dans le chat (« qu'est-ce que je dois payer ce mois-ci ? ») à partir du profil enregistré
+- [x] Obligations : rappel de la prochaine échéance dans le chat (« qu'est-ce que je dois payer ce mois-ci ? ») à partir du profil enregistré — bouton « 💾 Retenir mon profil » dans « Mes impôts et déclarations » ; dans le chat (français et darija) : échéances du mois avec date, délai, montant estimé et base légale, total du mois, prochaine échéance et tableau des semaines suivantes ; sans profil, invitation à le remplir
 - [ ] Performance : importer PyTorch seulement au premier usage d'un cerveau (1,1 s de démarrage à froid en moins) en isolant les classes de réseaux dans un module dédié
 - [ ] Performance : alerte dans le tableau de bord quand le 95e centile d'une page dépasse 3 s pendant une journée
 
@@ -71,6 +71,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Mobile : en 360 px, raccourcir l'invite de la barre de saisie (« Parle-moi ou dépose un fichier… ») pour qu'elle ne soit pas coupée
 - [ ] Fiscalité : l'édition 2026 du CGI est réorganisée en trois livres — vérifier dans le PDF officiel de la DGI la nouvelle numérotation des articles cités (19, 73, 99, 144, 247…) et les taux de 10 % propres à chaque secteur (hôtellerie, banque, professions libérales)
 - [ ] Fiscalité : historique de la cotisation minimale (taux et minimum) exercice par exercice, d'après les notes circulaires des lois de finances 2020 à 2026
+- [ ] Obligations : cocher dans le chat une échéance payée (« j'ai payé la CNSS ») pour ne plus la rappeler, et afficher un rappel discret à l'ouverture quand une échéance tombe dans moins de 5 jours
+- [ ] Obligations : ajouter au rappel les retenues à la source sur loyers et honoraires et la taxe professionnelle (31 janvier) selon le profil
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

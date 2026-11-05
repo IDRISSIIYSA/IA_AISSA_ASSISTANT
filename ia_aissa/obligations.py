@@ -165,3 +165,92 @@ FEUILLE_DE_ROUTE = [
     ("8. Garder les justificatifs 10 ans", "Factures, contrats, relevés : l'administration peut contrôler les exercices "
      "non prescrits.", "CGI, art. 211 (conservation des documents)"),
 ]
+
+
+# ==========================================
+# Rappel dans le chat : « qu'est-ce que je dois payer ce mois-ci ? », à partir du profil enregistré
+# ==========================================
+import json as _json
+
+CLE_PROFIL = "profil_obligations:{}"
+CHAMPS_PROFIL = ("forme", "debut", "ca", "benefice", "salaries", "masse", "is_precedent", "tva_mensuelle")
+
+
+def garder_profil(memoire, utilisateur, profil):
+    """Retient le profil (seulement ce qui sert au calendrier) pour les rappels dans le chat."""
+    propre = {k: profil[k] for k in CHAMPS_PROFIL if k in profil}
+    propre["debut"] = str(propre.get("debut", ""))[:10]
+    memoire.definir_reglage(CLE_PROFIL.format(utilisateur), _json.dumps(propre, ensure_ascii=False))
+
+
+def profil_de(memoire, utilisateur):
+    brut = memoire.reglage(CLE_PROFIL.format(utilisateur)) if memoire is not None else None
+    return _json.loads(brut) if brut else None
+
+
+def rappel(profil, aujourdhui=None, horizon_jours=45):
+    """Échéances du mois en cours (et en retard de ce mois), puis celles des `horizon_jours` suivants.
+    Renvoie {"ce_mois": DataFrame, "a_venir": DataFrame, "prochaine": dict ou None, "total_ce_mois": float}."""
+    aujourdhui = aujourdhui or datetime.date.today()
+    debut = datetime.date.fromisoformat(profil["debut"])
+    salaries = int(profil.get("salaries") or 0)
+    masse = float(profil.get("masse") or 0)
+    tables = []
+    for annee in (aujourdhui.year, aujourdhui.year + 1):          # décembre : les échéances de janvier aussi
+        cal = calendrier(profil["forme"], annee, debut, float(profil.get("ca") or 0), salaries if masse else 0, masse,
+                         float(profil.get("is_precedent") or 0), float(profil.get("tva_mensuelle") or 0), aujourdhui)
+        tables.append(cal["tableau"])
+    t = pd.concat(tables, ignore_index=True).drop_duplicates(subset=["Date limite", "Obligation"])
+    dates = pd.to_datetime(t["Date limite"], format="%d/%m/%Y").dt.date
+    ce_mois = t[(dates >= aujourdhui.replace(day=1)) & (dates <= fin_de_mois(aujourdhui.year, aujourdhui.month))]
+    a_venir = t[(dates > fin_de_mois(aujourdhui.year, aujourdhui.month))
+                & (dates <= aujourdhui + datetime.timedelta(days=horizon_jours))]
+    t = t.assign(_date=dates)
+    ce_mois = ce_mois.assign(_date=dates[ce_mois.index])
+    a_venir = a_venir.assign(_date=dates[a_venir.index])
+    futures = t[t["_date"] >= aujourdhui].sort_values("_date")
+    prochaine = None
+    if len(futures):
+        ligne = futures.iloc[0].to_dict()
+        ligne["jours"] = (ligne["_date"] - aujourdhui).days
+        prochaine = ligne
+    return {"ce_mois": ce_mois.sort_values("_date"), "a_venir": a_venir.sort_values("_date").drop(columns="_date"),
+            "prochaine": prochaine, "total_ce_mois": float(ce_mois["Montant estimé"].sum())}
+
+
+def reponse_rappel(memoire, utilisateur, aujourdhui=None):
+    """(texte, éléments) pour le chat : les échéances du mois, ou l'invitation à remplir son profil."""
+    profil = profil_de(memoire, utilisateur)
+    if not profil:
+        return ("Pour te dire exactement ce que tu dois payer et déclarer, j'ai besoin de ton profil (statut, chiffre "
+                "d'affaires, salariés…). Ouvre **Simulations → Mes impôts et déclarations (calendrier)**, remplis-le et "
+                "clique sur « 💾 Retenir mon profil » : ensuite, demande-moi simplement « qu'est-ce que je dois payer ce "
+                "mois-ci ? ».", [])
+    aujourdhui = aujourdhui or datetime.date.today()
+    r = rappel(profil, aujourdhui)
+    dh = lambda v: f"{v:,.0f}".replace(",", " ") + " DH"
+    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+            "novembre", "décembre"][aujourdhui.month - 1]
+    lignes = []
+    for _, e in r["ce_mois"].iterrows():
+        date = e["_date"]
+        etat = "⚠️ date passée — déjà payée ?" if date < aujourdhui else f"dans {(date - aujourdhui).days} jour(s)"
+        montant = f" — environ **{dh(e['Montant estimé'])}**" if e["Montant estimé"] else ""
+        lignes.append(f"- **{date.strftime('%d/%m')}** ({etat}) : {e['Obligation']}{montant} _({e['Base légale']})_")
+    texte = (f"Ton profil : {profil['forme'].lower()}, chiffre d'affaires {dh(float(profil.get('ca') or 0))}, "
+             f"{int(profil.get('salaries') or 0)} salarié(s).\n\n")
+    if lignes:
+        texte += (f"**En {mois} {aujourdhui.year}**, tu dois :\n" + "\n".join(lignes)
+                  + f"\n\nTotal estimé du mois : **{dh(r['total_ce_mois'])}**.")
+    else:
+        texte += f"Rien à payer ni à déclarer en {mois} {aujourdhui.year} d'après ton profil."
+    p = r["prochaine"]
+    if p:
+        texte += (f"\n\n⏰ Prochaine échéance : **{p['_date'].strftime('%d/%m/%Y')}** "
+                  f"(dans {p['jours']} jour(s)) — {p['Obligation']}.")
+    texte += ("\n\nMontants estimés à partir de ton profil (taux 2026) ; un retard coûte une pénalité et une "
+              "majoration. Ton profil a changé ? Mets-le à jour dans la simulation « Mes impôts et déclarations ».")
+    elements = []
+    if len(r["a_venir"]):
+        elements.append({"type": "tableau", "titre": "📅 Les semaines suivantes", "donnees": r["a_venir"]})
+    return texte, elements

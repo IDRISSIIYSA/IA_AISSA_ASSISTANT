@@ -41,6 +41,16 @@ def construire_plus(nom, memoire, c):
                                      help="Sert à calculer les 4 acomptes provisionnels (25 % chacun).")
         tva = c3[2].number_input("TVA à payer par mois, estimée (DH)", 0.0, value=10_000.0, step=500.0, key="ob_tva")
         cal = O.calendrier(forme, annee, debut, ca, salaries if masse else 0, masse, is_prec, tva, aujourdhui)
+        utilisateur = st.session_state.get("utilisateur", "Aissa")
+        if c3[0].button("💾 Retenir mon profil", key="ob_garder",
+                        help="Pour que je vous rappelle vos échéances dans le chat : « qu'est-ce que je dois payer "
+                             "ce mois-ci ? »"):
+            O.garder_profil(memoire, utilisateur, {"forme": forme, "debut": debut, "ca": ca, "benefice": benefice,
+                                                   "salaries": salaries, "masse": masse, "is_precedent": is_prec,
+                                                   "tva_mensuelle": tva})
+            st.success("Profil retenu : demandez-moi dans le chat « qu'est-ce que je dois payer ce mois-ci ? ».")
+        elif O.profil_de(memoire, utilisateur):
+            st.caption("✅ Profil retenu pour vos rappels dans le chat (cliquez de nouveau pour le mettre à jour).")
         paie = O.ce_que_je_paie(forme, ca, benefice, debut, annee, salaries if masse else 0, masse)
         st.markdown("#### 💸 Ce que vous payez")
         st.dataframe(paie, hide_index=True, width="stretch")

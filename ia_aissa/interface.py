@@ -883,6 +883,10 @@ def traiter(r, utilisateur, texte, fichiers):
                   for d in mem.digestions(200) if visible_par(d, utilisateur)][:30]
         return ("Voici ce que j'ai lu et digéré." if lignes else "Je n'ai encore rien lu : donne-moi un lien ou un livre !"), \
             [{"type": "liste", "titre": "📚 Ma bibliothèque", "lignes": lignes}], [], "lecteur", "normal"
+    if voulu == "echeances" and not re.search(r"\d", texte):   # avec un montant, c'est un calcul : pensée propre
+        from .obligations import reponse_rappel
+        reponse, elements = reponse_rappel(mem, utilisateur)
+        return reponse, elements, [{"outil": "pensee_propre", "entree": "échéances du profil"}], "comptable", "normal"
     if voulu == "prononciation":
         langue = next((l for l in LANGUES if l.lower() in texte.lower()), "Darija")
         if langue == "Darija":          # phrases du quotidien professionnel, score suivi dans le temps

@@ -101,6 +101,11 @@ INTENTIONS = {
                                 r"(livres?|pdf|e-?books?) (gratuits?|libres?)|où (trouver|télécharger) des (livres|pdf))",
                                 re.I),
     "prononciation": re.compile(r"(pronon\w+|apprends?[- ]moi à (dire|parler)|accent)", re.I),
+    "echeances": re.compile(r"((qu'est[- ]ce que|que|quoi) (je dois|dois[- ]je) (payer|déclarer|verser)|"
+                            r"(mes|prochaines?|les) (échéances?|obligations? (fiscales?|du mois))|"
+                            r"(payer|déclarer) ce mois|ce que je dois (payer|déclarer)|"
+                            r"(chno|chnou|achno) (khass?ni|khasni|khassni) n(khalles|khelles|khlles|khless|sali|déclarer))",
+                            re.I),
 }
 DOMAINES_GESTION = ("Comptabilité", "Fiscalité", "Finance", "Contrôle de gestion", "Ressources humaines", "Commercial",
                     "Gestion", "Banque", "Stratégie", "Marketing", "Logistique", "Transit", "Commerce international",

@@ -505,3 +505,27 @@ def test_taux_is_et_tva_par_exercice_selon_les_notes_circulaires_dgi():
     t = taux_is_par_exercice()
     assert list(t.columns) == ["Situation", "2022", "2023", "2024", "2025", "2026"] and t.iloc[0]["2023"] == "12,5 %"
     assert taux_tva_par_produit().iloc[0]["2025"] == "18 %"
+
+
+def test_rappel_des_echeances_dans_le_chat_depuis_le_profil(tmp_path):
+    """« Qu'est-ce que je dois payer ce mois-ci ? » : échéances du mois tirées du profil retenu (sinon, invitation)."""
+    import datetime
+    from ia_aissa import obligations as O
+    from ia_aissa.espace import intention
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    assert "Retenir mon profil" in O.reponse_rappel(mem, "Aissa")[0]                    # pas de profil : on l'invite
+    O.garder_profil(mem, "Aissa", {"forme": O.FORMES[0], "debut": datetime.date(2024, 1, 1), "ca": 1_500_000,
+                                   "benefice": 200_000, "salaries": 2, "masse": 12_000, "is_precedent": 40_000,
+                                   "tva_mensuelle": 10_000, "inutile": "pas gardé"})
+    assert "inutile" not in O.profil_de(mem, "Aissa") and O.profil_de(mem, "Autre") is None
+    texte, elements = O.reponse_rappel(mem, "Aissa", datetime.date(2026, 11, 5))
+    assert "En novembre 2026" in texte and "**10/11** (dans 5 jour(s)) : CNSS" in texte
+    assert "TVA du mois 10/2026" in texte and "Prochaine échéance : **10/11/2026**" in texte    # CA ≥ 1 MDH : mensuelle
+    assert elements and elements[0]["type"] == "tableau"
+    decembre = O.reponse_rappel(mem, "Aissa", datetime.date(2026, 12, 20))[0]
+    assert "acompte provisionnel n° 4" in decembre and "déjà payée ?" in decembre
+    for q in ("qu'est-ce que je dois payer ce mois-ci ?", "mes échéances", "chno khassni nkhalles had chhar",
+              "que dois-je déclarer", "prochaine échéance"):
+        assert intention(q) == "echeances", q
+    assert intention("TVA sur 1000 dh") != "echeances"
