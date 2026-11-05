@@ -78,6 +78,23 @@ cd /opt/ia_aissa/deploy && docker compose logs -f ia_aissa
 
 Changer de modèle : modifiez `MODELE_LOCAL` dans `.env`, puis relancez la commande de mise à jour.
 
+## Affiner le modèle local (LoRA) sur ses corrections
+
+Sur une machine avec carte graphique (au moins 16 Go de mémoire vidéo pour Qwen2.5-3B en bf16) :
+
+```bash
+pip install "transformers>=4.45" "peft>=0.13" accelerate datasets
+python -m ia_aissa.affinage exporter affinage.jsonl              # corrections validées + exemples de refus
+python -m ia_aissa.affinage mesurer --modele qwen2.5:3b          # AVANT : taux de réponses avec un chiffre non sourcé
+python deploy/affiner_lora.py affinage.jsonl --sortie ia-aissa-lora
+python llama.cpp/convert_hf_to_gguf.py ia-aissa-lora/fusionne --outfile ia-aissa-lora/ia-aissa-local.gguf
+ollama create ia-aissa-local -f deploy/Modelfile.lora
+python -m ia_aissa.affinage mesurer --modele ia-aissa-local      # APRÈS : même jeu de questions
+```
+
+Ne remplacez `MODELE_LOCAL` par `ia-aissa-local` que si le taux APRÈS est plus bas que le taux AVANT.
+Une vingtaine de corrections validées au moins rend l'affinage utile ; en dessous, gardez le modèle de base.
+
 ## Garder Streamlit Cloud en parallèle
 
 L'application Streamlit Cloud peut rester en ligne avec la même base Neon : les deux partagent alors la même mémoire.

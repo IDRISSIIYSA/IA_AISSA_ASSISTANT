@@ -88,3 +88,36 @@ def test_appel_d_outil_ecrit_en_texte_reconnu():
     assert nom == "calculer_ir" and json.loads(arguments) == {"revenu_net_imposable_annuel": 120000}
     assert appel_outil_en_texte('```json\n{"name": "calculer_tva", "parameters": {"montant": 100}}\n```')[0] == "calculer_tva"
     assert appel_outil_en_texte("Bonjour !") is None and appel_outil_en_texte('{"name": "outil_inconnu"}') is None
+
+
+def test_jeu_d_affinage_lora_et_mesure_des_chiffres_non_sources(tmp_path):
+    """Corrections validées → exemples au format du modèle local, sans aucun chiffre inventé ; refus inclus ;
+    mesure du taux de réponses avec un chiffre non sourcé (avant / après l'affinage)."""
+    import json
+    from ia_aissa import affinage as A
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.ajouter_correction("Aissa", "comptabilite", "paiement du loyer du dépôt", "6131 Locations et charges locatives",
+                           "utilisateur")
+    mem.ajouter_correction("Aissa", "comptabilite", "paiement du loyer du dépôt", "6131 Locations et charges locatives",
+                           "utilisateur")                                     # doublon : un seul exemple
+    exemples, ecartes = A.jeu_affinage(mem)
+    assert len(exemples) == 1 + len(A.QUESTIONS_SANS_SOURCE) and not ecartes
+    systeme, question, reponse = (m["content"] for m in exemples[0]["messages"])
+    assert "SOURCES" in systeme and "6131" in systeme and reponse.startswith("6131 Locations")
+    for e in exemples:                                                       # aucune cible n'invente un chiffre
+        s, q, r = (m["content"] for m in e["messages"])
+        assert not A.nombres_non_sources(r, f"{s} {q}")
+    assert exemples[-1]["messages"][2]["content"] == A.REFUS
+    bilan = A.exporter(mem, tmp_path / "affinage.jsonl")
+    lignes = (tmp_path / "affinage.jsonl").read_text(encoding="utf-8").splitlines()
+    assert bilan["exemples"] == len(lignes) and json.loads(lignes[0])["messages"][1]["content"] == question
+
+    def invente(q):
+        return "Le taux est de 27 % depuis 2019.", ""                       # chiffres sortis de nulle part
+
+    def honnete(q):
+        return A.REFUS, ""
+    avant, apres = A.mesurer(invente), A.mesurer(honnete)
+    assert avant["taux"] == 1.0 and apres["taux"] == 0.0 and avant["questions"] == len(A.QUESTIONS_MESURE)
+    assert "27" in avant["details"][0]["chiffres_non_sources"]

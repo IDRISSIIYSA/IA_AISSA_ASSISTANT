@@ -39,7 +39,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Performance : importer PyTorch seulement au premier usage d'un cerveau (1,1 s de démarrage à froid en moins) en isolant les classes de réseaux dans un module dédié — ia_aissa/reseaux.py : modules torch / nn « paresseux » et classes de cerveaux créées à la demande ; l'interface et le contrôle de gestion se chargent sans PyTorch (test dans un processus neuf), PyTorch arrive au premier cerveau utilisé
 - [x] Performance : alerte dans le tableau de bord quand le 95e centile d'une page dépasse 3 s pendant une journée — mesures horodatées (2 000 par page), alerte 🐢 sur les 24 dernières heures à partir de 5 ouvertures ; les affichages qui préparent une réponse sont comptés à part (« — réponse ») pour ne pas fausser l'ouverture des pages
 
-- [ ] Modèle local : affiner le petit modèle (LoRA) sur les corrections validées par l'administrateur, puis mesurer son taux de chiffres non sourcés avant et après
+- [x] Modèle local : affiner le petit modèle (LoRA) sur les corrections validées par l'administrateur, puis mesurer son taux de chiffres non sourcés avant et après — outillage prêt (ia_aissa/affinage.py : jeu d'affinage sans chiffre inventé + exemples de refus, mesure sur 13 questions fixes ; deploy/affiner_lora.py et Modelfile.lora ; marche à suivre dans deploy/README.md). L'entraînement demande une carte graphique : pas lancé ici (ni GPU ni Ollama dans cet environnement)
 - [ ] Serveur : sauvegarde quotidienne de la base Neon (pg_dump) vers un stockage à part, et page « santé du serveur » dans l'administration (RAM, disque, modèle chargé)
 
 - [ ] Simulations : coefficients de réévaluation du profit foncier lus dans la circulaire de la DGI de l'année (au lieu d'une saisie)
@@ -77,6 +77,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Performance : charger les cerveaux d'école en float16 ou les quantifier (moins de mémoire sur le serveur gratuit), en vérifiant que l'examen ne baisse pas
 - [ ] Performance : garder chaque soir un résumé des temps (médiane, 95e centile par page) dans la base, pour suivre la tendance d'un redémarrage du serveur à l'autre
 - [ ] Performance : objectif propre aux réponses (par exemple 95e centile < 15 s pour la pensée propre) avec sa propre alerte
+- [ ] Modèle local : lancer l'affinage LoRA sur le serveur avec GPU dès 20 corrections validées, et noter dans le tableau de bord le taux de chiffres non sourcés AVANT et APRÈS
+- [ ] Administration : bouton « Télécharger le jeu d'affinage (JSONL) » et nombre de corrections validées disponibles pour l'affinage
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse
