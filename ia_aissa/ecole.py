@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
-import torch
-import torch.nn as nn
+
+from .reseaux import classe_cerveau_ecole, nn, torch      # PyTorch importé au premier usage seulement
 
 from . import connaissances as K
 from .langues import LANGUES
@@ -620,14 +620,9 @@ PAR_CLE = {m.cle: m for m in MATIERES}
 # ==========================================
 # Le cerveau et l'apprentissage
 # ==========================================
-class Cerveau(nn.Module):
-    def __init__(self, dim, n_actions, cache=128):
-        super().__init__()
-        self.reseau = nn.Sequential(nn.Linear(dim, cache), nn.ReLU(), nn.Linear(cache, cache), nn.ReLU(),
-                                    nn.Linear(cache, n_actions))
-
-    def forward(self, x):
-        return self.reseau(x)
+def Cerveau(dim, n_actions, cache=128):
+    """Un cerveau né vide (la classe, qui hérite de nn.Module, est créée au premier usage : voir reseaux.py)."""
+    return classe_cerveau_ecole()(dim, n_actions, cache)
 
 
 def examen(matiere, n=400, seed=12345):

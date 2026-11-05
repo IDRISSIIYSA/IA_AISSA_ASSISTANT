@@ -370,6 +370,9 @@ Rappel des échéances : dans « Mes impôts et déclarations (calendrier) », l
 statut et vos chiffres ; demandez ensuite dans le chat « qu'est-ce que je dois payer ce mois-ci ? » (ou « chno khassni
 nkhalles ? ») : échéances du mois, montants estimés, base légale et prochaine échéance.
 
+Démarrage rapide : PyTorch n'est importé qu'au premier cerveau utilisé (`ia_aissa/reseaux.py`) ; la page s'affiche
+sans l'attendre.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :

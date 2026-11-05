@@ -19,9 +19,10 @@ from collections import deque
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
+
+from ia_aissa.reseaux import Paresseux, classe_cerveau_controle, nn, torch   # PyTorch au premier usage
+
+optim = Paresseux("torch.optim")
 
 
 # ==========================================
@@ -192,17 +193,10 @@ class ControleGestionEnv:
 # ==========================================
 # 3. Le cerveau vide et la mémoire profonde
 # ==========================================
-class Cerveau(nn.Module):
-    def __init__(self, n_entrees=len(FEATURES), n_actions=len(ACTIONS)):
-        super().__init__()
-        self.reseau = nn.Sequential(
-            nn.Linear(n_entrees, 64), nn.ReLU(),
-            nn.Linear(64, 64), nn.ReLU(),
-            nn.Linear(64, n_actions),
-        )
-
-    def forward(self, x):
-        return self.reseau(x)
+def Cerveau(n_entrees=None, n_actions=None):
+    """Un cerveau né vide (classe créée au premier usage : voir ia_aissa/reseaux.py)."""
+    classe = classe_cerveau_controle(len(FEATURES), len(ACTIONS))
+    return classe(n_entrees or len(FEATURES), n_actions or len(ACTIONS))
 
 
 class MemoireProfonde:

@@ -109,3 +109,17 @@ def test_pas_d_apprentissage_adaptatif_et_meilleur_cerveau_garde():
     meilleure = max(h["precision"] for h in historique)
     assert precision(cerveau, examen(m)) == meilleure                           # le cerveau rendu est le meilleur vu
     assert historique[-1]["precision"] == meilleure
+
+
+def test_pytorch_importe_seulement_au_premier_usage_d_un_cerveau():
+    """La page s'affiche sans attendre PyTorch : l'interface et le contrôle de gestion ne l'importent pas au
+    chargement ; il arrive au premier cerveau utilisé (vérifié dans un processus neuf)."""
+    import subprocess
+    import sys
+    code = ("import sys, controle_gestion_ia, ia_aissa.interface, ia_aissa.corrections; "
+            "assert 'torch' not in sys.modules, 'torch importé au chargement'; "
+            "from ia_aissa.ecole import Cerveau; c = Cerveau(8, 3); assert 'torch' in sys.modules; "
+            "import controle_gestion_ia as cg; assert cg.Cerveau()(cg.torch.zeros(1, len(cg.FEATURES))).shape[-1] == 3; "
+            "print('ok')")
+    sortie = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=240)
+    assert sortie.stdout.strip() == "ok", sortie.stderr[-800:]

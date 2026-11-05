@@ -17,8 +17,8 @@ import unicodedata
 from collections import deque
 
 import numpy as np
-import torch
-import torch.nn as nn
+
+from .reseaux import nn, torch          # PyTorch importé au premier usage seulement
 
 from . import ecole
 from .ecole import BRUIT, PAR_CLE, PREFIXES, examen, precision
