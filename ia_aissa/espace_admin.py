@@ -89,6 +89,9 @@ def tableau_de_bord(mem):
     from .parametres import alertes
     for alerte in alertes(mem):                         # loi de finances de l'année à intégrer, taux à revérifier
         st.warning(alerte)
+    from . import chrono
+    for alerte in chrono.alertes():                     # 95e centile d'une page > 3 s sur 24 heures
+        st.error(alerte)
     dernier = mem.reglage("moteur:dernier_appel")
     if dernier:
         d = json.loads(dernier)

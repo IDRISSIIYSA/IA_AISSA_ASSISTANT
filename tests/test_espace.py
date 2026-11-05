@@ -898,3 +898,25 @@ def test_index_de_lecture_compact_donne_les_memes_resultats():
         assert all(abs(o["score"] - round(naif[o["id"]], 3)) < 2e-3 for o in obtenus)
         assert all(0 < o["mots_trouves"] <= 1 for o in obtenus)
     assert idx.chercher("mot inconnu du vocabulaire") == []
+
+
+def test_alerte_quand_le_95e_centile_d_une_page_depasse_3_s_sur_une_journee():
+    from ia_aissa import chrono
+    chrono.reinitialiser()
+    maintenant = 1_800_000_000.0
+    for i in range(20):                                   # page lente aujourd'hui : 5 ouvertures sur 20 à 6 s
+        chrono.enregistrer("Lente", 6.0 if i % 4 == 0 else 1.0, maintenant - i * 600)
+    for i in range(20):                                   # lente hier seulement (hors des 24 heures)
+        chrono.enregistrer("Hier", 9.0, maintenant - 2 * 86_400 - i)
+    for i in range(3):                                    # trop peu de mesures pour conclure
+        chrono.enregistrer("Rare", 9.0, maintenant - i)
+    for i in range(10):                                   # les réponses (réflexion d'IA AISSA) ne comptent pas
+        chrono.enregistrer("Chat" + chrono.SUFFIXE_REPONSE, 12.0, maintenant - i)
+    alertes = chrono.alertes(maintenant)
+    assert len(alertes) == 1 and "« Lente »" in alertes[0] and "6.0 s" in alertes[0]
+    t = chrono.tableau().set_index("Page")
+    assert t.loc["Chat" + chrono.SUFFIXE_REPONSE, "Objectif < 3 s"] == "—"
+    with chrono.Chrono("Page") as c:                      # un message envoyé : l'affichage est compté comme réponse
+        chrono.marquer_reponse()
+    assert "Page" + chrono.SUFFIXE_REPONSE in set(chrono.tableau()["Page"])
+    chrono.reinitialiser()

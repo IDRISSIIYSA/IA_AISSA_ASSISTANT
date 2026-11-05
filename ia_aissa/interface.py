@@ -1225,6 +1225,8 @@ def espace_visiteur():
                            accept_file="multiple", accept_audio=True, submit_mode="disable",
                            file_type=["csv", "xlsx", "xlsm", "xls", "pdf", "epub", "txt", "md", "html"])
     if saisie:
+        from .chrono import marquer_reponse
+        marquer_reponse()                   # cet affichage prépare une réponse : compté à part, pas comme ouverture
         texte = saisie.text or ""
         fichiers = list(saisie.files or [])
         if getattr(saisie, "audio", None) is not None:
