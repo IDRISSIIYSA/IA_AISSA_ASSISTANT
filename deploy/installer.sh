@@ -43,6 +43,11 @@ fi
 echo "== 4/5 Pare-feu : SSH, HTTP et HTTPS seulement"
 if command -v ufw >/dev/null; then ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw --force enable; fi
 
+echo "== Sauvegarde quotidienne de la base (pg_dump, 30 jours gardés dans $DOSSIER/sauvegardes)"
+printf '17 3 * * * root %s/deploy/sauvegarde.sh >> /var/log/ia_aissa_sauvegarde.log 2>&1\n' "$DOSSIER" \
+  > /etc/cron.d/ia_aissa_sauvegarde
+chmod 644 /etc/cron.d/ia_aissa_sauvegarde
+
 echo "== 5/5 Démarrage (le premier lancement télécharge le modèle : quelques minutes)"
 docker compose --env-file .env up -d --build
 docker compose --env-file .env logs -f telechargement_modele || true

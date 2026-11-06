@@ -40,7 +40,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Performance : alerte dans le tableau de bord quand le 95e centile d'une page dépasse 3 s pendant une journée — mesures horodatées (2 000 par page), alerte 🐢 sur les 24 dernières heures à partir de 5 ouvertures ; les affichages qui préparent une réponse sont comptés à part (« — réponse ») pour ne pas fausser l'ouverture des pages
 
 - [x] Modèle local : affiner le petit modèle (LoRA) sur les corrections validées par l'administrateur, puis mesurer son taux de chiffres non sourcés avant et après — outillage prêt (ia_aissa/affinage.py : jeu d'affinage sans chiffre inventé + exemples de refus, mesure sur 13 questions fixes ; deploy/affiner_lora.py et Modelfile.lora ; marche à suivre dans deploy/README.md). L'entraînement demande une carte graphique : pas lancé ici (ni GPU ni Ollama dans cet environnement)
-- [ ] Serveur : sauvegarde quotidienne de la base Neon (pg_dump) vers un stockage à part, et page « santé du serveur » dans l'administration (RAM, disque, modèle chargé)
+- [x] Serveur : sauvegarde quotidienne de la base Neon (pg_dump) vers un stockage à part, et page « santé du serveur » dans l'administration (RAM, disque, modèle chargé) — serveur dédié : deploy/sauvegarde.sh (pg_dump 17 par Docker, chaque nuit par cron, 30 jours gardés) ; Streamlit Cloud : sauvegarde complète téléchargeable (JSON compressé, toutes les tables) et restauration dans une base vide, rappel après 7 jours ; « 🩺 Santé du serveur » : mémoire du processus et du serveur, disque, modules lourds, cerveaux en cache, index de lecture, alerte sous 15 % de mémoire libre
 
 - [ ] Simulations : coefficients de réévaluation du profit foncier lus dans la circulaire de la DGI de l'année (au lieu d'une saisie)
 - [ ] Simulations : comparer deux scénarios côte à côte (deux crédits, deux statuts, deux business plans) dans un même rapport
@@ -79,6 +79,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Performance : objectif propre aux réponses (par exemple 95e centile < 15 s pour la pensée propre) avec sa propre alerte
 - [ ] Modèle local : lancer l'affinage LoRA sur le serveur avec GPU dès 20 corrections validées, et noter dans le tableau de bord le taux de chiffres non sourcés AVANT et APRÈS
 - [ ] Administration : bouton « Télécharger le jeu d'affinage (JSONL) » et nombre de corrections validées disponibles pour l'affinage
+- [ ] Sauvegarde : envoi automatique chaque semaine vers un stockage objet (Neon Object Storage ou S3) quand une clé est fournie, avec vérification de restauration sur une base de test
+- [ ] Santé du serveur : garder la mémoire du processus toutes les heures et tracer sa courbe, pour voir venir une saturation avant l'erreur 502
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

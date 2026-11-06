@@ -373,6 +373,11 @@ nkhalles ? ») : échéances du mois, montants estimés, base légale et prochai
 Démarrage rapide : PyTorch n'est importé qu'au premier cerveau utilisé (`ia_aissa/reseaux.py`) ; la page s'affiche
 sans l'attendre.
 
+Sauvegarde et santé (`ia_aissa/sauvegarde.py`) : dans l'administration, « 💾 Sauvegarde de la mémoire » télécharge
+toutes les tables (JSON compressé ; restauration dans une base vide en ligne de commande) et « 🩺 Santé du serveur »
+montre mémoire, disque, modules chargés et index de lecture. Sur un serveur dédié, deploy/sauvegarde.sh fait chaque
+nuit un pg_dump (30 jours gardés).
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :

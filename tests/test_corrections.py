@@ -529,3 +529,37 @@ def test_rappel_des_echeances_dans_le_chat_depuis_le_profil(tmp_path):
               "que dois-je déclarer", "prochaine échéance"):
         assert intention(q) == "echeances", q
     assert intention("TVA sur 1000 dh") != "echeances"
+
+
+def test_sauvegarde_complete_et_restauration_dans_une_base_vide(tmp_path):
+    """Toute la mémoire exportée puis restaurée à l'identique dans une base vide ; refus si la base n'est pas vide."""
+    import datetime
+    import pytest
+    from ia_aissa import sauvegarde as SV
+    from ia_aissa.memoire import Memoire
+    source = Memoire(f"sqlite:///{tmp_path / 'source.db'}")
+    cid = source.nouvelle_conversation("Aissa", "Bonjour")
+    source.ajouter_message("Aissa", cid, "user", "Bonjour")
+    source.ajouter_correction("Aissa", "comptabilite", "loyer du dépôt", "6131 Locations et charges locatives",
+                              "utilisateur")
+    source.garder_passages("IA AISSA", "Livre", ["un passage", "un autre passage"])
+    source.definir_reglage("cle", "valeur")
+    source.sauver_media("avatar", b"\x89PNG\x00\xff", "image/png")
+    octets, bilan = SV.exporter(source)
+    assert bilan["passages"] == 2 and bilan["corrections"] == 1 and octets[:2] == b"\x1f\x8b"        # gzip
+    assert SV.derniere_sauvegarde(source)["date"] == datetime.date.today().isoformat()
+    cible = Memoire(f"sqlite:///{tmp_path / 'cible.db'}")
+    restaure = SV.restaurer(cible, octets)
+    assert restaure["passages"] == 2 and cible.reglage("cle") == "valeur"
+    assert [p["texte"] for p in cible.passages()] == ["un passage", "un autre passage"]
+    assert cible.media("avatar") == (b"\x89PNG\x00\xff", "image/png")                 # octets intacts
+    assert cible.corrections_de()[0]["cree_le"] is not None
+    with pytest.raises(ValueError, match="pas vide"):
+        SV.restaurer(cible, octets)                                                    # rien n'est écrasé
+    # Rappel : base persistante sans sauvegarde récente
+    source.persistante = True
+    assert SV.alerte_sauvegarde(source, datetime.date.today()) is None
+    assert "il y a 10 jours" in SV.alerte_sauvegarde(source, datetime.date.today() + datetime.timedelta(days=10))
+    s = SV.sante()
+    assert s["memoire_totale_mo"] > 0 and s["disque_total_go"] > 0 and isinstance(s["modules_lourds"], dict)
+    assert any("Disque libre" in l for l in SV.lignes_sante(s))

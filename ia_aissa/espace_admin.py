@@ -92,6 +92,13 @@ def tableau_de_bord(mem):
     from . import chrono
     for alerte in chrono.alertes():                     # 95e centile d'une page > 3 s sur 24 heures
         st.error(alerte)
+    from .sauvegarde import alerte_sauvegarde, lignes_sante, sante
+    rappel = alerte_sauvegarde(mem)
+    if rappel:
+        st.warning(rappel)
+    etat_serveur = lignes_sante(sante())
+    with st.expander("🩺 Santé du serveur", expanded=etat_serveur[0].startswith("⚠️")):
+        st.markdown("\n".join(f"- {l}" for l in etat_serveur))
     dernier = mem.reglage("moteur:dernier_appel")
     if dernier:
         d = json.loads(dernier)
@@ -244,7 +251,29 @@ def livres(mem, ingestion_de_livres):
 # ==========================================
 # 🕹️ Commandes
 # ==========================================
+def sauvegarde_de_la_memoire(mem):
+    """Télécharger toute la mémoire (stockage à part : l'ordinateur de l'administrateur)."""
+    from .sauvegarde import derniere_sauvegarde, exporter
+    st.markdown("#### 💾 Sauvegarde de la mémoire")
+    d = derniere_sauvegarde(mem)
+    st.caption((f"Dernière sauvegarde préparée le {d['date']} ({d['lignes']} lignes, {d['octets'] / 1e6:.1f} Mo). "
+                if d else "Aucune sauvegarde préparée pour l'instant. ")
+               + "Elle contient conversations et réglages : gardez-la en lieu sûr. Restauration dans une base vide : "
+                 "python -m ia_aissa.sauvegarde restaurer fichier.json.gz")
+    if st.button("Préparer une sauvegarde complète", key="sauvegarde_preparer"):
+        with st.spinner("J'exporte toutes les tables…"):
+            octets, bilan = exporter(mem)
+        st.session_state["sauvegarde_octets"] = octets
+        st.success(f"{sum(bilan.values())} lignes dans {len(bilan)} tables ({len(octets) / 1e6:.1f} Mo).")
+    if st.session_state.get("sauvegarde_octets"):
+        st.download_button("⬇️ Télécharger la sauvegarde", st.session_state["sauvegarde_octets"],
+                           file_name=f"ia_aissa_{datetime.now(timezone.utc):%Y-%m-%d}.json.gz",
+                           mime="application/gzip", key="sauvegarde_telecharger")
+    st.divider()
+
+
 def commandes(mem):
+    sauvegarde_de_la_memoire(mem)
     from .autodidacte import pratiquer, resoudre_crises
     from .broutage import Brouteur, cycle
     from .livres_libres import repas_de_livre

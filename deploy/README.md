@@ -78,6 +78,15 @@ cd /opt/ia_aissa/deploy && docker compose logs -f ia_aissa
 
 Changer de modèle : modifiez `MODELE_LOCAL` dans `.env`, puis relancez la commande de mise à jour.
 
+## Sauvegardes
+
+- Chaque nuit à 3 h 17, `deploy/sauvegarde.sh` (installé par `installer.sh` dans `/etc/cron.d`) fait un `pg_dump`
+  de la base Neon, compressé, dans `/opt/ia_aissa/sauvegardes` ; 30 jours sont gardés. Lancement à la main :
+  `sudo /opt/ia_aissa/deploy/sauvegarde.sh`. Restauration : `gunzip -c fichier.sql.gz | psql "adresse de la base"`.
+- Copiez de temps en temps ce dossier hors du serveur (stockage à part).
+- Sur Streamlit Cloud (sans serveur dédié) : Administration → 🕹️ Commandes → « Préparer une sauvegarde complète »,
+  puis téléchargez-la. Restauration dans une base vide : `python -m ia_aissa.sauvegarde restaurer fichier.json.gz`.
+
 ## Affiner le modèle local (LoRA) sur ses corrections
 
 Sur une machine avec carte graphique (au moins 16 Go de mémoire vidéo pour Qwen2.5-3B en bf16) :
