@@ -576,3 +576,57 @@ def test_coefficients_de_reevaluation_du_profit_foncier_2026():
     assert CF.coefficient(1940) is None and CF.coefficient(2010, 2027) is None   # avant 1946 / autre année de vente
     assert "**1,296**" in penser("quel est le coefficient de réévaluation pour un bien acheté en 2010 ?", None)[0]
     assert "pas de coefficient sûr" in penser("coefficient de réévaluation 1940", None)[0]
+
+
+def test_lecture_de_la_loi_de_finances_propose_les_taux_a_valider(tmp_path):
+    """Loi de finances en PDF → propositions (article, extrait) ; rien n'est appliqué avant validation."""
+    from fpdf import FPDF
+    from ia_aissa import connaissances as K
+    from ia_aissa import lecture_loi as L
+    from ia_aissa import parametres as P
+    from ia_aissa.memoire import Memoire
+    doc = FPDF()
+    doc.add_page()
+    doc.set_font("Helvetica", size=10)
+    texte = ("Article 6. Le montant de la cotisation minimale ne peut etre inferieur a quatre mille (4 000) dirhams. "
+             "Le taux de la cotisation minimale est fixe a 0,30 % pour les operations courantes. "
+             "Article 7. La deduction des frais professionnels est plafonnee a 40 000 dirhams par an. "
+             "Article 8. Est exoneree la cession dont le montant n'excede pas 140 000 dirhams par an.")
+    doc.multi_cell(0, 6, texte)
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    avant = K.MINIMUM_CM
+    trouvees = L.analyser(mem, bytes(doc.output()), "LF_2027.pdf", 2027)
+    par_cle = {(t["cle"], t["valeur"]): t for t in trouvees}
+    assert ("minimum_cotisation_minimale", 4000.0) in par_cle and par_cle[("minimum_cotisation_minimale", 4000.0)][
+        "article"] == "6"
+    assert ("taux_cotisation_minimale", 0.003) in par_cle and ("plafond_frais_pro", 40000.0) in par_cle
+    assert not any(t["cle"] == "seuil_petites_cessions" for t in trouvees)          # inchangé : rien à proposer
+    assert K.MINIMUM_CM == avant                                                     # rien appliqué sans validation
+    i = next(i for i, p in enumerate(L.en_attente(mem)) if p["cle"] == "minimum_cotisation_minimale")
+    L.decider(mem, i, True)
+    try:
+        assert K.MINIMUM_CM == 4000
+        h = P.historique(mem, "minimum_cotisation_minimale")[-1]
+        assert h["texte_legal"] == "Loi de finances 2027, article 6" and "LF_2027.pdf" in h["source"]
+        j = next(i for i, p in enumerate(L.en_attente(mem)) if p["cle"] == "plafond_frais_pro")
+        L.decider(mem, j, False)                                                     # rejetée : rien ne change
+        assert not any(p["cle"] == "plafond_frais_pro" for p in L.en_attente(mem))
+        assert not P.historique(mem, "plafond_frais_pro")
+    finally:
+        P.appliquer(Memoire(f"sqlite:///{tmp_path / 'vide.db'}"))                  # valeurs d'origine rétablies
+    assert K.MINIMUM_CM == avant
+
+
+def test_loi_de_finances_ignore_les_exemples_et_les_anciennes_valeurs():
+    from ia_aissa import lecture_loi as L
+    actuelles = {"taux_cotisation_minimale": 0.0025, "minimum_cotisation_minimale": 3000}
+    texte = ("Article 144. Le taux de la cotisation minimale est ramené de 0,50 % à 0,30 %. "
+             "Exemple : CM due = CA HT x 4 % = 420 000 x 4 % = 16 800 DH. "
+             "Le montant minimum de la cotisation minimale est fixé à 2 000 000 dirhams.")   # hors bornes
+    r = L.propositions(texte, actuelles)
+    assert [(x["cle"], x["valeur"]) for x in r] == [("taux_cotisation_minimale", 0.003)]
+    assert r[0]["article"] == "144"
+    assert "30 000" not in L.sans_ancienne_valeur("Le plafond est porté de trente mille (30 000) dirhams à 35 000 "
+                                                 "dirhams.")
+    assert [x["valeur"] for x in L.propositions("Le plafond des frais professionnels est porté de trente mille "
+                                                "(30 000) dirhams à quarante mille (40 000) dirhams.", {})] == [40000]

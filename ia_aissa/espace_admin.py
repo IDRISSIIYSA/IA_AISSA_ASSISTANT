@@ -448,6 +448,44 @@ def banc_d_essai(mem):
         st.dataframe(pd.DataFrame(r["lignes"]), hide_index=True, width="stretch")
 
 
+def lire_la_loi_de_finances(mem):
+    """Déposer la loi de finances (PDF) : IA AISSA propose les nouveaux taux trouvés, l'administrateur valide."""
+    from . import lecture_loi as L
+    from . import parametres as P
+    st.markdown("#### 📜 Lire la loi de finances de l'année")
+    st.caption("Chaque janvier, déposez la loi de finances (PDF du Bulletin officiel ou de la DGI) : je cherche les "
+               "taux et seuils qui ont changé et je vous les propose avec l'article et l'extrait. Rien n'est appliqué "
+               "sans votre validation.")
+    c = st.columns([3, 1])
+    fichier = c[0].file_uploader("Loi de finances (PDF)", type=["pdf"], key="lf_pdf")
+    annee = c[1].number_input("Année", 2024, 2100, datetime.now(timezone.utc).year, key="lf_annee")
+    if fichier is not None and st.button("🔎 Lire et proposer", key="lf_lire"):
+        with st.spinner("Je lis la loi de finances…"):
+            try:
+                trouvees = L.analyser(mem, fichier.getvalue(), fichier.name, annee)
+                st.success(f"{len(trouvees)} proposition(s) trouvée(s)." if trouvees else
+                           "Aucun taux ou seuil suivi n'a changé dans ce texte (ou le PDF est une image scannée).")
+            except Exception as e:
+                st.error(f"Lecture impossible : {e}")
+    for i, p in enumerate(L.en_attente(mem)):
+        unite = P.PAR_CLE[p["cle"]][4]
+        with st.container(border=True):
+            st.markdown(f"**{P.PAR_CLE[p['cle']][3]}** : {P.afficher_valeur(p['actuelle'], unite)} → "
+                        f"**{P.afficher_valeur(p['valeur'], unite)}** — loi de finances {p['annee']}"
+                        + (f", article {p['article']}" if p["article"] else ""))
+            st.caption(f"« {p['extrait']} »")
+            c = st.columns(2)
+            if c[0].button("✅ Valider et appliquer", key=f"lf_ok_{i}_{p['cle']}_{p['valeur']}", width="stretch"):
+                try:
+                    L.decider(mem, i, True)
+                    st.rerun()
+                except ValueError as e:
+                    st.error(f"Refusé : {e}")
+            if c[1].button("✖ Rejeter", key=f"lf_non_{i}_{p['cle']}_{p['valeur']}", width="stretch"):
+                L.decider(mem, i, False)
+                st.rerun()
+
+
 def mises_a_jour_des_taux(mem):
     """Mettre à jour un taux ou un seuil (SMIG, CNSS, AMO…) avec son texte légal et sa source : appliqué aussitôt."""
     from . import parametres as P
@@ -455,6 +493,7 @@ def mises_a_jour_des_taux(mem):
     for alerte in P.alertes(mem):
         st.warning(alerte)
     st.dataframe(P.registre(mem).drop(columns=["Clé"]), hide_index=True, width="stretch")
+    lire_la_loi_de_finances(mem)
     with st.form("mise_a_jour_taux"):
         cles = [p[0] for p in P.PARAMETRES]
         cle = st.selectbox("Paramètre", cles, format_func=lambda k: P.PAR_CLE[k][3])

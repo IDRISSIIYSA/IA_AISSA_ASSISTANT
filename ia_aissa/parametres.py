@@ -136,7 +136,9 @@ def alertes(memoire=None, aujourdhui=None):
     annees_ir = B.annees_couvertes("ir", memoire)
     if aujourdhui.year > max(annees_ir):
         messages.append(f"📅 Loi de finances {aujourdhui.year} non intégrée : le barème de l'IR s'arrête à "
-                        f"{max(annees_ir)}. Ajoutez le barème {aujourdhui.year} (Bulletin officiel) dans l'administration.")
+                        f"{max(annees_ir)}. Ajoutez le barème {aujourdhui.year} (Bulletin officiel) dans l'administration, "
+                        "et déposez la loi de finances en PDF (📜 Lire la loi de finances) : je proposerai les "
+                        "nouveaux taux à valider.")
     for impot in ("tva", "is"):
         if aujourdhui.year > max(B.annees_couvertes(impot, memoire)):
             messages.append(f"📅 Taux de {impot.upper()} {aujourdhui.year} à vérifier dans la loi de finances "

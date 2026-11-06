@@ -381,6 +381,9 @@ nuit un pg_dump (30 jours gardés).
 Comparer deux scénarios : sous chaque simulation, « 📌 Garder comme scénario A », changez vos chiffres, et IA AISSA
 met A et B côte à côte avec les écarts (rapport de comparaison en PDF et Excel).
 
+Loi de finances (`ia_aissa/lecture_loi.py`) : chaque janvier, l'administrateur dépose la loi de finances en PDF ;
+IA AISSA propose les taux et seuils qui ont changé (article et extrait à l'appui), appliqués seulement après validation.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :
