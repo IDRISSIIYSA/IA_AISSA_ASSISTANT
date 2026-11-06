@@ -378,6 +378,9 @@ toutes les tables (JSON compressé ; restauration dans une base vide en ligne de
 montre mémoire, disque, modules chargés et index de lecture. Sur un serveur dédié, deploy/sauvegarde.sh fait chaque
 nuit un pg_dump (30 jours gardés).
 
+Comparer deux scénarios : sous chaque simulation, « 📌 Garder comme scénario A », changez vos chiffres, et IA AISSA
+met A et B côte à côte avec les écarts (rapport de comparaison en PDF et Excel).
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :

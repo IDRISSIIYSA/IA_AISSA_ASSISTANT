@@ -920,3 +920,37 @@ def test_alerte_quand_le_95e_centile_d_une_page_depasse_3_s_sur_une_journee():
         chrono.marquer_reponse()
     assert "Page" + chrono.SUFFIXE_REPONSE in set(chrono.tableau()["Page"])
     chrono.reinitialiser()
+
+
+def test_comparer_deux_scenarios_cote_a_cote(tmp_path, monkeypatch):
+    """Garder un crédit comme scénario A, changer le capital : A et B côte à côte, écarts calculés, rapport exportable."""
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa.scenarios import comparer, ecart, rapport_comparaison, valeur
+    assert valeur("1 500 000 DH") == (1_500_000.0, "DH") and valeur("20,5 %") == (20.5, "%")
+    assert ecart("1 000 DH", "1 250,50 DH") == "+250,50 DH" and ecart("20 %", "17,5 %") == "-2,50 point(s)"
+    assert ecart("oui", "non") == "différent" and ecart("5 ans", "5 ans") == "="
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+
+    def page():
+        import streamlit as st
+        from ia_aissa.espace_simulations import afficher
+        from ia_aissa.partage import memoire
+        afficher("Crédit (échéancier)", memoire())
+
+    at = AppTest.from_function(page, default_timeout=300).run()
+    garder = next(b for b in at.button if b.key == "garder_A_Crédit (échéancier)")
+    garder.click().run()
+    assert at.session_state["scenario_A_Crédit (échéancier)"] is not None
+    assert any("Changez vos chiffres" in c.value for c in at.caption)
+    at.number_input(key="cr_cap").set_value(300_000.0).run()
+    assert not at.exception
+    assert any("Scénario A ou scénario B" in m.value for m in at.markdown)
+    t = at.dataframe[-1].value
+    capital = t[t["Rubrique"].str.contains("Capital", case=False)].iloc[0]
+    assert capital["Écart (B − A)"] == "+100 000 DH"
+    a = at.session_state["scenario_A_Crédit (échéancier)"]
+    from ia_aissa.espace_simulations import construire  # noqa: F401 (le rapport B vient de la même simulation)
+    rc = rapport_comparaison("Crédit (échéancier)", a, {**a, "numero": "B", "entrees": {**a["entrees"],
+                                                                                         "Capital": "300 000 DH"}})
+    assert rc["tableau"] is not None and "Scénario A (rapport)" in rc["entrees"]
+    assert list(comparer(a, a)["Écart (B − A)"].unique()) in (["="], ["=", ""], ["", "="], [""])

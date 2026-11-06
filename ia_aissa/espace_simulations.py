@@ -172,6 +172,40 @@ def afficher(nom, memoire):
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"xlsx_{nom}",
                             width="stretch"):
         journaliser(memoire, r)
+    comparaison(nom, r, memoire)
+
+
+def comparaison(nom, r, memoire):
+    """Garder ce résultat comme scénario A, puis le comparer au scénario courant (B) dans un même rapport."""
+    from .scenarios import comparer, rapport_comparaison
+    cle = f"scenario_A_{nom}"
+    a = st.session_state.get(cle)
+    c = st.columns(2)
+    if c[0].button("📌 Garder comme scénario A" if a is None else "📌 Remplacer le scénario A par celui-ci",
+                   key=f"garder_A_{nom}", width="stretch",
+                   help="Gardez ce résultat, changez vos chiffres : je mets les deux scénarios côte à côte."):
+        st.session_state[cle] = a = r
+        st.toast("Scénario A gardé : changez vos chiffres pour obtenir le scénario B.")
+    if a is None:
+        return
+    if c[1].button("🗑️ Oublier le scénario A", key=f"oublier_A_{nom}", width="stretch"):
+        st.session_state.pop(cle, None)
+        return
+    st.markdown("#### ⚖️ Scénario A ou scénario B ?")
+    if a["numero"] == r["numero"] or (a["entrees"] == r["entrees"]):
+        st.caption("Changez vos chiffres ci-dessus : le résultat courant deviendra le scénario B.")
+        return
+    t = comparer(a, r)
+    st.dataframe(t, hide_index=True, width="stretch")
+    rc = rapport_comparaison(nom, a, r)
+    c2 = st.columns(2)
+    if c2[0].download_button("📄 Comparaison PDF", pdf(rc), f"{rc['numero']}.pdf", "application/pdf",
+                             key=f"pdf_cmp_{nom}", width="stretch"):
+        journaliser(memoire, rc)
+    if c2[1].download_button("📊 Comparaison Excel", excel(rc), f"{rc['numero']}.xlsx",
+                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             key=f"xlsx_cmp_{nom}", width="stretch"):
+        journaliser(memoire, rc)
 
 
 def construire(nom, memoire):
