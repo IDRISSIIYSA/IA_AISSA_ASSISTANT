@@ -563,3 +563,16 @@ def test_sauvegarde_complete_et_restauration_dans_une_base_vide(tmp_path):
     s = SV.sante()
     assert s["memoire_totale_mo"] > 0 and s["disque_total_go"] > 0 and isinstance(s["modules_lourds"], dict)
     assert any("Disque libre" in l for l in SV.lignes_sante(s))
+
+
+def test_coefficients_de_reevaluation_du_profit_foncier_2026():
+    """Arrêté du 6 février 2026 : tableau recoupé (Le Matin, CAE Experts) ; rien d'inventé hors du tableau."""
+    from ia_aissa import coefficients_fonciers as CF
+    from ia_aissa.pensee import penser
+    assert len(CF.COEFFICIENTS_2026) == 80 and min(CF.COEFFICIENTS_2026) == 1946 and max(CF.COEFFICIENTS_2026) == 2025
+    for annee, attendu in {1980: 4.646, 2000: 1.585, 2010: 1.296, 2022: 1.078, 2024: 1.008, 2025: 1.0}.items():
+        assert CF.coefficient(annee) == attendu                         # les six valeurs citées par Le Matin
+    assert CF.coefficient(1946) == 57.773 and CF.coefficient(2026) == 1.0
+    assert CF.coefficient(1940) is None and CF.coefficient(2010, 2027) is None   # avant 1946 / autre année de vente
+    assert "**1,296**" in penser("quel est le coefficient de réévaluation pour un bien acheté en 2010 ?", None)[0]
+    assert "pas de coefficient sûr" in penser("coefficient de réévaluation 1940", None)[0]

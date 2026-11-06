@@ -42,7 +42,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Modèle local : affiner le petit modèle (LoRA) sur les corrections validées par l'administrateur, puis mesurer son taux de chiffres non sourcés avant et après — outillage prêt (ia_aissa/affinage.py : jeu d'affinage sans chiffre inventé + exemples de refus, mesure sur 13 questions fixes ; deploy/affiner_lora.py et Modelfile.lora ; marche à suivre dans deploy/README.md). L'entraînement demande une carte graphique : pas lancé ici (ni GPU ni Ollama dans cet environnement)
 - [x] Serveur : sauvegarde quotidienne de la base Neon (pg_dump) vers un stockage à part, et page « santé du serveur » dans l'administration (RAM, disque, modèle chargé) — serveur dédié : deploy/sauvegarde.sh (pg_dump 17 par Docker, chaque nuit par cron, 30 jours gardés) ; Streamlit Cloud : sauvegarde complète téléchargeable (JSON compressé, toutes les tables) et restauration dans une base vide, rappel après 7 jours ; « 🩺 Santé du serveur » : mémoire du processus et du serveur, disque, modules lourds, cerveaux en cache, index de lecture, alerte sous 15 % de mémoire libre
 
-- [ ] Simulations : coefficients de réévaluation du profit foncier lus dans la circulaire de la DGI de l'année (au lieu d'une saisie)
+- [x] Simulations : coefficients de réévaluation du profit foncier lus dans la circulaire de la DGI de l'année (au lieu d'une saisie) — tableau 2026 (arrêté du 6 février 2026, 80 années 1946-2025) dans ia_aissa/coefficients_fonciers.py, recoupé Le Matin / CAE Experts (le BO refuse les connexions automatiques) ; la simulation remplit le coefficient d'après l'année d'acquisition et de vente (modifiable) ; réponse dans le chat ; avant 1946 ou autre année de vente : saisie avec avertissement
 - [ ] Simulations : comparer deux scénarios côte à côte (deux crédits, deux statuts, deux business plans) dans un même rapport
 
 - [ ] Mises à jour : chaque 1er janvier, IA AISSA lit la loi de finances déposée en PDF et propose à l'administrateur les nouveaux taux trouvés (à valider), au lieu de les saisir à la main
@@ -81,6 +81,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Administration : bouton « Télécharger le jeu d'affinage (JSONL) » et nombre de corrections validées disponibles pour l'affinage
 - [ ] Sauvegarde : envoi automatique chaque semaine vers un stockage objet (Neon Object Storage ou S3) quand une clé est fournie, avec vérification de restauration sur une base de test
 - [ ] Santé du serveur : garder la mémoire du processus toutes les heures et tracer sa courbe, pour voir venir une saturation avant l'erreur 502
+- [ ] Profit foncier : ajouter chaque année le nouveau tableau (arrêté de février) depuis l'administration, avec la source, et garder les tableaux des années passées pour les ventes antérieures
+- [ ] Profit foncier : confirmer le tableau 2026 sur le Bulletin officiel n° 7486 (PDF) et la règle forfaitaire de 3 % par an pour les biens acquis avant 1946
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

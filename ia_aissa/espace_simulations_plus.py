@@ -785,17 +785,29 @@ def construire_plus(nom, memoire, c):
                                     help="Frais d'annonce, de courtage, de mainlevée… justifiés.")
         prix_a = c[2].number_input("Prix d'acquisition (DH)", 0.0, value=800_000.0, step=50_000.0, key="pf_pa")
         c2 = st.columns(3)
-        annee_a = c2[0].number_input("Année d'acquisition", 1946, aujourdhui.year, 2010, key="pf_aa")
+        annee_a = c2[0].number_input("Année d'acquisition", 1900, aujourdhui.year, 2010, key="pf_aa")
         frais_r = c2[1].number_input("Frais d'acquisition justifiés (DH, 0 = forfait 15 %)", 0.0, value=0.0,
                                      step=1_000.0, key="pf_fa")
         travaux = c2[2].number_input("Travaux et investissements justifiés (DH)", 0.0, value=100_000.0, step=5_000.0,
                                      key="pf_tr")
+        from . import coefficients_fonciers as CF
         c3 = st.columns(3)
-        coef = c3[0].number_input("Coefficient de réévaluation de l'année d'acquisition", 1.0, 20.0, 1.30, 0.01,
-                                  key="pf_co", help="Publié chaque année par la DGI (circulaire) : lisez celui de votre "
-                                  "année d'acquisition. Exemple indicatif : 1,30 pour 2010 vendu en 2026.")
-        rp = c3[1].checkbox("Résidence principale occupée au moins 5 ans", key="pf_rp")
-        autres = c3[2].number_input("Autres cessions immobilières cette année (DH)", 0.0, value=0.0, step=10_000.0,
+        annee_c = c3[0].number_input("Année de la vente", 2020, 2035, aujourdhui.year, key="pf_ac")
+        officiel = CF.coefficient(annee_a, annee_c)
+        if officiel is not None:
+            st.caption(f"Coefficient officiel {annee_c} pour un bien acquis en {annee_a} : **{officiel:g}** "
+                       f"({CF.SOURCE}). Modifiable si votre notaire indique autre chose.")
+        else:
+            st.warning("Coefficient officiel non disponible pour ce cas "
+                       + (f"(tableau connu : ventes de {CF.ANNEE_DU_TABLEAU})" if annee_c != CF.ANNEE_DU_TABLEAU
+                          else "(acquisition avant 1946 : taux forfaitaire, à vérifier)")
+                       + " : saisissez celui de l'arrêté de l'année de la vente.")
+        coef = c3[1].number_input("Coefficient de réévaluation", 1.0, 80.0, officiel or 1.30, 0.001, format="%.3f",
+                                  key=f"pf_co_{annee_a}_{annee_c}",
+                                  help="Fixé chaque année par arrêté du ministre des Finances (CGI, art. 65-II).")
+        c4 = st.columns(2)
+        rp = c4[0].checkbox("Résidence principale occupée au moins 5 ans", key="pf_rp")
+        autres = c4[1].number_input("Autres cessions immobilières cette année (DH)", 0.0, value=0.0, step=10_000.0,
                                     key="pf_au")
         x = S.profit_foncier(prix_v, frais_v, prix_a, frais_r, travaux, coef, rp, prix_v + autres)
         conseils = [f"Régime appliqué : {x['regime']}."]
@@ -813,7 +825,7 @@ def construire_plus(nom, memoire, c):
         conseils.append("Le notaire exige l'attestation de liquidation : déclarez et payez dans les 30 jours suivant "
                         "la vente (CGI, art. 83 et 173), sinon pénalités de l'art. 184 et de l'art. 208.")
         return rapport(nom, categorie_de(nom), {"Prix de vente": dh(prix_v), "Frais de cession": dh(frais_v),
-                                                "Prix d'acquisition": dh(prix_a), "Année d'acquisition": annee_a,
+                                                "Prix d'acquisition": dh(prix_a), "Année d'acquisition": annee_a, "Année de la vente": annee_c,
                                                 "Travaux justifiés": dh(travaux), "Coefficient": f"{coef:g}",
                                                 "Résidence principale (5 ans)": "oui" if rp else "non"},
                        {"Frais d'acquisition retenus": dh(x["frais_acquisition"]) + (" (forfait 15 %)" if x["forfait_15"] else ""),
@@ -827,6 +839,8 @@ def construire_plus(nom, memoire, c):
                         "Exonérations : cessions de l'année ≤ 140 000 DH ; résidence principale occupée 5 ans au moins "
                         "(au-delà de 4 000 000 DH, 3 % sur la fraction excédentaire)."],
                        ["CGI, art. 61-II, 63, 65, 73-II-F-6°, 83, 144-II, 173 et 184",
+                        "Coefficient : " + (CF.SOURCE if officiel is not None and abs(coef - officiel) < 1e-9
+                                            else "saisi par l'utilisateur"),
                         f"Vérifié le {B.VERIFIE_LE} (Upsilon Consulting — profit foncier 2026 ; ReaConsult)"],
                        aujourdhui.year, remarques=["Coefficient de réévaluation à lire dans la circulaire de la DGI de "
                        "l'année de vente.", "Non traités : logement social (4 ans), donations en famille, biens hérités "

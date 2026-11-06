@@ -309,6 +309,22 @@ def calculer(texte):
     sans_annees = annees.sub(" ", t) if re.search(r"\b(de|à|a|en|depuis|entre|et|jusqu'à|année|annee|loi de finances)\s+"
                                                   r"(19|20)\d\d\b", t) else t
     valeurs = [v for v in nombres(sans_annees) if v > 0]
+    if re.search(r"coefficients? de r[ée][ée]valuation", t):     # profit foncier : coefficient de l'année d'achat
+        from . import coefficients_fonciers as CF
+        annee = re.search(r"(?<![\d.,])(1[89]\d\d|20[0-4]\d)(?![\d.,])", t)
+        if annee:
+            a = int(annee.group(1))
+            c = CF.coefficient(a)
+            if c is not None:
+                return (f"Coefficient de réévaluation pour un bien acquis en **{a}** et vendu en "
+                        f"{CF.ANNEE_DU_TABLEAU} : **{str(c).replace('.', ',')}** (prix d'acquisition, frais et travaux "
+                        f"multipliés par ce coefficient). _Source : {CF.SOURCE}._ La simulation « Plus-value "
+                        "immobilière (profit foncier) » l'applique d'elle-même.",
+                        [f"Année d'acquisition trouvée : {a}.", "Tableau officiel de l'année de cession."])
+            return (f"Pour un bien acquis en {a}, je n'ai pas de coefficient sûr : avant 1946, l'arrêté prévoit un "
+                    "taux forfaitaire de 3 % par an dont je n'ai pas les modalités exactes. Demandez le calcul à "
+                    "votre notaire ou à la DGI, puis saisissez-le dans la simulation « Plus-value immobilière "
+                    f"(profit foncier) ». _Source : {CF.SOURCE}._", [f"Année d'acquisition trouvée : {a}."])
     from .taux_exercice import exercice_dans, repondre_par_exercice
     exercice = exercice_dans(t)
     if exercice:                            # « taux IS 2024 », « TVA électricité 2025 » : les taux de cet exercice
