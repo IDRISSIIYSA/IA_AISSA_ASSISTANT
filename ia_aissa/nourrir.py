@@ -59,6 +59,23 @@ def titre_par_moteur(moteur_config, client, question):
     return titre[:100]
 
 
+PREFIXE_SUITE = "lacune_suite:"
+LIENS_GARDES = 5
+
+
+def liens_utiles(question, liens, n=LIENS_GARDES):
+    """Les articles liés les plus proches de la question : d'abord ceux dont le titre partage des mots porteurs de
+    sens avec elle, puis l'ordre de la page (les premiers liens d'un article sont les plus centraux)."""
+    import unicodedata
+
+    def mots_de(t):
+        t = unicodedata.normalize("NFKD", t.lower()).encode("ascii", "ignore").decode()
+        return {m for m in re.findall(r"[a-z0-9]+", t) if len(m) > 2 and m not in MOTS_VIDES}
+    q = mots_de(question)
+    classes = sorted(enumerate(liens), key=lambda e: (-len(q & mots_de(e[1])), e[0]))
+    return [titre for _, titre in classes[:n]]
+
+
 def nourrir_du_jour(memoire, moteur_config=None, client=None, brouteur=None, aujourdhui=None, forcer=False):
     """Un repas par jour, tiré de ses lacunes. Renvoie le bilan (déjà fait aujourd'hui : le bilan du jour)."""
     jour = (aujourdhui or datetime.date.today()).isoformat()
@@ -70,7 +87,44 @@ def nourrir_du_jour(memoire, moteur_config=None, client=None, brouteur=None, auj
         brouteur = Brouteur()
     from .lecture import decouper, repondre_par_lecture
     moteur_utilise, essais = False, []
-    for lacune in memoire.lacunes_ouvertes(10):
+
+    def manger(lacune, source, texte):
+        memoire.garder_passages("IA AISSA", source, decouper(texte))   # elle pourra retrouver la réponse
+        bilan = digerer(memoire, None, None, source, texte, "IA AISSA", nb_bouchees=2, combler=False)
+        resolue = repondre_par_lecture(lacune["question"], memoire) is not None
+        if resolue:
+            memoire.resoudre_lacune(lacune["id"])
+        return bilan, resolue
+
+    def conclure(resultat):
+        memoire.definir_reglage(f"nourri:{jour}", json.dumps(resultat, ensure_ascii=False))
+        return resultat
+
+    # 1. Une lacune qu'un article n'a pas suffi à résoudre : le lendemain, un article lié de cette page
+    ouvertes = {l["id"]: l for l in memoire.lacunes_ouvertes(50)}
+    for cle, brut in sorted(memoire.reglages(PREFIXE_SUITE).items()):
+        suite = json.loads(brut)
+        lacune = ouvertes.get(int(cle[len(PREFIXE_SUITE):]))
+        if lacune is None or not suite["liens"]:
+            continue
+        titre = suite["liens"].pop(0)
+        suite["essayes"] = suite.get("essayes", []) + [titre]
+        suite["epuise"] = not suite["liens"]
+        memoire.definir_reglage(cle, json.dumps(suite, ensure_ascii=False))
+        try:
+            source, texte = brouteur.wikipedia(titre)
+        except (ErreurBroutage, Exception) as e:
+            essais.append(f"{titre} (article lié) : {str(e)[:80]}")
+            break
+        bilan, resolue = manger(lacune, source, texte)
+        return conclure({"date": jour, "lacune": lacune["question"], "source": source, "concepts": bilan["concepts"],
+                         "resolue": resolue, "moteur_utilise": False, "essais": essais[-5:],
+                         "article_lie": f"lié depuis « {suite['depuis']} »"})
+
+    # 2. Sinon, une lacune nouvelle (celles dont les articles liés sont épuisés passent après les autres)
+    epuisees = {int(k[len(PREFIXE_SUITE):]) for k, v in memoire.reglages(PREFIXE_SUITE).items()
+                if json.loads(v).get("epuise")}
+    for lacune in sorted(memoire.lacunes_ouvertes(10), key=lambda l: l["id"] in epuisees):
         question = lacune["question"]
         titres = []
         if client is not None and not moteur_utilise:
@@ -82,22 +136,23 @@ def nourrir_du_jour(memoire, moteur_config=None, client=None, brouteur=None, auj
         titres += titres_candidats(question)
         for titre in [t for i, t in enumerate(titres) if t and t not in titres[:i]][:5]:
             try:
-                source, texte = brouteur.wikipedia(titre)
+                if hasattr(brouteur, "wikipedia_et_liens"):
+                    source, texte, liens = brouteur.wikipedia_et_liens(titre)
+                else:
+                    (source, texte), liens = brouteur.wikipedia(titre), []
             except (ErreurBroutage, Exception) as e:
                 essais.append(f"{titre} : {str(e)[:80]}")
                 continue
             if len(texte.strip()) < 200:
                 essais.append(f"{titre} : article trop court")
                 continue
-            memoire.garder_passages("IA AISSA", source, decouper(texte))   # elle pourra retrouver la réponse
-            bilan = digerer(memoire, None, None, source, texte, "IA AISSA", nb_bouchees=2)
-            resolue = repondre_par_lecture(question, memoire) is not None
-            if resolue:
-                memoire.resoudre_lacune(lacune["id"])
-            resultat = {"date": jour, "lacune": question, "source": source, "concepts": bilan["concepts"],
-                        "resolue": resolue, "moteur_utilise": moteur_utilise, "essais": essais[-5:]}
-            memoire.definir_reglage(f"nourri:{jour}", json.dumps(resultat, ensure_ascii=False))
-            return resultat
+            bilan, resolue = manger(lacune, source, texte)
+            if not resolue and liens:          # demain : un article lié, choisi d'après les mots de la question
+                memoire.definir_reglage(f"{PREFIXE_SUITE}{lacune['id']}", json.dumps(
+                    {"depuis": titre, "liens": liens_utiles(question, liens), "essayes": [], "epuise": False},
+                    ensure_ascii=False))
+            return conclure({"date": jour, "lacune": question, "source": source, "concepts": bilan["concepts"],
+                             "resolue": resolue, "moteur_utilise": moteur_utilise, "essais": essais[-5:]})
     resultat = {"date": jour, "lacune": None, "source": None, "concepts": 0, "resolue": False,
                 "moteur_utilise": moteur_utilise, "essais": essais[-5:]}
     memoire.definir_reglage(f"nourri:{jour}", json.dumps(resultat, ensure_ascii=False))

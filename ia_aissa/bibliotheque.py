@@ -193,7 +193,7 @@ def exercices_pour_ecole(moteur, client, concepts):
 # 3. Intégrer
 # ==========================================
 def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_bouchees=4, callback=None,
-            famille=None):
+            famille=None, combler=True):
     """Mange le texte (morceau par morceau), rumine, range les concepts et nourrit l'école. Renvoie le bilan."""
     if len(texte.strip()) < 200:
         raise ErreurBroutage("Pas assez de texte à manger (page vide, protégée ou scannée sans texte).")
@@ -212,7 +212,7 @@ def digerer(memoire, moteur, client, source, texte, utilisateur="IA AISSA", nb_b
         if callback:
             callback(k, len(morceaux), d)
     concepts = [c for d in digestions for c in d["concepts"]]
-    comblees = combler_lacunes(memoire, concepts)
+    comblees = combler_lacunes(memoire, concepts) if combler else []   # le repas du jour vérifie par la relecture
     apprises = 0
     for question, matiere, reponse in (exercices_pour_ecole(moteur, client, concepts) if client else []):
         try:

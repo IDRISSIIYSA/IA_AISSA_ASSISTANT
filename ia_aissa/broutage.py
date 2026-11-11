@@ -126,18 +126,25 @@ class Brouteur:
     def wikipedia(self, sujet, langue="fr"):
         """L'article lui-même (/wiki/Titre), seule partie de Wikipédia que son robots.txt ouvre aux robots :
         son API et sa recherche leur sont fermées, et IA AISSA respecte cette règle."""
+        source, texte, _ = self.wikipedia_et_liens(sujet, langue)
+        return source, texte
+
+    def wikipedia_et_liens(self, sujet, langue="fr"):
+        """L'article et ses liens internes vers d'autres articles (titres, dans l'ordre de la page, sans doublon ni
+        page technique : Fichier:, Catégorie:, Aide:…), pour lire le lendemain un article lié."""
         from urllib.parse import quote
         titre = sujet.strip()
         titre = titre[:1].upper() + titre[1:]
         url = f"https://{langue}.wikipedia.org/wiki/{quote(titre.replace(' ', '_'))}"
         try:
-            _, texte = texte_html(self.visiter(url))
+            brut = self.visiter(url)
+            _, texte = texte_html(brut)
         except ErreurBroutage:
             raise
         except Exception as e:
             raise ErreurBroutage(f"Pas d'article Wikipédia « {titre} » ({type(e).__name__}).") from e
         utiles = [l for l in texte.splitlines() if not l.startswith(BANDEAUX)]
-        return f"Wikipédia — {titre}", "\n".join(utiles)[:TAILLE_MAX_PAGE]
+        return f"Wikipédia — {titre}", "\n".join(utiles)[:TAILLE_MAX_PAGE], liens_wikipedia(brut, titre)
 
     def arxiv(self, sujet, n=3):
         flux = self.visiter("https://export.arxiv.org/api/query",
@@ -149,6 +156,29 @@ class Brouteur:
             raise ErreurBroutage(f"Rien sur arXiv pour « {sujet} ».")
         texte = "\n\n".join(f"{t}. {r}" for t, r in articles)[:TAILLE_MAX_PAGE]
         return f"arXiv — {articles[0][0][:80]}", texte
+
+
+def liens_wikipedia(html, titre_page="", maximum=200):
+    """Les titres des articles liés depuis le corps d'une page Wikipédia."""
+    import re
+    from urllib.parse import unquote
+    from bs4 import BeautifulSoup
+    soupe = BeautifulSoup(html, "html.parser")
+    corps = soupe.find(id="mw-content-text") or soupe
+    titres, vus = [], {titre_page.lower()}
+    for a in corps.find_all("a", href=True):
+        m = re.match(r"^(?:https?://[a-z-]+\.wikipedia\.org)?(?:/wiki/|\./)([^#?]+)$", a["href"])  # 3 formes de lien
+        if not m or ":" in m.group(1):                   # Fichier:, Catégorie:, Aide:, Portail:… : pas des articles
+            continue
+        t = unquote(m.group(1)).replace("_", " ").strip()
+        if t.endswith("(homonymie)"):                    # une page d'homonymie ne répond à rien
+            continue
+        if t and t.lower() not in vus:
+            vus.add(t.lower())
+            titres.append(t)
+        if len(titres) >= maximum:
+            break
+    return titres
 
 
 def choisir_sujet(memoire, rng=random):

@@ -998,3 +998,49 @@ def test_le_chat_oriente_vers_la_bonne_simulation():
     assert "Code du travail" in penser("mon patron veut me licencier", None)[0]      # question de droit : la loi
     assert "TVA 200 DH" in penser("TVA sur 1000 dh", None)[0]                      # un calcul reste un calcul
     assert "La TVA au Maroc" in penser("parle de la TVA", None)[0]                # une fiche reste une fiche
+
+
+def test_repas_du_jour_lendemain_article_lie(tmp_path):
+    """L'article ne suffit pas : le lendemain, un article lié (liens internes de la page, choisis d'après la
+    question) avant de passer à une autre lacune ; une fois les liens épuisés, les autres lacunes passent avant."""
+    import datetime
+    from ia_aissa import nourrir
+    from ia_aissa.bibliotheque import ErreurBroutage
+    from ia_aissa.broutage import liens_wikipedia
+    from ia_aissa.memoire import Memoire
+    html = ('<div id="mw-content-text"><a href="/wiki/Volcan">v</a><a href="/wiki/Fichier:X.jpg">f</a>'
+            '<a href="/wiki/Plaque_tectonique">p</a><a href="/wiki/Volcan#Types">v2</a>'
+            '<a href="./S%C3%A9isme">s</a><a href="./Aide:Accueil">a</a>'
+            '<a href="https://fr.wikipedia.org/wiki/Faille">f</a></div>')
+    assert liens_wikipedia(html, "Terre") == ["Volcan", "Plaque tectonique", "Séisme", "Faille"]
+    assert nourrir.liens_utiles("Comment se forme un séisme ?", ["Volcan", "Plaque tectonique", "Séisme"])[0] == "Séisme"
+
+    class FauxBrouteur:
+        def __init__(self):
+            self.demandes = []
+
+        def wikipedia_et_liens(self, titre):
+            self.demandes.append(titre)
+            if titre != "Richter":
+                raise ErreurBroutage("absent")
+            return ("Wikipédia — Richter", "Charles Richter est né en Ohio en 1900 et a grandi à Los Angeles avec sa famille. " * 20,
+                    ["Californie", "Volcan", "Magnitude d'un séisme", "Géologie"])
+
+        def wikipedia(self, titre):
+            self.demandes.append(titre)
+            if titre == "Magnitude d'un séisme":
+                return ("Wikipédia — Magnitude d'un séisme",
+                        "La magnitude d'un séisme se mesure avec l'échelle de Richter, qui mesure l'énergie libérée. " * 20)
+            raise ErreurBroutage("absent")
+
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.ajouter_lacune("seisme magnitude echelle Richter mesure", "physique", 0.2)
+    b = FauxBrouteur()
+    jour = datetime.date(2026, 11, 11)
+    premier = nourrir.nourrir_du_jour(mem, None, None, b, jour)
+    assert premier["source"] == "Wikipédia — Richter" and not premier["resolue"]
+    suite = json_suite = __import__("json").loads(mem.reglage(f"{nourrir.PREFIXE_SUITE}{mem.lacunes_ouvertes()[0]['id']}"))
+    assert json_suite["liens"][0] == "Magnitude d'un séisme" and suite["depuis"] == "Richter"
+    lendemain = nourrir.nourrir_du_jour(mem, None, None, b, jour + datetime.timedelta(days=1))
+    assert lendemain["source"] == "Wikipédia — Magnitude d'un séisme" and lendemain["resolue"]
+    assert "lié depuis" in lendemain["article_lie"] and not mem.lacunes_ouvertes()
