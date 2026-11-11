@@ -58,7 +58,20 @@ NOUVELLES_FORMULATIONS = [
     ("achat d'une voiture pour l'entreprise", "2340 Matériel de transport"),
     ("chrit tomobil l charika", "2340 Matériel de transport"),
 ]
-TOUTES = QUESTIONS + NOUVELLES_FORMULATIONS
+# Questions de situation (séance du 11/11/2026) : le chat doit orienter vers la bonne simulation
+QUESTIONS_SIMULATIONS = [
+    ("je vais céder un terrain hérité, combien d'impôt", "Plus-value immobilière (profit foncier)"),
+    ("bghit nbi3 lbo9 dyali f casa", "Plus-value immobilière (profit foncier)"),
+    ("vaut-il mieux une SARL ou rester personne physique ?", "Choisir son statut (comparaison)"),
+    ("quel statut juridique choisir pour ouvrir un salon de coiffure", "Choisir son statut (comparaison)"),
+    ("j'ai démissionné, combien je vais toucher au départ", "Solde de tout compte"),
+    ("chhal nakhod ila khrejt mn lkhdma b démission", "Solde de tout compte"),
+    ("combien vaut l'indemnité de licenciement après 8 ans d'ancienneté", "Indemnité de licenciement"),
+    ("je veux solder mon prêt immobilier plus tôt", "Remboursement anticipé d'un crédit"),
+    ("je prépare une étude de faisabilité pour une boulangerie", "Business plan sur 5 ans"),
+    ("avec mon salaire, combien puis-je emprunter pour une maison", "Capacité d'emprunt"),
+]
+TOUTES = QUESTIONS + NOUVELLES_FORMULATIONS + QUESTIONS_SIMULATIONS
 
 
 def evaluer(questions=TOUTES, memoire=None):

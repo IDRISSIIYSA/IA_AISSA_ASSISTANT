@@ -469,6 +469,12 @@ def penser(texte, memoire=None, conclusion=None, precedente=None, utilisateur=No
         reponse, etapes = calcul
         return reponse, ["Je repère des chiffres et un calcul que je sais faire."] + etapes, 0.9
 
+    from .orientation_simulations import reponse_orientation
+    orientation = reponse_orientation(texte)
+    if orientation:                                    # une situation que je sais simuler : la bonne simulation
+        reponse, etapes = orientation
+        return reponse, etapes, 0.9
+
     from .fiches import fiche
     synthese = fiche(texte, memoire, utilisateur)
     if synthese:                                       # « parle de la TVA » : tout ce qu'elle sait, rassemblé

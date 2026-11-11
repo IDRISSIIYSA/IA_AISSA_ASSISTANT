@@ -685,6 +685,10 @@ def afficher_element(e, cle):
         st.dataframe(pd.DataFrame(lignes), hide_index=True, width="stretch", column_config={
             "Naissance": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent"),
             "Aujourd'hui": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent")})
+    elif t == "ouvrir_simulation":
+        from .espace_simulations import MODES, naviguer
+        st.button(f"🧮 Ouvrir la simulation « {e['nom']} »", key=f"ouvrir_sim{cle}", on_click=naviguer,
+                  args=(e["nom"], MODES[1]), type="primary")
     elif t == "atelier" and e.get("suivi"):
         utilisateur = st.session_state.get("utilisateur", "Aissa")
         essai = atelier_suivi(st, e["phrase"], LANGUES[e["langue"]]["voix"], e.get("sens", ""), cle=f"atelier{cle}")
@@ -1258,6 +1262,9 @@ def espace_visiteur():
         source = ("⚡ sa pensée propre (sans API)" if not r["cle_api"] or any(o["outil"] == "pensee_propre" for o in journal)
                   else f"🌐 grand moteur : {r['moteur']}" + (" + ses calculateurs" if any(
                       o["outil"].startswith("calculer") for o in journal) else ""))
+        vers = re.search(r"la bonne simulation est \*\*« (.+?) »\*\*", reponse)
+        if vers:                                       # le chat oriente vers une simulation : un bouton pour l'ouvrir
+            elements = [*elements, {"type": "ouvrir_simulation", "nom": vers.group(1)}]
         message = {"role": "assistant", "texte": reponse, "elements": elements, "outils": journal, "langue": langue,
                    "meta": meta, "role_ia": role, "source": source}
         st.session_state["affichage"].append(message)

@@ -981,3 +981,20 @@ def test_voix_reponse_mixte_phrase_par_phrase(monkeypatch):
     audio = I._dire_mixte("La TVA est de 20 %. The standard VAT rate in Morocco is 20 percent.", "Français")
     assert audio == b"<fr>"                                        # une voix manque : lecture habituelle en français
     I._VOIX_GARDEES.clear()
+
+
+def test_le_chat_oriente_vers_la_bonne_simulation():
+    """Une situation de la vie courante → la bonne simulation (et un bouton pour l'ouvrir) ; les calculs, les fiches
+    et les questions de droit ne sont pas détournés."""
+    from ia_aissa.banc import QUESTIONS_SIMULATIONS
+    from ia_aissa.espace_simulations import CATEGORIES
+    from ia_aissa.orientation_simulations import PISTES, orienter
+    from ia_aissa.pensee import penser
+    toutes = {n for noms in CATEGORIES.values() for n in noms}
+    assert all(nom in toutes for _, nom, _ in PISTES)                       # chaque piste mène à une vraie simulation
+    for question, attendu in QUESTIONS_SIMULATIONS:
+        assert f"**« {attendu} »**" in penser(question, None)[0], question
+    assert orienter("wach ndir sarl wla auto-entrepreneur")[0] == "Choisir son statut (comparaison)"
+    assert "Code du travail" in penser("mon patron veut me licencier", None)[0]      # question de droit : la loi
+    assert "TVA 200 DH" in penser("TVA sur 1000 dh", None)[0]                      # un calcul reste un calcul
+    assert "La TVA au Maroc" in penser("parle de la TVA", None)[0]                # une fiche reste une fiche

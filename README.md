@@ -387,6 +387,9 @@ IA AISSA propose les taux et seuils qui ont changé (article et extrait à l'app
 Voix : une réponse mixte (darija, français, anglais, espagnol…) est lue phrase par phrase, chacune avec la voix de sa
 langue.
 
+Orientation : une situation décrite dans le chat (« bghit nbi3 dar », « SARL ou auto-entrepreneur ? », « combien je
+touche si je démissionne ? ») mène à la bonne simulation, avec un bouton pour l'ouvrir.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :
