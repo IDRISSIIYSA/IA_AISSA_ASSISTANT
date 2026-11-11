@@ -259,6 +259,23 @@ def _dire(texte, langue, attente=ATTENTE_VOIX_S):
     return resultat.get("audio")
 
 
+def _dire_mixte(texte, langue, attente=ATTENTE_VOIX_S, ecriture_arabe=None):
+    """Une réponse mixte lue phrase par phrase, chaque morceau avec la voix de sa langue (fabriqués en parallèle,
+    mis bout à bout : des MP3 qui se suivent se lisent d'une traite). Une seule langue, ou une voix manquante : la
+    lecture habituelle dans la langue de la réponse."""
+    from .langues import segments_par_langue
+    segments = segments_par_langue(texte, langue)
+    if ecriture_arabe:                  # l'appelant sait que l'écriture arabe est du darija (salut de l'alien)
+        segments = [(ecriture_arabe if l in ("Arabe", "Darija") else l, m) for l, m in segments]
+    if len(segments) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(len(segments)) as fabrique:
+            audios = list(fabrique.map(lambda s: _dire(s[1], s[0], attente), segments))
+        if all(audios):
+            return b"".join(audios)
+    return _dire(partie_dans_la_langue(texte, langue), langue, attente)
+
+
 def ouvrir_conversation(utilisateur, conversation_id):
     lignes = memoire().messages_de(utilisateur, conversation_id) if conversation_id else []
     st.session_state["conversation_id"] = conversation_id
@@ -1172,12 +1189,7 @@ def espace_visiteur():
                  "ou dis-moi simplement ce qui ne va pas.").replace(" ,", ",").replace("  ", " ")
         audio = None
         if lecture_activee():                     # chaque partie avec sa voix : darija (marocaine), puis français
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(2) as fabrique:          # les deux voix en même temps
-                darija = fabrique.submit(_dire, salut, "Darija")
-                francais = fabrique.submit(_dire, partie_dans_la_langue(texte, "Français"), "Français")
-                darija, francais = darija.result(), francais.result()
-            audio = (darija or b"") + (francais or b"") or None    # deux MP3 bout à bout se lisent d'une traite
+            audio = _dire_mixte(texte, "Français", ecriture_arabe="Darija")
         st.session_state["parole"] = {"texte": texte, "audio": audio, "voix": "ar-MA", "nouveau": True}
 
     from .espace_simulations import (MODES, afficher as afficher_simulation, barre_laterale, choix_principal,
@@ -1254,7 +1266,7 @@ def espace_visiteur():
         if r["vocal"]:                  # la voix se fabrique pendant que l'échange est appris (en parallèle)
             import threading
             fil_voix = threading.Thread(target=lambda: voix.update(
-                audio=_dire(extrait_a_lire(partie_dans_la_langue(reponse, langue)), langue)), daemon=True)
+                audio=_dire_mixte(extrait_a_lire(reponse), langue)), daemon=True)   # chaque phrase dans sa langue
             fil_voix.start()
         apprendre_de_l_echange(r, utilisateur, texte, reponse)
         if r["vocal"]:

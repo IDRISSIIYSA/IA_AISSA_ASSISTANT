@@ -954,3 +954,30 @@ def test_comparer_deux_scenarios_cote_a_cote(tmp_path, monkeypatch):
                                                                                          "Capital": "300 000 DH"}})
     assert rc["tableau"] is not None and "Scénario A (rapport)" in rc["entrees"]
     assert list(comparer(a, a)["Écart (B − A)"].unique()) in (["="], ["=", ""], ["", "="], [""])
+
+
+def test_voix_reponse_mixte_phrase_par_phrase(monkeypatch):
+    """Une réponse mixte est lue phrase par phrase, chacune avec la voix de sa langue ; voix manquante : repli."""
+    from ia_aissa.langues import segments_par_langue
+    import ia_aissa.interface as I
+    assert segments_par_langue("مسا الخير، كيف داز نهارك؟ — Bonsoir ! Je suis IA AISSA.", "Français") == [
+        ("Darija", "مسا الخير، كيف داز نهارك؟"), ("Français", "Bonsoir ! Je suis IA AISSA.")]
+    assert [l for l, _ in segments_par_langue("La TVA est de 20 %. The standard VAT rate in Morocco is 20 "
+                                              "percent. El impuesto sobre la renta es progresivo.", "Français")] == [
+        "Français", "English", "Español"]
+    assert segments_par_langue("Bonjour, voici le calcul : IR annuel 12 000 DH.", "Français") == [
+        ("Français", "Bonjour, voici le calcul : IR annuel 12 000 DH.")]
+    assert len(segments_par_langue(" ".join(["Hello there my friend." if i % 2 else "Bonjour à toi mon ami."
+                                             for i in range(20)]), "Français")) <= 6
+    dites = []
+    monkeypatch.setattr(I, "synthetiser", lambda t, l: dites.append((l, t)) or f"<{l}>".encode())
+    monkeypatch.setattr(I, "_PANNE_VOIX", {"echecs": 0, "jusqu_a": 0.0})
+    I._VOIX_GARDEES.clear()
+    audio = I._dire_mixte("La TVA est de 20 %. The standard VAT rate in Morocco is 20 percent.", "Français")
+    assert audio == b"<Fran\xc3\xa7ais><English>" and {l for l, _ in dites} == {"Français", "English"}
+    dites.clear()
+    I._VOIX_GARDEES.clear()
+    monkeypatch.setattr(I, "synthetiser", lambda t, l: None if l == "English" else dites.append((l, t)) or b"<fr>")
+    audio = I._dire_mixte("La TVA est de 20 %. The standard VAT rate in Morocco is 20 percent.", "Français")
+    assert audio == b"<fr>"                                        # une voix manque : lecture habituelle en français
+    I._VOIX_GARDEES.clear()

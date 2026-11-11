@@ -384,6 +384,9 @@ met A et B côte à côte avec les écarts (rapport de comparaison en PDF et Exc
 Loi de finances (`ia_aissa/lecture_loi.py`) : chaque janvier, l'administrateur dépose la loi de finances en PDF ;
 IA AISSA propose les taux et seuils qui ont changé (article et extrait à l'appui), appliqués seulement après validation.
 
+Voix : une réponse mixte (darija, français, anglais, espagnol…) est lue phrase par phrase, chacune avec la voix de sa
+langue.
+
 ## L'assistante conversationnelle (`ia_aissa/assistant.py`)
 
 - Trois moteurs au choix dans la barre latérale, avec les mêmes connaissances, outils et mémoire :

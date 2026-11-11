@@ -46,7 +46,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Simulations : comparer deux scénarios côte à côte (deux crédits, deux statuts, deux business plans) dans un même rapport — pour toutes les simulations : « 📌 Garder comme scénario A », puis le résultat courant (B) face à A, entrée par entrée et résultat par résultat, écart B − A calculé (en points pour les pourcentages), rapport de comparaison en PDF et Excel (ia_aissa/scenarios.py)
 
 - [x] Mises à jour : chaque 1er janvier, IA AISSA lit la loi de finances déposée en PDF et propose à l'administrateur les nouveaux taux trouvés (à valider), au lieu de les saisir à la main — ia_aissa/lecture_loi.py et « 📜 Lire la loi de finances » (📈 Apprentissage → mises à jour des taux) : propositions avec article et extrait, appliquées seulement après validation (texte légal et source remplis d'après la loi) ; filtres contre les exemples chiffrés, bornes plausibles, seule la nouvelle valeur de « de X à Y » ; essai réel sur la note circulaire DGI n° 733 : 2 propositions pertinentes (taux de CM de 0,15 % et 4 %), aucun bruit
-- [ ] Voix : lire une réponse mixte phrase par phrase, chacune avec la voix de sa langue
+- [x] Voix : lire une réponse mixte phrase par phrase, chacune avec la voix de sa langue — langues.segments_par_langue (phrases regroupées par langue, morceaux trop courts rattachés au voisin, 6 morceaux au plus) et _dire_mixte (voix fabriquées en parallèle, mises bout à bout ; une voix manque : lecture habituelle) ; le salut de l'alien passe par le même chemin
 
 - [ ] Banc d'essai : réentraîner l'aiguilleur des cerveaux d'école avec les formulations darija ratées (19/35 seuls), en mesurant avant/après sur le banc
 - [ ] Banc d'essai : ajouter 10 questions sur les nouvelles simulations (statut, profit foncier, solde de tout compte) pour que le chat oriente vers la bonne simulation
@@ -87,6 +87,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Scénarios : garder jusqu'à trois scénarios (A, B, C) et un graphique des résultats clés côte à côte
 - [ ] Loi de finances : reconnaître aussi le nouveau barème de l'IR (tableau des tranches) et le proposer comme barème de l'année, à valider
 - [ ] Loi de finances : PDF scanné (image) → lecture par reconnaissance de caractères (OCR) avant la recherche des taux
+- [ ] Voix : enrichir les mots darija en écriture arabe (ديالكم, بغيت, واخا…) pour que la voix marocaine lise le darija au lieu de la voix arabe standard
+- [ ] Voix : une courte pause entre deux langues (silence MP3 de 300 ms) pour que le changement de voix soit naturel
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

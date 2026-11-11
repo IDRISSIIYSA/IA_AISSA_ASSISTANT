@@ -148,3 +148,54 @@ def partie_dans_la_langue(texte, langue):
     if not arabe:                      # dans une ligne mixte, retirer les mots en écriture arabe
         garde = _re.sub(r"[؀-ۿ][؀-ۿ\s،؟]*", " ", garde)
     return garde or texte
+
+
+MAX_SEGMENTS = 6
+MIN_CARACTERES_SEGMENT = 12
+
+
+def segments_par_langue(texte, langue_principale=None):
+    """Une réponse mixte découpée pour la voix : [(langue, morceau)], chaque phrase avec sa langue, les phrases
+    voisines de même langue regroupées. Écriture arabe → Darija ou Arabe ; écriture latine → langue reconnue par ses
+    mots, sinon la langue principale. Au plus MAX_SEGMENTS morceaux (les plus courts rejoignent leur voisin)."""
+    texte = (texte or "").strip()
+    principale = langue_principale or detecter_langue(texte)
+    phrases = [p.strip() for p in _re.split(r"(?<=[.!?؟…])\s+|\n+|\s+[—–]\s+", texte) if p and p.strip()]
+    segments = []
+    for p in phrases:
+        if not (ARABE.search(p) or LATIN.search(p)):          # chiffres, ponctuation : avec le morceau précédent
+            langue = segments[-1][0] if segments else principale
+        elif len(ARABE.findall(p)) > len(LATIN.findall(p)):
+            langue = detecter_langue(p)
+        else:
+            langue = detecter_langue(p, defaut=principale if principale not in ("Arabe", "Darija") else "Français")
+        if segments and segments[-1][0] == langue:
+            segments[-1] = (langue, segments[-1][1] + " " + p)
+        else:
+            segments.append((langue, p))
+    # les morceaux trop courts (« OK. », « Salam ! ») rejoignent leur voisin plutôt que changer de voix pour un mot
+    i = 0
+    while len(segments) > 1 and i < len(segments):
+        if len(segments[i][1]) < MIN_CARACTERES_SEGMENT and (ARABE.search(segments[i][1]) is None) == (
+                segments[i][0] not in ("Arabe", "Darija")):
+            voisin = i - 1 if i > 0 else i + 1
+            langue = segments[voisin][0]
+            a, b = sorted((i, voisin))
+            segments[a:b + 1] = [(langue, segments[a][1] + " " + segments[b][1])]
+            i = max(0, a - 1)
+            continue
+        i += 1
+    fusion = []
+    for langue, morceau in segments:
+        if fusion and fusion[-1][0] == langue:
+            fusion[-1] = (langue, fusion[-1][1] + " " + morceau)
+        else:
+            fusion.append((langue, morceau))
+    while len(fusion) > MAX_SEGMENTS:                          # trop de changements : on garde les plus longs morceaux
+        i = min(range(len(fusion)), key=lambda k: len(fusion[k][1]))
+        voisin = i - 1 if i > 0 else i + 1
+        a, b = sorted((i, voisin))
+        fusion[a:b + 1] = [(fusion[a if len(fusion[a][1]) >= len(fusion[b][1]) else b][0],
+                            fusion[a][1] + " " + fusion[b][1])]
+    fusion = [(langue, morceau.strip(" —–-")) for langue, morceau in fusion if morceau.strip(" —–-")]
+    return fusion or [(principale, texte)]
