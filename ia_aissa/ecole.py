@@ -603,7 +603,59 @@ MATIERES = [
 HORS_ORIENTATION = {"langues", "matiere_scolaire"}      # s'appliquent à n'importe quel texte
 
 
+# Questions de la vie courante (darija en lettres latines et arabes, français) et leur matière : l'aiguilleur les
+# confondait (banc d'essai du 01/11/2026). Formulations DIFFÉRENTES de celles du banc, qui reste un examen jamais vu.
+EXEMPLES_ORIENTATION = {
+    "comptabilite": [
+        "sajjalt fatoura dyal l'essence dyal charika", "khlast salaire dyal lkhdama dyal charika",
+        "chrit sel3a l lmagasin b crédit", "bi3t sel3a l wa7d client", "khlast l'assurance dyal tomobil dyal charika",
+        "chrit imprimante jdida l lmaktab", "khlast lfatoura dyal lgaz dyal lmatbakh dyal charika",
+        "chrit kursi w tabla l lbureau", "khlast l'avocat dyal charika", "chrit machine jdida l l'usine",
+        "khlast lfatoura dyal internet dyal lmaktab", "chrit camion dyal livraison l charika",
+        "خلصت فاتورة الما والضو ديال الشركة", "شريت حاسوب جديد للمكتب", "خلصت الكرا ديال المستودع",
+        "خلصت الخدامة ديال الشركة", "بعت السلعة للكليان", "شريت السلعة للمحل", "شريت كاميو للشركة",
+        "comptabiliser l'achat d'une imprimante", "écriture pour le paiement du loyer de l'entrepôt",
+        "enregistrer la facture d'eau et d'électricité du bureau", "achat de marchandises à crédit",
+        "paiement des salaires du mois", "passer l'écriture d'une facture de téléphone mobile",
+        "imputation d'une facture d'assurance automobile", "achat d'un camion de livraison pour l'entreprise",
+        "règlement de la facture d'internet de la société", "achat d'un bureau et de chaises pour l'agence",
+        "facture de gaz et d'eau de l'atelier", "khlast fatoura dyal lkahraba dyal l'atelier",
+        "paiement de la facture d'électricité de l'usine"],
+    "banque": [
+        "bghit kredi bach nchri l'appartement", "chhal ghadi nkhles f lkredi dyal tomobil", "bghit nsellef mn lbanka",
+        "kredi immobilier b taux mzyan", "bghit n7el compte f lbanka", "bghit kredi dyal lmachrou3",
+        "بغيت ناخد قرض باش نشري دار", "بغيت كريدي ديال الطوموبيل", "بغيت نحل حساب فالبنكة",
+        "simulation de prêt pour une voiture", "emprunt bancaire pour acheter une maison",
+        "taux d'intérêt d'un crédit immobilier", "ouvrir un compte bancaire professionnel",
+        "demander un crédit de trésorerie à la banque", "mensualité d'un prêt sur vingt ans"],
+    "juridique": [
+        "lpatron jrani mn lkhdma bla sbab", "tredouni mn lkhdma wach 3andi l7e9", "chno l7o9o9 dyali ila tredouni",
+        "طردوني من الخدمة بلا سبب", "الباطرون بغا يجريني من الخدمة", "le licenciement abusif au Maroc",
+        "mon employeur m'a renvoyé sans préavis", "indemnité de licenciement d'un salarié",
+        "démission et préavis du salarié", "mon contrat de travail a été rompu sans raison"],
+    "histoire": [
+        "chkoun li bna sour dyal marrakech", "chkoun li bna jame3 l7assan", "f ina dawla tbnat lmadina dyal fes",
+        "chkoun li 7kem lmaghrib 9bel l3alawiyin", "شكون اللي بنا الصومعة ديال حسان", "شكون اللي حكم المغرب قبل العلويين",
+        "quelle dynastie a construit la mosquée Hassan", "sous quelle dynastie la Koutoubia de Marrakech a-t-elle été "
+        "élevée", "qui a fondé la ville de Fès", "quelle dynastie régnait au Maroc au XIIe siècle"],
+    "unites": [
+        "b chno kan9iso lkahraba", "l9owa b ina unité kat9as", "بأش كنقيسو القوة", "en quelle unité mesure-t-on "
+        "l'énergie", "l'unité de la puissance électrique", "la pression se mesure en quelle unité"],
+    "tva": [
+        "tva 3la l'medicaments f pharmacie", "chhal tva 3la dwa dyal sbitar", "الضريبة على القيمة المضافة ديال الدوا",
+        "taux de TVA sur les produits pharmaceutiques", "TVA applicable aux médicaments en pharmacie",
+        "tva 3la lkahraba", "taux de TVA sur la vente de vêtements"],
+}
+PART_EXEMPLES_ORIENTATION = 0.10
+
+
 def _orientation(rng):
+    if rng.random() < PART_EXEMPLES_ORIENTATION:          # une question de la vie courante, avec sa matière
+        cle = list(EXEMPLES_ORIENTATION)[int(rng.integers(len(EXEMPLES_ORIENTATION)))]
+        exemples = EXEMPLES_ORIENTATION[cle]
+        texte = exemples[int(rng.integers(len(exemples)))]
+        y = next(i for i, m in enumerate(MATIERES_ORIENTABLES) if m.cle == cle)
+        return vectoriser_mixte(texte), y, texte
     y = int(rng.integers(len(MATIERES_ORIENTABLES)))
     _, _, texte = MATIERES_ORIENTABLES[y].generer(rng)
     return vectoriser_mixte(texte), y, texte
