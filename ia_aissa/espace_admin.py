@@ -356,7 +356,8 @@ def repas_du_jour_admin(mem):
                 st.error(f"Impossible pour l'instant : {e}")
     from .donnees_maroc import SOURCES_NON_LUES
     st.caption("Non lues, faute d'autorisation de réutilisation : "
-               + " ; ".join(f"{nom} ({raison})" for nom, (_, raison) in SOURCES_NON_LUES.items()) + ".")
+               + " ; ".join(f"{nom} ({raison})" for nom, (_, raison) in SOURCES_NON_LUES.items())
+               + ". Courriels de demande d'autorisation prêts à envoyer : docs/demande_autorisation_donnees.md.")
     maroc = mem.reglage("donnees_maroc:derniere")
     if maroc:
         d = json.loads(maroc)

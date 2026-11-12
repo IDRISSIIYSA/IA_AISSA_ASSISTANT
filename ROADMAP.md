@@ -56,7 +56,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 
 - [x] Voix : fabriquer la lecture à voix haute après l'affichage, dans une relance séparée, pour que la page ne l'attende jamais — la voix part dans un fil d'arrière-plan (jusqu'à 12 s) ; un fragment Streamlit vérifie chaque seconde et relance la page pour la lire dès qu'elle est prête ; la page n'attend plus les 4 s d'avant
 - [x] Données marocaines : préférer, pour un même tableau, l'année la plus récente dans la réponse (l'ACAPS commence ses séries en 2012) et l'annoncer « dernier chiffre publié : … » — valeurs datées (années, trimestres « T4-2025 ») triées de la plus récente à la plus ancienne, la première annoncée « dernier chiffre publié », les 6 plus récentes gardées ; entiers séparés par milliers
-- [ ] Données marocaines : demander à la DEPF et à l'Office des changes une autorisation écrite de réutilisation (préparer le modèle de courriel dans docs/) ; en attendant, seulement des liens
+- [x] Données marocaines : demander à la DEPF et à l'Office des changes une autorisation écrite de réutilisation (préparer le modèle de courriel dans docs/) ; en attendant, seulement des liens — docs/demande_autorisation_donnees.md : deux courriels en français (citation, aucune modification, lecture peu fréquente par un robot identifié, retrait sur demande) et une version courte en arabe ; à envoyer par Aissa depuis la rubrique Contact des sites officiels ; chemin rappelé dans l'administration
 - [ ] Données marocaines : un tableau du HCP par province n'a pas de ligne nationale dans ses 80 premières lignes ; lire la ligne « Total / National » même au-delà de la limite
 - [ ] Données marocaines : comparer deux années à la demande (« chômage 2024 contre 2025 ») en calculant l'écart en points à partir de la ligne trouvée
 - [ ] Contrôle de gestion : prévoir trois périodes d'avance (trimestre) avec un intervalle qui s'élargit à chaque pas, et comparer à la droite sur tout l'historique (erreur moyenne rejouée)
@@ -99,6 +99,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Voix : commencer à lire la première phrase dès qu'elle est prête, pendant que la suite se fabrique
 - [ ] Données marocaines : relire une fois les tableaux déjà en mémoire pour leur donner le nouveau format « dernier chiffre publié » (sinon ils attendent leur tour de rotation)
 - [ ] Données marocaines : indiquer l'évolution sur un an (« +0,4 point par rapport à 2024 ») quand la série le permet
+- [ ] Données marocaines : quand une autorisation écrite arrive, ajouter la source autorisée (conditions, date, données) et la lire au rythme convenu
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

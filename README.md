@@ -23,6 +23,7 @@ chômage, les prix, le PIB, les crédits et les salariés (« taux de chômage �
 S'y ajoutent l'ACAPS (retraites, AMO), la CMR, la CNRA et la CNOPS. Les tableaux sont lus à tour de rôle (les jamais lus d'abord)
 jusqu'à couvrir tout le catalogue ; sans région nommée dans la question, c'est la ligne d'ensemble (« Ensemble, Total ») qui répond. La DEPF et l'Office des changes ne sont pas lus
 (pas de licence de réutilisation, robots refusés) : IA AISSA donne leur lien sans recopier leurs publications.
+Les courriels de demande d'autorisation sont prêts dans `docs/demande_autorisation_donnees.md`.
 
 ## Deux espaces : visiteurs et administration
 
