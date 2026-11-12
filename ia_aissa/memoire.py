@@ -362,6 +362,17 @@ class Memoire:
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(requete.order_by(passages.c.id))]
 
+    def iter_passages(self, utilisateurs=None, paquet=2000):
+        """Les passages un par un, lus par paquets (la base n'est jamais chargée d'un bloc en mémoire : pic de
+        mémoire bien plus bas quand la bibliothèque est grande)."""
+        requete = select(passages.c.id, passages.c.utilisateur, passages.c.source, passages.c.numero, passages.c.texte)
+        if utilisateurs is not None:
+            requete = requete.where(passages.c.utilisateur.in_(list(utilisateurs)))
+        with self.moteur.connect() as c:
+            resultat = c.execution_options(stream_results=True, yield_per=paquet).execute(requete.order_by(passages.c.id))
+            for l in resultat:
+                yield l._mapping
+
     def compter_passages(self):
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(

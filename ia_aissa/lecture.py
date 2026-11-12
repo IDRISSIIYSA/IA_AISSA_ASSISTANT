@@ -62,13 +62,20 @@ class Index:
 
     def __init__(self, lignes, k1=1.4, b=0.75):
         import numpy as np
+        import time as _time
         self.k1, self.b = k1, b
         self.champs = ("id", "utilisateur", "source", "numero")
-        self.meta = [tuple(l[c] for c in self.champs) for l in lignes]
-        self.textes = [l["texte"] for l in lignes]
+        self.meta, self.textes = [], []
+        noms = {}                                          # une seule copie de chaque source et de chaque utilisateur
         postings = collections.defaultdict(lambda: (array("I"), array("H")))
         longueurs = array("I")
-        for i, texte in enumerate(self.textes):
+        for i, l in enumerate(lignes):                     # lignes : une liste ou un flux (lu une seule fois)
+            texte = l["texte"]
+            self.meta.append((l["id"], noms.setdefault(l["utilisateur"], l["utilisateur"]),
+                              noms.setdefault(l["source"], l["source"]), l["numero"]))
+            self.textes.append(texte)
+            if i % 500 == 499:
+                _time.sleep(0)                             # laisse respirer la page pendant une longue construction
             compte = collections.Counter(jetons(texte))
             longueurs.append(sum(compte.values()))
             for t, f in compte.items():
@@ -121,7 +128,9 @@ def index(memoire, utilisateur=None):
     comptes = memoire.compter_passages()
     signature = (id(memoire), tuple(sorted(visibles or [])), sum(c["passages"] for c in comptes), len(comptes))
     if _INDEX.get("signature") != signature:
-        _INDEX.update(signature=signature, index=Index(memoire.passages(visibles)))
+        flux = memoire.iter_passages(visibles) if hasattr(memoire, "iter_passages") else memoire.passages(visibles)
+        _INDEX.update(signature=signature, index=None)     # l'ancien index est libéré avant d'en bâtir un nouveau
+        _INDEX.update(signature=signature, index=Index(flux))
     return _INDEX["index"]
 
 
