@@ -40,7 +40,7 @@ SOURCES_NON_LUES = {
         "https://www.oc.gov.ma", "le site rejette les robots (page « Request Rejected »)"),
 }
 MAX_TABLEAUX = 8
-MAX_LIGNES = 80
+MAX_LIGNES = 250                # un tableau par province (181 lignes) tient en entier
 MAX_OCTETS = 3_000_000
 FREQUENCE_JOURS = 7
 
@@ -83,7 +83,9 @@ def date_de(entete):
 
 def tableau_en_phrases(chemin, sigle, titre, max_lignes=MAX_LIGNES):
     """Un tableau Excel en phrases : « titre — dimensions : valeur (colonne) ; … ». Repère tout seul la ligne de titre
-    et la ligne d'en-têtes (la première ligne d'au moins trois cellules)."""
+    et la ligne d'en-têtes (la première ligne d'au moins trois cellules). Au-delà de max_lignes, seules les lignes
+    d'ensemble (« Total », « National ») sont encore gardées."""
+    from .lecture import agregation
     import openpyxl
     import warnings
     with warnings.catch_warnings():
@@ -118,10 +120,11 @@ def tableau_en_phrases(chemin, sigle, titre, max_lignes=MAX_LIGNES):
                               f"{nombre_fr(v)} ({e})" if e else nombre_fr(v) for e, v in reste)))
             else:
                 detail = " ; ".join(f"{nombre_fr(v)} ({e})" if e else nombre_fr(v) for e, v in valeurs[:6])
-            phrases.append(f"{sigle} — {intitule} — {', '.join(etiquettes) or 'ensemble'} : {detail}.")
-            if len(phrases) >= max_lignes:
-                classeur.close()
-                return phrases
+            phrase = f"{sigle} — {intitule} — {', '.join(etiquettes) or 'ensemble'} : {detail}."
+            if len(phrases) < max_lignes:
+                phrases.append(phrase)
+            elif agregation(phrase) == 1:                # au-delà de la limite : seulement les lignes d'ensemble
+                phrases.append(phrase)
     classeur.close()
     return phrases
 

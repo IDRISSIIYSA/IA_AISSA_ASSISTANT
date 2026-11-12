@@ -1099,3 +1099,32 @@ def test_donnees_maroc_dernier_chiffre_publie_en_premier(tmp_path):
     w.save(trimestres)
     assert "dernier chiffre publié : 12,9 (T4-2025) ; avant : 13,3 (T1-2025) ; 12,8 (T4-2024)" in \
         D.tableau_en_phrases(trimestres, "HCP", "Chômage")[0]
+
+
+def test_donnees_maroc_ligne_d_ensemble_au_dela_de_la_limite_et_avertissement(tmp_path):
+    """La ligne « Total » d'un long tableau est gardée même au-delà de la limite ; un chiffre d'une seule province
+    que la question ne nomme pas est signalé comme tel."""
+    import openpyxl
+    from ia_aissa import donnees_maroc as D
+    from ia_aissa.lecture import avertissement_partiel, repondre_par_lecture
+    from ia_aissa.memoire import Memoire
+    chemin = tmp_path / "long.xlsx"
+    w = openpyxl.Workbook()
+    f = w.active
+    f.append(["Taux d'activité par province (%)"])
+    f.append(["Milieu", "Province", 2025, 2024])
+    for i in range(300):
+        f.append(["National", f"Province {i}", 40.0 + i % 10, 41.0])
+    f.append(["Ensemble", "Total", 43.5, 44.0])
+    w.save(chemin)
+    phrases = D.tableau_en_phrases(chemin, "HCP", "Activité", max_lignes=50)
+    assert len(phrases) == 51 and "Ensemble, Total : dernier chiffre publié : 43,5 (2025)" in phrases[-1]
+    assert "Taza" in avertissement_partiel("HCP — T — National, Taza : 9 (2025).", "taux de chômage")
+    assert avertissement_partiel("HCP — T — National, Taza : 9 (2025).", "taux de chômage à Taza") == ""
+    assert avertissement_partiel("HCP — T — Ensemble, Total : 9 (2025).", "taux de chômage") == ""
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.garder_passages("IA AISSA", "HCP — Chômage par province", [
+        "HCP — Taux de chômage par province — National, Taza : dernier chiffre publié : 9 (2025).",
+        "HCP — Taux de chômage par province — National, Fès : dernier chiffre publié : 15 (2025)."])
+    reponse = repondre_par_lecture("taux de chômage par province", mem)["reponse"]
+    assert "attention : ce chiffre ne concerne que" in reponse

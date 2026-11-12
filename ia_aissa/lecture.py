@@ -157,6 +157,22 @@ def agregation(texte):
     return sum(m in ENSEMBLES for m in mots) / len(mots) if mots else 0.0
 
 
+def avertissement_partiel(texte, question):
+    """Une ligne de tableau sur une seule région ou catégorie que la question ne nomme pas : le dire, pour qu'un
+    chiffre de Taza ne passe pas pour le chiffre national."""
+    etiquettes = re.findall(r" — ([^—:]+) : ", texte)
+    if not etiquettes or agregation(texte) == 1:
+        return ""
+    precises = [e.strip() for e in etiquettes[-1].split(",") if e.strip() not in ("", "-")
+                and e.strip().lower() not in ENSEMBLES]
+    q = set(jetons(question))
+    absentes = [e for e in precises if not (set(jetons(e)) & q)]
+    if not absentes:
+        return ""
+    return (f" _(attention : ce chiffre ne concerne que « {', '.join(absentes)} » ; ce tableau ne donne pas de total "
+            "national dans ce que j'ai lu)_")
+
+
 SEUIL_LECTURE = 0.45            # part des mots de la question retrouvés dans le meilleur passage
 
 
@@ -182,7 +198,7 @@ def repondre_par_lecture(question, memoire, utilisateur=None, n=6, strict=False)
         par_source = datees
     choisis = sorted(par_source.values(), key=lambda r: r["source"])[:n] if len(par_source) > 1 else list(par_source.values())
     lignes = [f"**{r['source']}** (passage {r['numero'] + 1}) : « {' '.join(phrases_utiles(r['texte'], question))} »"
-              for r in choisis]
+              + avertissement_partiel(r["texte"], question) for r in choisis]
     confiance = round(min(0.95, max(r["mots_trouves"] for r in choisis)), 3)
     return {"reponse": "\n\n".join(lignes), "sources": [r["source"] for r in choisis], "confiance": confiance}
 
