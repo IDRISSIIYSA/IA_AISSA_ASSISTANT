@@ -810,7 +810,7 @@ def test_donnees_officielles_marocaines_data_gov_ma(tmp_path):
     b = D.repas_donnees_maroc(mem, FauxBrouteur(), datetime.date(2026, 10, 31))
     assert b["catalogues"]["HCP"] == 2 and b["tableaux"][0]["lignes"] == 3
     textes = " ".join(p["texte"] for p in mem.passages())
-    assert "Casablanca : 17,7 (2025) ; 18,1 (2024)" in textes and "9879" not in textes.split("Total :")[1][:40]
+    assert "Casablanca : dernier chiffre publié : 17,7 (2025) ; avant : 18,1 (2024)" in textes and "9879" not in textes.split("Total :")[1][:40]
     assert "data.gov.ma/data/fr/dataset/data_i2" in textes                # le catalogue indique où trouver la donnée
     reponse, _, confiance = penser("taux de chômage à Casablanca", mem)
     assert confiance >= 0.85 and "17,7 (2025)" in reponse and "HCP" in reponse and "ODbL" in reponse
@@ -866,8 +866,8 @@ def test_donnees_maroc_rotation_et_ligne_nationale(tmp_path):
     assert agregation("HCP — T — Ensemble, Total : 12,9 (2025).") == 1
     assert agregation("HCP — T — National, Casablanca : 17,7 (2025).") == 0.5 and agregation("texte libre") == 0
     sans_region = repondre_par_lecture("taux de chômage par sexe", mem)["reponse"]
-    assert "Ensemble, Total : 12,9" in sans_region and "Casablanca" not in sans_region
-    assert "Casablanca : 17,7" in repondre_par_lecture("taux de chômage par sexe à Casablanca", mem)["reponse"]
+    assert "Ensemble, Total : dernier chiffre publié : 12,9" in sans_region and "Casablanca" not in sans_region
+    assert "Casablanca : dernier chiffre publié : 17,7" in repondre_par_lecture("taux de chômage par sexe à Casablanca", mem)["reponse"]
 
 
 def test_index_de_lecture_compact_donne_les_memes_resultats():
@@ -1073,3 +1073,29 @@ def test_voix_fabriquee_apres_l_affichage(tmp_path, monkeypatch):
     assert not at.exception
     assert "voix_jeton" not in at.session_state["parole"] and jeton not in I._VOIX_EN_COURS
     I._VOIX_GARDEES.clear()
+
+
+def test_donnees_maroc_dernier_chiffre_publie_en_premier(tmp_path):
+    """Une série qui commence en 2012 (ACAPS) : la réponse annonce d'abord le dernier chiffre publié."""
+    import openpyxl
+    from ia_aissa import donnees_maroc as D
+    assert D.date_de("2025") == (2025, 0) and D.date_de("T4-2025") == (2025, 4) and D.date_de("Région") is None
+    chemin = tmp_path / "acaps.xlsx"
+    w = openpyxl.Workbook()
+    f = w.active
+    f.append(["Cotisations des régimes de retraite (millions de DH)"])
+    f.append(["Régime", *range(2012, 2024)])
+    f.append(["Régimes complémentaires", *[5000.0 + 100 * i for i in range(12)]])
+    w.save(chemin)
+    phrase = D.tableau_en_phrases(chemin, "ACAPS", "Cotisations")[0]
+    assert "Régimes complémentaires : dernier chiffre publié : 6 100 (2023) ; avant : 6 000 (2022)" in phrase
+    assert "(2012)" not in phrase                                          # les 6 plus récentes seulement
+    trimestres = tmp_path / "t.xlsx"
+    w = openpyxl.Workbook()
+    f = w.active
+    f.append(["Taux de chômage trimestriel"])
+    f.append(["Milieu", "Sexe", "T1-2025", "T4-2024", "T4-2025"])
+    f.append(["Ensemble", "Total", 13.3, 12.8, 12.9])
+    w.save(trimestres)
+    assert "dernier chiffre publié : 12,9 (T4-2025) ; avant : 13,3 (T1-2025) ; 12,8 (T4-2024)" in \
+        D.tableau_en_phrases(trimestres, "HCP", "Chômage")[0]

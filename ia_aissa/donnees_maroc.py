@@ -65,9 +65,20 @@ def fiche(sigle, jeu):
 
 
 def nombre_fr(v):
+    if isinstance(v, int) and not isinstance(v, bool):
+        return f"{v:,}".replace(",", " ")                 # 6100 → « 6 100 », comme les nombres à virgule
     if isinstance(v, float):
         return f"{v:,.2f}".replace(",", " ").replace(".", ",").rstrip("0").rstrip(",")
     return str(v)
+
+
+def date_de(entete):
+    """(année, trimestre) d'un en-tête de colonne (« 2025 », « T4-2025 », « 2024-T2 »), ou None."""
+    m = re.search(r"(?<!\d)(19\d\d|20\d\d)(?!\d)", str(entete or ""))
+    if not m:
+        return None
+    t = re.search(r"\bT([1-4])\b", str(entete))
+    return int(m.group(1)), int(t.group(1)) if t else 0
 
 
 def tableau_en_phrases(chemin, sigle, titre, max_lignes=MAX_LIGNES):
@@ -98,7 +109,15 @@ def tableau_en_phrases(chemin, sigle, titre, max_lignes=MAX_LIGNES):
                        if isinstance(c, (int, float)) and not isinstance(c, bool)]
             if not valeurs:
                 continue
-            detail = " ; ".join(f"{nombre_fr(v)} ({e})" if e else nombre_fr(v) for e, v in valeurs[:6])
+            datees = [(date_de(e), e, v) for e, v in valeurs]
+            if any(d for d, _, _ in datees):            # séries datées : la plus récente d'abord, et annoncée
+                valeurs = [(e, v) for _, e, v in sorted(datees, key=lambda x: x[0] or (0, 0), reverse=True)]
+                (e0, v0), reste = valeurs[0], valeurs[1:6]
+                detail = (f"dernier chiffre publié : {nombre_fr(v0)} ({e0})"
+                          + ("" if not reste else " ; avant : " + " ; ".join(
+                              f"{nombre_fr(v)} ({e})" if e else nombre_fr(v) for e, v in reste)))
+            else:
+                detail = " ; ".join(f"{nombre_fr(v)} ({e})" if e else nombre_fr(v) for e, v in valeurs[:6])
             phrases.append(f"{sigle} — {intitule} — {', '.join(etiquettes) or 'ensemble'} : {detail}.")
             if len(phrases) >= max_lignes:
                 classeur.close()
