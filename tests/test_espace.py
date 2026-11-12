@@ -1044,3 +1044,32 @@ def test_repas_du_jour_lendemain_article_lie(tmp_path):
     lendemain = nourrir.nourrir_du_jour(mem, None, None, b, jour + datetime.timedelta(days=1))
     assert lendemain["source"] == "Wikipédia — Magnitude d'un séisme" and lendemain["resolue"]
     assert "lié depuis" in lendemain["article_lie"] and not mem.lacunes_ouvertes()
+
+
+def test_voix_fabriquee_apres_l_affichage(tmp_path, monkeypatch):
+    """En ligne, la page n'attend jamais la voix : elle est fabriquée en arrière-plan et lue à la relance suivante."""
+    import time
+    from streamlit.testing.v1 import AppTest
+    import ia_aissa.interface as I
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    monkeypatch.setattr(I, "SYNCHRONE", False)                                    # comme en ligne
+    monkeypatch.setattr(I, "_PANNE_VOIX", {"echecs": 0, "jusqu_a": 0.0})
+    I._VOIX_GARDEES.clear()
+
+    def lente(texte, langue):
+        time.sleep(2)
+        return b"ID3-voix"
+    monkeypatch.setattr(I, "synthetiser", lente)
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    debut = time.time()
+    at.chat_input[0].set_value("TVA sur 1000 dh").run()
+    parole = at.session_state["parole"]
+    assert parole.get("voix_jeton") and parole["audio"] is None and parole["nouveau"] is False   # pas encore lue
+    jeton = parole["voix_jeton"]
+    while not I._VOIX_EN_COURS[jeton]["fini"] and time.time() - debut < 20:
+        time.sleep(0.2)
+    assert I._VOIX_EN_COURS[jeton]["audio"] == b"ID3-voix"
+    at.run()                                                                       # la relance qui lit la voix
+    assert not at.exception
+    assert "voix_jeton" not in at.session_state["parole"] and jeton not in I._VOIX_EN_COURS
+    I._VOIX_GARDEES.clear()

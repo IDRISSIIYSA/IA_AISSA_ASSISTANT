@@ -54,7 +54,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [x] Repas du jour : quand l'article ne suffit pas à résoudre la lacune, essayer le lendemain un second article lié (liens internes de la page) avant de passer à une autre lacune — liens internes lus (formes « /wiki/ », « ./ » et adresse complète ; sans pages techniques ni homonymies), 5 gardés d'après les mots de la question (essai réel : « magnitude d'un séisme » → « Magnitude d'un séisme ») ; un par jour jusqu'à épuisement ; au passage, le repas ne ferme plus une lacune par simple ressemblance de mots (« Charles » + « Richter ») : seule la relecture décide
 - [x] Pensée propre : utiliser sa mémoire de lecture quand elle est sûre (réponse « Tokyo » tirée de l'article Japon) pour répondre sans appeler le grand moteur — sa pensée lit déjà ses lectures (confiance 0,95) et répond désormais avant le moteur ; réponses plus rapides (client du moteur paresseux, préchauffage, voix limitée au début et fabriquée en parallèle)
 
-- [ ] Voix : fabriquer la lecture à voix haute après l'affichage, dans une relance séparée, pour que la page ne l'attende jamais
+- [x] Voix : fabriquer la lecture à voix haute après l'affichage, dans une relance séparée, pour que la page ne l'attende jamais — la voix part dans un fil d'arrière-plan (jusqu'à 12 s) ; un fragment Streamlit vérifie chaque seconde et relance la page pour la lire dès qu'elle est prête ; la page n'attend plus les 4 s d'avant
 - [ ] Données marocaines : préférer, pour un même tableau, l'année la plus récente dans la réponse (l'ACAPS commence ses séries en 2012) et l'annoncer « dernier chiffre publié : … »
 - [ ] Données marocaines : demander à la DEPF et à l'Office des changes une autorisation écrite de réutilisation (préparer le modèle de courriel dans docs/) ; en attendant, seulement des liens
 - [ ] Données marocaines : un tableau du HCP par province n'a pas de ligne nationale dans ses 80 premières lignes ; lire la ligne « Total / National » même au-delà de la limite
@@ -95,6 +95,8 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Orientation : couvrir aussi le bulletin de paie, la TVA due, le seuil de rentabilité et l'amortissement par des pistes en darija
 - [ ] Bibliothèque : le comblement automatique des lacunes (combler_lacunes, seuil 0,3) ferme des lacunes sur une simple ressemblance de mots ; exiger aussi que la relecture trouve la réponse, partout
 - [ ] Repas du jour : afficher dans l'administration le chemin suivi pour une lacune (article, puis articles liés) et la raison de l'échec
+- [ ] Voix : petit indicateur « 🔊 la voix arrive… » sous l'alien pendant la fabrication
+- [ ] Voix : commencer à lire la première phrase dès qu'elle est prête, pendant que la suite se fabrique
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse

@@ -276,6 +276,47 @@ def _dire_mixte(texte, langue, attente=ATTENTE_VOIX_S, ecriture_arabe=None):
     return _dire(partie_dans_la_langue(texte, langue), langue, attente)
 
 
+_VOIX_EN_COURS = {}                # jeton → {"audio", "fini", "debut"} : voix fabriquées après l'affichage
+ATTENTE_MAX_VOIX_S = 12           # au-delà, la voix du navigateur lit la réponse
+
+
+def lancer_voix(texte, langue):
+    """Fabrique la voix dans un fil d'arrière-plan et renvoie son jeton (None en mode test : voix immédiate)."""
+    if SYNCHRONE:
+        return None
+    import threading
+    import uuid
+    jeton = uuid.uuid4().hex
+    _VOIX_EN_COURS[jeton] = {"audio": None, "fini": False, "debut": time.time()}
+
+    def fabriquer():
+        try:
+            _VOIX_EN_COURS[jeton]["audio"] = _dire_mixte(texte, langue, attente=ATTENTE_MAX_VOIX_S)
+        finally:
+            _VOIX_EN_COURS[jeton]["fini"] = True
+    threading.Thread(target=fabriquer, daemon=True, name="ia-aissa-voix").start()
+    for ancien in [j for j, v in _VOIX_EN_COURS.items() if time.time() - v["debut"] > 600]:
+        _VOIX_EN_COURS.pop(ancien, None)            # jetons oubliés (page fermée) : rien ne s'accumule
+    return jeton
+
+
+@st.fragment(run_every=1.0)
+def attendre_la_voix():
+    """Relance légère, chaque seconde, jusqu'à ce que la voix soit prête : alors la page se relance pour la lire
+    (ou, après ATTENTE_MAX_VOIX_S, pour laisser la voix du navigateur lire)."""
+    parole = st.session_state.get("parole") or {}
+    jeton = parole.get("voix_jeton")
+    if not jeton:
+        return
+    etat = _VOIX_EN_COURS.get(jeton)
+    if etat and not etat["fini"] and time.time() - etat["debut"] < ATTENTE_MAX_VOIX_S:
+        return
+    parole.update(audio=(etat or {}).get("audio"), nouveau=True)
+    parole.pop("voix_jeton", None)
+    _VOIX_EN_COURS.pop(jeton, None)
+    st.rerun()
+
+
 def ouvrir_conversation(utilisateur, conversation_id):
     lignes = memoire().messages_de(utilisateur, conversation_id) if conversation_id else []
     st.session_state["conversation_id"] = conversation_id
@@ -1269,17 +1310,16 @@ def espace_visiteur():
                    "meta": meta, "role_ia": role, "source": source}
         st.session_state["affichage"].append(message)
         afficher_message(message, len(st.session_state["affichage"]) - 1, r["voir_outils"])
-        voix = {}
-        if r["vocal"]:                  # la voix se fabrique pendant que l'échange est appris (en parallèle)
-            import threading
-            fil_voix = threading.Thread(target=lambda: voix.update(
-                audio=_dire_mixte(extrait_a_lire(reponse), langue)), daemon=True)   # chaque phrase dans sa langue
-            fil_voix.start()
         apprendre_de_l_echange(r, utilisateur, texte, reponse)
-        if r["vocal"]:
-            fil_voix.join(timeout=ATTENTE_VOIX_S + 1)   # au-delà, la voix du navigateur prend le relais
-        st.session_state["parole"] = {"texte": reponse, "audio": voix.get("audio"),
-                                      "voix": LANGUES[langue]["voix"], "nouveau": True, "etat": etat, "meta": meta}
+        parole = {"texte": reponse, "audio": None, "voix": LANGUES[langue]["voix"], "nouveau": True, "etat": etat,
+                  "meta": meta}
+        if r["vocal"]:                  # la voix se fabrique APRÈS l'affichage : la page ne l'attend jamais
+            jeton = lancer_voix(extrait_a_lire(reponse), langue)
+            if jeton:
+                parole.update(nouveau=False, voix_jeton=jeton)   # lue dès qu'elle est prête (relance séparée)
+            else:
+                parole["audio"] = _dire_mixte(extrait_a_lire(reponse), langue)   # tests : tout de suite
+        st.session_state["parole"] = parole
 
     parole = st.session_state["parole"]
     image, type_image = mem.media("avatar")
@@ -1290,3 +1330,5 @@ def espace_visiteur():
                          lecture_auto=parole.get("nouveau", False) and r["vocal"], etat=parole.get("etat", "normal"),
                          indicateur=parole.get("meta"), en_haut=not st.session_state["affichage"]), height=640)
     parole["nouveau"] = False
+    if parole.get("voix_jeton"):
+        attendre_la_voix()
