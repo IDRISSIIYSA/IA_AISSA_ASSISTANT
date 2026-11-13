@@ -104,7 +104,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Données marocaines : quand une autorisation écrite arrive, ajouter la source autorisée (conditions, date, données) et la lire au rythme convenu
 - [ ] Données marocaines : pour une question nationale, préférer le tableau qui a une ligne d'ensemble (« Taux de chômage selon le sexe », « Ensemble, Total ») à un tableau par province
 - [ ] Mémoire du serveur (à décider par Aissa) : borner la bibliothèque — oublier les passages lus seule sur le web, jamais utilisés pour répondre, après 60 jours (les livres et documents donnés par une personne ne sont jamais oubliés)
-- [ ] Index de lecture : ne plus garder les textes en mémoire (relus dans la base pour les seuls meilleurs résultats) : environ un tiers de mémoire en moins
+- [x] Index de lecture : ne plus garder les textes en mémoire (relus dans la base pour les seuls meilleurs résultats) : environ un tiers de mémoire en moins — pic mesuré pour 60 000 passages : 171 → 116 Mo (194 avant-hier), 30 ms par recherche, mêmes résultats
 - [ ] Données marocaines : comparer deux régions la même année (« chômage Casablanca contre Fès en 2025 ») à partir de deux lignes du même tableau
 
 ## Fait

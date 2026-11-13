@@ -1163,3 +1163,21 @@ def test_taches_de_fond_repoussees_apres_le_demarrage(monkeypatch):
     assert not partage.serveur_tout_juste_demarre()
     monkeypatch.setattr(chrono, "age_du_processus", lambda: None)            # âge inconnu : pas de délai
     assert not partage.serveur_tout_juste_demarre()
+
+
+def test_index_sans_textes_en_memoire_memes_resultats(tmp_path):
+    """Les textes ne restent pas dans l'index : relus dans la base pour les meilleurs résultats, mêmes réponses."""
+    from ia_aissa import lecture
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.garder_passages("IA AISSA", "Livre", ["La capitale du Japon est Tokyo, grande ville d'Asie.",
+                                               "Le Maroc a pour capitale Rabat, au bord de l'Atlantique.",
+                                               "La Koutoubia de Marrakech a été construite par les Almohades."])
+    lecture._INDEX.clear()
+    idx = lecture.index(mem)
+    assert idx.lecteur is not None and idx._textes == []                       # rien en mémoire
+    r = idx.chercher("capitale du Maroc", n=2)
+    assert "Rabat" in r[0]["texte"] and r[0]["mots_trouves"] > 0
+    assert "Rabat" in lecture.repondre_par_lecture("quelle est la capitale du Maroc", mem)["reponse"]
+    assert lecture.examen_lecture(mem, n=3)["questions"] >= 0
+    lecture._INDEX.clear()

@@ -373,6 +373,14 @@ class Memoire:
             for l in resultat:
                 yield l._mapping
 
+    def textes_passages(self, ids):
+        """{id: texte} pour les passages demandés (les meilleurs résultats d'une recherche)."""
+        if not ids:
+            return {}
+        with self.moteur.connect() as c:
+            return {l.id: l.texte for l in c.execute(select(passages.c.id, passages.c.texte)
+                                                      .where(passages.c.id.in_(list(ids))))}
+
     def compter_passages(self):
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(

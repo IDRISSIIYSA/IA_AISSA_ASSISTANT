@@ -60,12 +60,15 @@ class Index:
     a peu de mémoire). Les scores sont calculés d'un bloc avec numpy ; les mots retrouvés ne sont recomptés que pour
     les meilleurs passages."""
 
-    def __init__(self, lignes, k1=1.4, b=0.75):
+    def __init__(self, lignes, k1=1.4, b=0.75, lecteur=None):
+        """lecteur(ids) → {id: texte} : les textes ne restent pas en mémoire, ils sont relus dans la base pour les
+        seuls meilleurs résultats d'une recherche (environ un tiers de mémoire en moins). Sans lecteur (tests,
+        petites listes), les textes sont gardés."""
         import numpy as np
         import time as _time
         self.k1, self.b = k1, b
         self.champs = ("id", "utilisateur", "source", "numero")
-        self.meta, self.textes = [], []
+        self.meta, self._textes, self.lecteur = [], [], lecteur
         noms = {}                                          # une seule copie de chaque source et de chaque utilisateur
         postings = collections.defaultdict(lambda: (array("I"), array("H")))
         longueurs = array("I")
@@ -73,7 +76,8 @@ class Index:
             texte = l["texte"]
             self.meta.append((l["id"], noms.setdefault(l["utilisateur"], l["utilisateur"]),
                               noms.setdefault(l["source"], l["source"]), l["numero"]))
-            self.textes.append(texte)
+            if lecteur is None:
+                self._textes.append(texte)
             if i % 500 == 499:
                 _time.sleep(0)                             # laisse respirer la page pendant une longue construction
             compte = collections.Counter(jetons(texte))
@@ -82,7 +86,7 @@ class Index:
                 ids, tfs = postings[t]
                 ids.append(i)
                 tfs.append(min(f, 65535))
-        n = len(self.textes)
+        n = len(self.meta)
         self.longueurs = np.frombuffer(longueurs, dtype=np.uint32).astype(np.float32) if n else np.zeros(0, np.float32)
         self.moyenne = float(self.longueurs.mean()) if n else 0.0
         self.postings = {t: (np.frombuffer(ids, dtype=np.uint32), np.frombuffer(tfs, dtype=np.uint16))
@@ -90,14 +94,21 @@ class Index:
         self.idf = {t: math.log(1 + (n - len(ids) + .5) / (len(ids) + .5)) for t, (ids, _) in self.postings.items()}
 
     def __len__(self):
-        return len(self.textes)
+        return len(self.meta)
+
+    def textes_de(self, indices):
+        """Les textes des passages demandés (positions dans l'index), relus dans la base au besoin."""
+        if self.lecteur is None:
+            return {i: self._textes[i] for i in indices}
+        lus = self.lecteur([self.meta[i][0] for i in indices])
+        return {i: lus.get(self.meta[i][0], "") for i in indices}
 
     def chercher(self, question, n=5):
         import numpy as np
         q = [t for t in set(jetons(question)) if t in self.idf]
-        if not q or not self.textes:
+        if not q or not self.meta:
             return []
-        scores = np.zeros(len(self.textes), dtype=np.float32)
+        scores = np.zeros(len(self.meta), dtype=np.float32)
         normes = self.k1 * (1 - self.b + self.b * self.longueurs / max(self.moyenne, 1e-9))
         for t in q:
             ids, tfs = self.postings[t]
@@ -108,10 +119,11 @@ class Index:
         maximum = sum(self.idf[t] for t in q) * (self.k1 + 1) or 1
         entiers = [t for t in q if not t.startswith("<")]
         resultats = []
+        textes = self.textes_de([int(i) for i in meilleurs])
         for i in meilleurs:
-            presents = set(jetons(self.textes[i]))
+            presents = set(jetons(textes[int(i)]))
             s = float(scores[i])
-            resultats.append({**dict(zip(self.champs, self.meta[i])), "texte": self.textes[i], "score": round(s, 3),
+            resultats.append({**dict(zip(self.champs, self.meta[i])), "texte": textes[int(i)], "score": round(s, 3),
                               "couverture": round(s / maximum, 3),
                               "mots_trouves": sum(1 for t in q if t in presents) / max(1, len(q)),
                               "mots_entiers": sum(1 for t in entiers if t in presents),
@@ -130,7 +142,8 @@ def index(memoire, utilisateur=None):
     if _INDEX.get("signature") != signature:
         flux = memoire.iter_passages(visibles) if hasattr(memoire, "iter_passages") else memoire.passages(visibles)
         _INDEX.update(signature=signature, index=None)     # l'ancien index est libéré avant d'en bâtir un nouveau
-        _INDEX.update(signature=signature, index=Index(flux))
+        lecteur = memoire.textes_passages if hasattr(memoire, "textes_passages") else None
+        _INDEX.update(signature=signature, index=Index(flux, lecteur=lecteur))
     return _INDEX["index"]
 
 
@@ -254,7 +267,7 @@ def examen_lecture(memoire, n=20, rng=None):
     retrouves = mots_ok = 0
     exemples = []
     for i in rng.sample(range(len(idx)), min(n, len(idx))):
-        ligne = {**dict(zip(idx.champs, idx.meta[i])), "texte": idx.textes[i]}
+        ligne = {**dict(zip(idx.champs, idx.meta[i])), "texte": idx.textes_de([i])[i]}
         phrases = [p for p in re.split(r"(?<=[.;!?])\s+", ligne["texte"]) if len(p.split()) >= 8]
         if not phrases:
             continue
