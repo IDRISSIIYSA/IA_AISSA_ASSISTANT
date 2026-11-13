@@ -110,6 +110,18 @@ def etat_memoire(st_):
                     f"à chaque redémarrage de l'application.\n\n{AIDE_MEMOIRE}")
 
 
+DELAI_TACHES_S = 300      # tâches de fond repoussées après le démarrage : la première page passe d'abord
+
+
+def serveur_tout_juste_demarre():
+    """Vrai pendant les DELAI_TACHES_S premières secondes du serveur : au démarrage (réveil, nouvelle version), la page,
+    le préchauffage et les tâches de fond se disputaient le processeur et la mémoire du petit serveur gratuit (site en
+    erreur 502 plusieurs fois). Les tâches de fond attendent la première visite qui suit ce délai."""
+    from .chrono import age_du_processus
+    age = age_du_processus()
+    return age is not None and age < DELAI_TACHES_S
+
+
 def broutage_autonome():
     """Démarre le broutage autonome d'IA AISSA (un travailleur par serveur), avec le grand moteur si une clé API de
     l'application existe, sinon seule (rumination locale) ; appelé régulièrement, il ne démarre qu'une fois.
@@ -117,6 +129,8 @@ def broutage_autonome():
     from .assistant import MOTEURS, client_moteur
     from .broutage import ETAT, demarrer
     if str(secret("BROUTAGE_AUTONOME") or "oui").lower() in ("non", "false", "0") or os.environ.get("IA_AISSA_TESTS"):
+        return ETAT
+    if serveur_tout_juste_demarre():
         return ETAT
     moteur = next((m for m, c in MOTEURS.items() if secret(c["secret"]) and not c.get("local")), None)
     par_jour = int(secret("BROUTAGE_PAR_JOUR") or 6)
@@ -131,6 +145,8 @@ def repas_du_jour():
     qui répond à une de ses lacunes (au plus un appel au grand moteur par jour). Secret facultatif :
     REPAS_DU_JOUR = "non" pour l'arrêter."""
     if os.environ.get("IA_AISSA_TESTS") or str(secret("REPAS_DU_JOUR") or "oui").lower() in ("non", "false", "0"):
+        return False
+    if serveur_tout_juste_demarre():
         return False
     from .assistant import MOTEURS, client_moteur
     from .nourrir import nourrir_en_arriere_plan

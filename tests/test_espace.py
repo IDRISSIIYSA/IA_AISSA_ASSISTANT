@@ -1145,3 +1145,21 @@ def test_donnees_maroc_comparer_deux_annees(tmp_path):
     mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
     mem.garder_passages("IA AISSA", "HCP — Chômage", [ligne])
     assert "-0,4 point(s)" in repondre_par_lecture("taux de chômage total 2024 contre 2025", mem)["reponse"]
+
+
+def test_taches_de_fond_repoussees_apres_le_demarrage(monkeypatch):
+    """Au démarrage du serveur, ni travailleur autonome ni repas du jour : la première page passe d'abord."""
+    from ia_aissa import chrono, partage
+    monkeypatch.delenv("IA_AISSA_TESTS", raising=False)
+    monkeypatch.setattr(chrono, "age_du_processus", lambda: 12.0)              # serveur démarré il y a 12 s
+    appels = []
+    monkeypatch.setattr("ia_aissa.nourrir.nourrir_en_arriere_plan", lambda *a, **k: appels.append("repas") or True)
+    monkeypatch.setattr("ia_aissa.broutage.demarrer", lambda *a, **k: appels.append("broutage") or {})
+    assert partage.serveur_tout_juste_demarre()
+    assert partage.repas_du_jour() is False
+    partage.broutage_autonome()
+    assert appels == []
+    monkeypatch.setattr(chrono, "age_du_processus", lambda: partage.DELAI_TACHES_S + 1.0)
+    assert not partage.serveur_tout_juste_demarre()
+    monkeypatch.setattr(chrono, "age_du_processus", lambda: None)            # âge inconnu : pas de délai
+    assert not partage.serveur_tout_juste_demarre()
