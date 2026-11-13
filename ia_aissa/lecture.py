@@ -166,6 +166,34 @@ def agregation(texte):
     return sum(m in ENSEMBLES for m in mots) / len(mots) if mots else 0.0
 
 
+_VALEUR_DATEE = re.compile(r"(-?\d[\d   ]*(?:,\d+)?) \(((?:T[1-4]-)?(?:19|20)\d\d)\)")
+
+
+def comparaison_annees(texte, question):
+    """« chômage 2024 contre 2025 » : l'écart entre les deux années, calculé sur la ligne de tableau trouvée
+    (en points pour un pourcentage). Une année absente du tableau est dite, rien n'est inventé."""
+    annees = list(dict.fromkeys(re.findall(r"(?<![\d.,])((?:19|20)\d\d)(?![\d.,])", question)))
+    if len(annees) != 2:
+        return ""
+    valeurs = {}
+    for brut, periode in _VALEUR_DATEE.findall(texte):
+        annee = periode[-4:]
+        if annee not in valeurs or not periode.startswith("T"):     # l'année entière avant un trimestre
+            valeurs[annee] = (float(re.sub(r"[   ]", "", brut).replace(",", ".")), periode)
+    a, b = sorted(annees)
+    manquantes = [x for x in (a, b) if x not in valeurs]
+    if manquantes:
+        return f" _(pas de valeur pour {' ni '.join(manquantes)} dans ce tableau : je ne compare pas)_"
+    (va, pa), (vb, pb) = valeurs[a], valeurs[b]
+    ecart = vb - va
+    nombre = lambda v: f"{v:+,.2f}".replace(",", " ").replace(".", ",").rstrip("0").rstrip(",")
+    if re.search(r"%|pourcentage|taux", texte, re.I):
+        detail = f"{nombre(ecart)} point(s)"
+    else:
+        detail = nombre(ecart) + (f" ({nombre(100 * ecart / va)} %)" if va else "")
+    return f" → **de {pa} à {pb} : {detail}**"
+
+
 def avertissement_partiel(texte, question):
     """Une ligne de tableau sur une seule région ou catégorie que la question ne nomme pas : le dire, pour qu'un
     chiffre de Taza ne passe pas pour le chiffre national."""
@@ -207,7 +235,8 @@ def repondre_par_lecture(question, memoire, utilisateur=None, n=6, strict=False)
         par_source = datees
     choisis = sorted(par_source.values(), key=lambda r: r["source"])[:n] if len(par_source) > 1 else list(par_source.values())
     lignes = [f"**{r['source']}** (passage {r['numero'] + 1}) : « {' '.join(phrases_utiles(r['texte'], question))} »"
-              + avertissement_partiel(r["texte"], question) for r in choisis]
+              + comparaison_annees(r["texte"], question) + avertissement_partiel(r["texte"], question)
+              for r in choisis]
     confiance = round(min(0.95, max(r["mots_trouves"] for r in choisis)), 3)
     return {"reponse": "\n\n".join(lignes), "sources": [r["source"] for r in choisis], "confiance": confiance}
 

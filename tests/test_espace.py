@@ -1128,3 +1128,20 @@ def test_donnees_maroc_ligne_d_ensemble_au_dela_de_la_limite_et_avertissement(tm
         "HCP — Taux de chômage par province — National, Fès : dernier chiffre publié : 15 (2025)."])
     reponse = repondre_par_lecture("taux de chômage par province", mem)["reponse"]
     assert "attention : ce chiffre ne concerne que" in reponse
+
+
+def test_donnees_maroc_comparer_deux_annees(tmp_path):
+    """« chômage 2024 contre 2025 » : l'écart calculé sur la ligne trouvée (points pour un taux) ; année absente : dit."""
+    from ia_aissa.lecture import comparaison_annees, repondre_par_lecture
+    from ia_aissa.memoire import Memoire
+    ligne = ("HCP — Taux de chômage (POURCENTAGE) — Ensemble, Total : dernier chiffre publié : 12,9 (2025) ; "
+             "avant : 13,3 (2024) ; 13 (2023).")
+    assert comparaison_annees(ligne, "chômage 2024 contre 2025") == " → **de 2024 à 2025 : -0,4 point(s)**"
+    assert "pas de valeur pour 2019" in comparaison_annees(ligne, "chômage 2019 et 2025")
+    assert comparaison_annees(ligne, "chômage en 2025") == ""
+    assert comparaison_annees("CNSS — Masse salariale — Total : dernier chiffre publié : 1 200 000 (2023) ; "
+                              "avant : 1 000 000 (2022).", "masse salariale 2022 vs 2023") == \
+        " → **de 2022 à 2023 : +200 000 (+20 %)**"
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.garder_passages("IA AISSA", "HCP — Chômage", [ligne])
+    assert "-0,4 point(s)" in repondre_par_lecture("taux de chômage total 2024 contre 2025", mem)["reponse"]
