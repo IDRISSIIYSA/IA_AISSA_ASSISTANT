@@ -174,6 +174,7 @@ def analyser_controle(nom, contenu, n_episodes=None):
                   .assign(ecart_pct=lambda d: (d["reel"] - d["budget"]) / d["budget"]).sort_values("ecart_pct"))
     pire = par_centre.index[-1]
     previsions = cg.prevoir(df)
+    trimestre = cg.prevoir_trimestre(df)
     montant = lambda v: f"{v:,.0f}".replace(",", " ")
     resume = (f"Fichier « {nom} » : {df['centre'].nunique()} centre(s), {df['periode'].nunique()} période(s). "
               f"Budget {montant(budget)}, réalisé {montant(reel)}, écart global {(reel - budget) / budget:+.1%}. "
@@ -197,6 +198,8 @@ def analyser_controle(nom, contenu, n_episodes=None):
         {"type": "liste", "titre": "📜 Principes découverts par IA AISSA", "lignes": principes},
         {"type": "tableau", "titre": "🔮 Prévision du réalisé de la période suivante (intervalle de confiance 95 %)",
          "donnees": previsions},
+        {"type": "tableau", "titre": "📆 Prévision du trimestre (3 périodes, intervalle qui s'élargit à chaque pas ; "
+                                     "méthode choisie d'après l'erreur rejouée sur le passé)", "donnees": trimestre},
         {"type": "liste", "titre": "🔧 Montage des données brutes", "lignes": rapport},
         {"type": "tableau", "titre": "🚨 Alertes et décisions dont je doute",
          "donnees": lisible[(df["decision_ia"] == cg.ACTIONS[0]) | (df["statut"] != cg.STATUTS["sur"])]

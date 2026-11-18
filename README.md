@@ -219,6 +219,8 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
   couverture réelle est mesurée en rejouant le passé (chaque période prévue avec les seules données d'avant) : sur
   les données d'exemple, 80 à 87 % ; l'intervalle est alors élargi d'après les erreurs constatées, et la colonne
   « couverture_reelle » le dit. Un incident imprévisible reste imprévisible.
+- **Prévision du trimestre** : les 3 périodes suivantes, avec un intervalle qui s'élargit à chaque pas ; pour chaque
+  centre, la méthode (tendance des 12 dernières périodes ou droite sur tout l'historique) qui a le moins erré sur son passé.
 
 ## Penser avec son propre cerveau (`ia_aissa/pensee.py`)
 

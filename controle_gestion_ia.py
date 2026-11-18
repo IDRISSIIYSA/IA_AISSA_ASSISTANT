@@ -87,9 +87,10 @@ FENETRE_TENDANCE = 12          # la tendance suit les 12 dernières périodes : 
 MIN_HISTOIRE_TEST = 6          # périodes minimum avant de rejouer une prévision pour mesurer la couverture
 
 
-def prevision_un_pas(y, z=1.96, fenetre=FENETRE_TENDANCE):
-    """Prévision de la valeur suivante de la série y et marge de l'intervalle : saisonnalité mensuelle estimée sur tout
-    l'historique (dès 24 périodes), tendance linéaire sur les `fenetre` dernières périodes désaisonnalisées."""
+def prevision_un_pas(y, z=1.96, fenetre=FENETRE_TENDANCE, pas=1):
+    """Prévision de la valeur à `pas` périodes d'avance (1 = la suivante) et marge de l'intervalle : saisonnalité
+    mensuelle estimée sur tout l'historique (dès 24 périodes), tendance linéaire sur les `fenetre` dernières périodes
+    désaisonnalisées. La marge s'élargit avec le pas (incertitude sur la pente)."""
     y = np.asarray(y, dtype=float)
     n = len(y)
     t = np.arange(n, dtype=float)
@@ -104,9 +105,48 @@ def prevision_un_pas(y, z=1.96, fenetre=FENETRE_TENDANCE):
     pente, origine = np.polyfit(tw, yw, 1)
     residus = yw - (origine + pente * tw)
     ecart_type = float(np.sqrt((residus ** 2).sum() / max(1, w - 2)))
-    prevision = origine + pente * n + saison[n % 12]
-    marge = z * ecart_type * np.sqrt(1 + 1 / w + (n - tw.mean()) ** 2 / max(1e-9, ((tw - tw.mean()) ** 2).sum()))
+    cible = n - 1 + pas
+    prevision = origine + pente * cible + saison[cible % 12]
+    marge = z * ecart_type * np.sqrt(1 + 1 / w + (cible - tw.mean()) ** 2 / max(1e-9, ((tw - tw.mean()) ** 2).sum()))
     return float(prevision), float(marge)
+
+
+def erreurs_rejouees(y, debut=MIN_HISTOIRE_TEST):
+    """Erreur absolue moyenne, en rejouant le passé, de la tendance récente (12 périodes) et de la droite sur tout
+    l'historique : laquelle prévoit le mieux cette série ? Renvoie (erreur récente, erreur tout l'historique, essais)."""
+    y = np.asarray(y, dtype=float)
+    recentes, globales = [], []
+    for k in range(debut, len(y)):
+        recentes.append(abs(y[k] - prevision_un_pas(y[:k])[0]))
+        globales.append(abs(y[k] - prevision_un_pas(y[:k], fenetre=k)[0]))
+    if not recentes:
+        return None, None, 0
+    return float(np.mean(recentes)), float(np.mean(globales)), len(recentes)
+
+
+def prevoir_trimestre(df, z=1.96, horizon=3):
+    """Les `horizon` périodes suivantes par centre (intervalle qui s'élargit à chaque pas), et la méthode qui a le
+    moins erré sur le passé."""
+    lignes = []
+    for centre, groupe in df.sort_values("periode").groupby("centre"):
+        y = groupe["reel"].to_numpy(dtype=float)
+        if len(y) < 3:
+            continue
+        try:
+            derniere = pd.Period(str(groupe["periode"].iloc[-1]), freq="M")
+        except (ValueError, TypeError):
+            derniere = None
+        recente, globale, essais = erreurs_rejouees(y)
+        meilleure = ("—" if not essais else "tendance récente (12 périodes)" if recente <= globale
+                     else "droite sur tout l'historique")
+        fenetre = len(y) if meilleure.startswith("droite") else FENETRE_TENDANCE   # la méthode qui a le moins erré
+        for h in range(1, horizon + 1):
+            prevision, marge = prevision_un_pas(y, z, fenetre=fenetre, pas=h)
+            lignes.append((str(derniere + h) if derniere is not None else f"+{h}", centre, h, round(prevision, 2),
+                           round(prevision - marge, 2), round(prevision + marge, 2),
+                           round(recente, 2) if essais else None, round(globale, 2) if essais else None, meilleure))
+    return pd.DataFrame(lignes, columns=["periode", "centre", "pas", "prevision", "bas_95", "haut_95",
+                                         "erreur_recente", "erreur_historique", "meilleure_methode"])
 
 
 def couverture_reelle(y, z=1.96):

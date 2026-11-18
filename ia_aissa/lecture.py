@@ -200,7 +200,9 @@ def comparaison_annees(texte, question):
     (va, pa), (vb, pb) = valeurs[a], valeurs[b]
     ecart = vb - va
     nombre = lambda v: f"{v:+,.2f}".replace(",", " ").replace(".", ",").rstrip("0").rstrip(",")
-    if re.search(r"%|pourcentage|taux", texte, re.I):
+    if abs(ecart) < 1e-9:
+        detail = "stable (même valeur)"
+    elif re.search(r"%|pourcentage|taux", texte, re.I):
         detail = f"{nombre(ecart)} point(s)"
     else:
         detail = nombre(ecart) + (f" ({nombre(100 * ecart / va)} %)" if va else "")

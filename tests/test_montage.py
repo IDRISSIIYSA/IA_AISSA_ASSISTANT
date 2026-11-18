@@ -129,3 +129,28 @@ def test_prevision_robuste_aux_derives_et_couverture_mesuree():
     large = cg.prevoir(pd.DataFrame({"periode": [str(x) for x in pd.period_range("2023-01", periods=40, freq="M")],
                                      "centre": "Rupture", "reel": ruptures}))
     assert "élargi" in large["couverture_reelle"].iloc[0]
+
+
+def test_prevision_du_trimestre_et_methode_qui_erre_le_moins():
+    """Trois périodes d'avance, intervalle qui s'élargit ; la tendance récente gagne sur une série qui dérive,
+    la droite sur tout l'historique sur une série stable bruitée."""
+    import numpy as np
+    import pandas as pd
+    import controle_gestion_ia as cg
+    rng = np.random.default_rng(1)
+    periodes = [str(p) for p in pd.period_range("2023-01", periods=36, freq="M")]
+    stable = 100_000 + rng.normal(0, 3_000, 36)
+    derive = 100_000 + rng.normal(0, 1_000, 36)
+    derive[24:] += np.arange(1, 13) * 5_000
+    df = pd.DataFrame({"periode": periodes * 2, "centre": ["Stable"] * 36 + ["Dérive"] * 36,
+                       "reel": np.concatenate([stable, derive])})
+    t = cg.prevoir_trimestre(df)
+    d = t[t["centre"] == "Dérive"].sort_values("pas")
+    assert list(d["periode"]) == ["2026-01", "2026-02", "2026-03"] and list(d["pas"]) == [1, 2, 3]
+    largeurs = (d["haut_95"] - d["bas_95"]).tolist()
+    assert largeurs[0] < largeurs[1] < largeurs[2]                         # l'incertitude grandit à chaque pas
+    assert d["meilleure_methode"].iloc[0].startswith("tendance récente") and d["prevision"].iloc[2] > d["prevision"].iloc[0]
+    s = t[t["centre"] == "Stable"].iloc[0]
+    assert s["erreur_historique"] <= s["erreur_recente"] and s["meilleure_methode"].startswith("droite")
+    recente, globale, essais = cg.erreurs_rejouees(derive)
+    assert essais == 30 and recente < globale
