@@ -175,6 +175,7 @@ def analyser_controle(nom, contenu, n_episodes=None):
     pire = par_centre.index[-1]
     previsions = cg.prevoir(df)
     trimestre = cg.prevoir_trimestre(df)
+    sauts = cg.ruptures(df)
     montant = lambda v: f"{v:,.0f}".replace(",", " ")
     resume = (f"Fichier « {nom} » : {df['centre'].nunique()} centre(s), {df['periode'].nunique()} période(s). "
               f"Budget {montant(budget)}, réalisé {montant(reel)}, écart global {(reel - budget) / budget:+.1%}. "
@@ -188,6 +189,9 @@ def analyser_controle(nom, contenu, n_episodes=None):
                              for p in previsions.itertuples()) + ". Tendance tirée des 12 dernières périodes ; "
                  "couverture réelle de l'intervalle, mesurée en rejouant le passé : "
                  + ", ".join(f"{p.centre} {p.couverture_reelle}" for p in previsions.itertuples()) + "."))
+    if len(sauts):                     # un changement brutal de niveau mérite d'être dit en clair
+        resume += " Rupture de niveau : " + ", ".join(
+            f"{r.centre} à partir de {r.a_partir_de} ({r.variation})" for r in sauts.itertuples()) + "."
     elements = [
         {"type": "metriques", "valeurs": [("Budget", f"{budget:,.0f}".replace(",", " ")),
                                          ("Réalisé", f"{reel:,.0f}".replace(",", " ")),
@@ -200,6 +204,8 @@ def analyser_controle(nom, contenu, n_episodes=None):
          "donnees": previsions},
         {"type": "tableau", "titre": "📆 Prévision du trimestre (3 périodes, intervalle qui s'élargit à chaque pas ; "
                                      "méthode choisie d'après l'erreur rejouée sur le passé)", "donnees": trimestre},
+        *([{"type": "tableau", "titre": "⚡ Ruptures de niveau (changement brutal et durable, avec sa période)",
+            "donnees": sauts}] if len(sauts) else []),
         {"type": "liste", "titre": "🔧 Montage des données brutes", "lignes": rapport},
         {"type": "tableau", "titre": "🚨 Alertes et décisions dont je doute",
          "donnees": lisible[(df["decision_ia"] == cg.ACTIONS[0]) | (df["statut"] != cg.STATUTS["sur"])]

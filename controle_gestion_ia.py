@@ -124,6 +124,63 @@ def erreurs_rejouees(y, debut=MIN_HISTOIRE_TEST):
     return float(np.mean(recentes)), float(np.mean(globales)), len(recentes)
 
 
+SEUIL_RUPTURE_T = 5.0          # écart entre les deux niveaux, en erreurs types : au-dessous, c'est du bruit
+SEUIL_RUPTURE_PART = 0.10      # et au moins 10 % de changement de niveau
+SEGMENT_MIN = 4                # chaque côté de la rupture dure au moins 4 périodes
+
+
+def detecter_rupture(y):
+    """Le changement brutal de niveau le plus net d'une série : (indice de la première période du nouveau niveau,
+    niveau avant, niveau après, statistique t) ou None. Une dérive lente (pente régulière) n'est pas une rupture :
+    la série est d'abord redressée de sa tendance, puis on cherche le point qui sépare le mieux deux niveaux."""
+    y = np.asarray(y, dtype=float)
+    n = len(y)
+    if n < 2 * SEGMENT_MIN:
+        return None
+    if n >= 24:                                            # la saisonnalité n'est pas une rupture
+        t = np.arange(n, dtype=float)
+        pente, origine = np.polyfit(t, y, 1)
+        residus = y - (origine + pente * t)
+        y = y - np.array([residus[t % 12 == m].mean() for m in range(12)])[t.astype(int) % 12]
+    meilleure = None
+    for k in range(SEGMENT_MIN, n - SEGMENT_MIN + 1):
+        a, b = y[:k], y[k:]
+        residus = np.concatenate([a - a.mean(), b - b.mean()])
+        sd = float(np.sqrt((residus ** 2).sum() / max(1, n - 2)))
+        t_stat = abs(b.mean() - a.mean()) / (sd * np.sqrt(1 / len(a) + 1 / len(b))) if sd > 0 else float("inf")
+        # une dérive lente donne aussi un écart de niveaux : on exige que chaque côté soit plat (pas de pente forte)
+        pentes = [abs(np.polyfit(np.arange(len(c)), c, 1)[0]) * len(c) for c in (a, b)]
+        if max(pentes) > 0.5 * abs(b.mean() - a.mean()):
+            continue
+        # brutal : autour du point, 3 périodes avant / 3 après portent l'essentiel du changement (pas un coude)
+        if abs(y[k:k + 3].mean() - y[k - 3:k].mean()) < 0.6 * abs(b.mean() - a.mean()):
+            continue
+        if meilleure is None or t_stat > meilleure[3]:
+            meilleure = (k, float(a.mean()), float(b.mean()), float(t_stat))
+    if meilleure is None:
+        return None
+    k, avant, apres, t_stat = meilleure
+    if t_stat < SEUIL_RUPTURE_T or abs(apres - avant) < SEUIL_RUPTURE_PART * max(abs(avant), 1e-9):
+        return None
+    return meilleure
+
+
+def ruptures(df):
+    """Les ruptures de niveau de chaque centre, avec la période où elles ont eu lieu."""
+    lignes = []
+    for centre, groupe in df.sort_values("periode").groupby("centre"):
+        y = groupe["reel"].to_numpy(dtype=float)
+        r = detecter_rupture(y)
+        if r:
+            k, avant, apres, t_stat = r
+            lignes.append({"centre": centre, "a_partir_de": str(groupe["periode"].iloc[k]),
+                           "niveau_avant": round(avant, 2), "niveau_apres": round(apres, 2),
+                           "variation": f"{(apres - avant) / avant:+.0%}" if avant else "—",
+                           "nettete": round(t_stat, 1)})
+    return pd.DataFrame(lignes, columns=["centre", "a_partir_de", "niveau_avant", "niveau_apres", "variation",
+                                         "nettete"])
+
+
 def prevoir_trimestre(df, z=1.96, horizon=3):
     """Les `horizon` périodes suivantes par centre (intervalle qui s'élargit à chaque pas), et la méthode qui a le
     moins erré sur le passé."""

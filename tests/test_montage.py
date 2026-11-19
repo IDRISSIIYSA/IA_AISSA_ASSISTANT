@@ -154,3 +154,21 @@ def test_prevision_du_trimestre_et_methode_qui_erre_le_moins():
     assert s["erreur_historique"] <= s["erreur_recente"] and s["meilleure_methode"].startswith("droite")
     recente, globale, essais = cg.erreurs_rejouees(derive)
     assert essais == 30 and recente < globale
+
+
+def test_rupture_de_niveau_signalee_avec_sa_periode():
+    """Un saut brutal et durable est signalé avec sa période ; une dérive lente, un coude ou du bruit ne le sont pas."""
+    import numpy as np
+    import pandas as pd
+    import controle_gestion_ia as cg
+    r = np.random.default_rng(0)
+    saut = np.r_[np.full(20, 100.0), np.full(16, 130.0)] + r.normal(0, 3, 36)
+    assert cg.detecter_rupture(saut)[0] == 20
+    assert cg.detecter_rupture(100 + np.arange(36) * 2 + r.normal(0, 3, 36)) is None        # pente régulière
+    assert cg.detecter_rupture(np.r_[np.full(18, 100.0), 100 + np.arange(1, 19) * 2.0] + r.normal(0, 2, 36)) is None
+    assert cg.detecter_rupture(100 + r.normal(0, 5, 36)) is None                            # bruit
+    assert cg.ruptures(cg.preparer(cg.generer_donnees_exemple(36))).empty                   # ni saison ni dérive
+    periodes = [str(p) for p in pd.period_range("2023-01", periods=36, freq="M")]
+    df = pd.DataFrame({"periode": periodes, "centre": "Usine", "reel": saut})
+    t = cg.ruptures(df)
+    assert t.iloc[0]["a_partir_de"] == "2024-09" and t.iloc[0]["variation"] == "+30%"

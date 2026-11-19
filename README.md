@@ -221,6 +221,8 @@ L'agent de contrôle de gestion ne se contente plus de décider : il sait quand 
   « couverture_reelle » le dit. Un incident imprévisible reste imprévisible.
 - **Prévision du trimestre** : les 3 périodes suivantes, avec un intervalle qui s'élargit à chaque pas ; pour chaque
   centre, la méthode (tendance des 12 dernières périodes ou droite sur tout l'historique) qui a le moins erré sur son passé.
+- **Ruptures de niveau** : un changement brutal et durable (pas une dérive lente ni la saisonnalité) est signalé avec
+  la période où il a commencé, le niveau avant et après.
 
 ## Penser avec son propre cerveau (`ia_aissa/pensee.py`)
 
