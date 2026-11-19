@@ -732,7 +732,8 @@ def afficher_element(e, cle):
                   args=(e["nom"], MODES[1]), type="primary")
     elif t == "atelier" and e.get("suivi"):
         utilisateur = st.session_state.get("utilisateur", "Aissa")
-        essai = atelier_suivi(st, e["phrase"], LANGUES[e["langue"]]["voix"], e.get("sens", ""), cle=f"atelier{cle}")
+        essai = atelier_suivi(st, e["phrase"], LANGUES[e["langue"]]["voix"], e.get("sens", ""), cle=f"atelier{cle}",
+                              arabe=e.get("arabe"))
         if e.get("arabe"):
             st.markdown(f"<div dir='rtl' lang='ar' style='font-size:1.35rem;text-align:right'>✍️ {e['arabe']}</div>",
                         unsafe_allow_html=True)
@@ -745,6 +746,11 @@ def afficher_element(e, cle):
             delta = f"{sum(recents) / len(recents) - sum(avant) / len(avant):+.0f}" if avant else None
             st.metric(f"Ma prononciation en {e['langue']} (moyenne des 5 derniers essais)",
                       f"{sum(recents) / len(recents):.0f} / 100", delta=delta)
+            from .voix import comparer_ecritures
+            par_ecriture = comparer_ecritures(essais)
+            if len(par_ecriture) > 1:              # les deux écritures ont été lues : on les compare
+                st.caption("Selon l'écriture lue : " + " · ".join(
+                    f"{k} {m}/100 ({n} essai{'s' if n > 1 else ''})" for k, (m, n) in sorted(par_ecriture.items())))
             if len(scores) > 1:
                 st.line_chart(pd.DataFrame({"Score": scores}, index=pd.RangeIndex(1, len(scores) + 1, name="Essai")),
                               y_label="Score / 100")

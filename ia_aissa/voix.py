@@ -107,6 +107,7 @@ export default function(component) {
   parentElement.innerHTML = `<style>__CSS__</style>
     <div class="atelier">
       <div class="phrase">« ${cible.replace(/</g, '&lt;')} »</div>
+      ${data.arabe ? `<div class="phrase" dir="rtl" lang="ar">« ${data.arabe.replace(/</g, '&lt;')} »</div>` : ''}
       ${data.sens ? `<div class="sens">${data.sens.replace(/</g, '&lt;')}</div>` : ''}
       <button class="principal" data-v="0.9">🔊 IA AISSA prononce</button>
       <button data-v="0.6">🐢 Lentement</button>
@@ -130,12 +131,19 @@ export default function(component) {
     if (!R) { zone.textContent = "La reconnaissance vocale n'est pas disponible dans ce navigateur (utilisez Chrome ou Edge)."; return; }
     const rec = new R(); rec.lang = VOIX; rec.maxAlternatives = 1; zone.textContent = '🎙️ Je vous écoute…';
     rec.onresult = e => {
-      const dit = e.results[0][0].transcript, a = normaliser(cible).join(' '), b = normaliser(dit).join(' ');
-      const score = Math.max(0, Math.round(100 * (1 - distance(a, b) / Math.max(a.length, b.length, 1))));
+      const dit = e.results[0][0].transcript, b = normaliser(dit).join(' ');
+      const noter = t => { const a = normaliser(t).join(' ');
+        return Math.max(0, Math.round(100 * (1 - distance(a, b) / Math.max(a.length, b.length, 1)))); };
+      // le darija est transcrit en écriture arabe (ar-MA) : on note contre les deux écritures, la meilleure compte
+      const scoreLatin = noter(cible), scoreArabe = data.arabe ? noter(data.arabe) : -1;
+      const ecriture = scoreArabe > scoreLatin ? 'arabe' : 'latine';
+      const score = Math.max(scoreLatin, scoreArabe), modele = ecriture === 'arabe' ? data.arabe : cible;
       const entendus = new Set(normaliser(dit));
-      zone.innerHTML = `<div class="score">Prononciation : ${score} / 100</div><div>Entendu : « ${dit.replace(/</g, '&lt;')} »</div>
-        <div>${normaliser(cible).map(m => `<span class="${entendus.has(m) ? 'ok' : 'ko'}">${m}</span>`).join(' ')}</div>`;
-      setTriggerValue('score', {score, dit, phrase: cible, quand: Date.now()});
+      zone.innerHTML = `<div class="score">Prononciation : ${score} / 100 (écriture ${ecriture})</div>
+        <div>Entendu : « ${dit.replace(/</g, '&lt;')} »</div>
+        <div>${normaliser(modele).map(m => `<span class="${entendus.has(m) ? 'ok' : 'ko'}">${m}</span>`).join(' ')}</div>`;
+      setTriggerValue('score', {score, dit, phrase: cible, ecriture, score_latin: scoreLatin,
+                                score_arabe: scoreArabe, quand: Date.now()});
     };
     rec.onerror = e => zone.textContent = 'Erreur du micro : ' + e.error;
     rec.start();
@@ -156,12 +164,13 @@ button.principal { background: linear-gradient(180deg, #38bdf8, #0284c7); color:
 _atelier = None
 
 
-def atelier_suivi(st, phrase, code_voix, sens="", cle="atelier"):
+def atelier_suivi(st, phrase, code_voix, sens="", cle="atelier", arabe=None):
     """Atelier de prononciation dont le score revient à Python ; renvoie le dernier essai (ou None)."""
     global _atelier
     if _atelier is None:
         _atelier = st.components.v2.component("ia_aissa_atelier", js=ATELIER_JS.replace("__CSS__", ATELIER_CSS))
-    resultat = _atelier(key=cle, data={"phrase": phrase, "voix": code_voix, "sens": sens}, on_score_change=lambda: None)
+    resultat = _atelier(key=cle, data={"phrase": phrase, "voix": code_voix, "sens": sens, "arabe": arabe or ""},
+                        on_score_change=lambda: None)
     try:
         return resultat["score"]
     except (KeyError, TypeError):
@@ -173,9 +182,17 @@ def noter_prononciation(memoire, utilisateur, langue, essai):
     cle = f"prononciation:{utilisateur}:{int(essai['quand'])}"
     if memoire.reglage(cle) is not None:
         return False
-    memoire.definir_reglage(cle, json.dumps({"langue": langue, "score": int(essai["score"]), "phrase": essai["phrase"]},
-                                            ensure_ascii=False))
+    memoire.definir_reglage(cle, json.dumps({"langue": langue, "score": int(essai["score"]), "phrase": essai["phrase"],
+                                             "ecriture": essai.get("ecriture", "latine")}, ensure_ascii=False))
     return True
+
+
+def comparer_ecritures(essais):
+    """Moyenne des scores par écriture lue (latine, arabe) : {"latine": (moyenne, nombre), "arabe": (…)}."""
+    par = {}
+    for e in essais:
+        par.setdefault(e.get("ecriture", "latine"), []).append(e["score"])
+    return {k: (round(sum(v) / len(v)), len(v)) for k, v in par.items()}
 
 
 def suivi_prononciation(memoire, utilisateur):

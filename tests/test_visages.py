@@ -92,3 +92,22 @@ def test_mobile_360_paysage_et_bouton_remonter_a_l_alien():
     assert interface.SEUIL_REMONTER == 6
     assert 'class="remonter-alien" href="#alien"' in source and '<div id="alien"></div>' in source
     assert "a.remonter-alien { position: fixed" in source and "prefers-reduced-motion" in source
+
+
+def test_prononciation_notee_contre_les_deux_ecritures(tmp_path):
+    """Le darija est transcrit en écriture arabe (ar-MA) : la note compare aux deux écritures (la meilleure compte),
+    l'écriture lue est gardée, et les moyennes par écriture se comparent."""
+    from ia_aissa.memoire import Memoire
+    from ia_aissa.voix import ATELIER_JS, comparer_ecritures, noter_prononciation, suivi_prononciation
+    assert "data.arabe" in ATELIER_JS and "score_arabe" in ATELIER_JS and "ecriture" in ATELIER_JS
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    noter_prononciation(mem, "Aissa", "Darija", {"score": 60, "phrase": "lclient ba9i ma khlsch", "quand": 1,
+                                                 "ecriture": "latine"})
+    noter_prononciation(mem, "Aissa", "Darija", {"score": 95, "phrase": "lclient ba9i ma khlsch", "quand": 2,
+                                                 "ecriture": "arabe"})
+    noter_prononciation(mem, "Aissa", "Darija", {"score": 85, "phrase": "lclient ba9i ma khlsch", "quand": 3,
+                                                 "ecriture": "arabe"})
+    noter_prononciation(mem, "Aissa", "Darija", {"score": 70, "phrase": "x", "quand": 4})   # ancien essai : latine
+    essais = suivi_prononciation(mem, "Aissa")
+    assert [e["ecriture"] for e in essais] == ["latine", "arabe", "arabe", "latine"]
+    assert comparer_ecritures(essais) == {"latine": (65, 2), "arabe": (90, 2)}
