@@ -361,7 +361,7 @@ panier 30 DH/jour), en signalant ce que l'on perd en droits CNSS.
 (facture, devis, réunion, budget… avec son sens en français), vous la répétez, le navigateur la transcrit et la
 note sur 100. Chaque essai est gardé avec votre compte : moyenne des 5 derniers essais, progression par rapport
 aux 5 précédents et courbe de vos scores.
-Répétition espacée : l'atelier vous redonne la phrase où votre score récent est le plus faible (jamais celle que
+30 phrases professionnelles (bureau, banque, administration, douane). Répétition espacée : l'atelier vous redonne la phrase où votre score récent est le plus faible (jamais celle que
 vous venez d'essayer), et l'affiche aussi en écriture arabe (« شكرا على الخدمة ديالكم »).
 
 Sur téléphone : vérifié en 360 px (petits Android) et en paysage, où l'alien entier est réduit au-dessus de la barre de

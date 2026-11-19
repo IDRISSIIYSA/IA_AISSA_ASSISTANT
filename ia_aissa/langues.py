@@ -60,9 +60,33 @@ PHRASES_PRO_DARIJA = [
     ("sift lia devis 3afak", "Envoyez-moi un devis s'il vous plaît"),
     ("l'marchandise wslat f lw9t", "La marchandise est arrivée à temps"),
     ("chokran 3la l'khedma dyalkom", "Merci pour votre travail"),
+    # Banque
+    ("bghit n7el compte f lbanka", "Je voudrais ouvrir un compte à la banque"),
+    ("chhal kayn f lcompte dyali", "Combien y a-t-il sur mon compte ?"),
+    ("bghit ndir virement", "Je voudrais faire un virement"),
+    ("lcarte dyali tblokat", "Ma carte bancaire est bloquée"),
+    ("chhal lfayda dyal had lkredi", "Quel est le taux d'intérêt de ce crédit ?"),
+    ("khassni carnet dyal chèque", "J'ai besoin d'un chéquier"),
+    ("wach lflous wslo", "L'argent est-il arrivé ?"),
+    # Administration
+    ("fin kayna lmo9ata3a", "Où se trouve l'arrondissement ?"),
+    ("khassni nsawb la carte nationale", "Je dois faire ma carte nationale"),
+    ("chno lwata2i9 li khassni njib", "Quels documents dois-je apporter ?"),
+    ("bghit nsawb chahadat ssokna", "Je voudrais une attestation de résidence"),
+    ("imta ghadi ykoun lwra9 wajed", "Quand les papiers seront-ils prêts ?"),
+    ("fin ghadi nsini", "Où dois-je signer ?"),
+    ("khassni nkhlles ttanber", "Je dois payer le timbre"),
+    # Douane et commerce extérieur
+    ("had sel3a jat mn lkharij", "Cette marchandise vient de l'étranger"),
+    ("chhal ddiwana 3la had sel3a", "Combien de droits de douane sur cette marchandise ?"),
+    ("fin l'facture dyal chchira", "Où est la facture d'achat ?"),
+    ("sel3a ba9a f lport", "La marchandise est restée au port"),
+    ("khassna transitaire", "Nous avons besoin d'un transitaire"),
+    ("imta ghadi nkhrjo sel3a mn ddiwana", "Quand allons-nous sortir la marchandise de la douane ?"),
 ]
 
-# La même phrase en écriture arabe (darija telle qu'on l'écrit au Maroc, mots français gardés tels qu'ils se disent)
+# La même phrase en écriture arabe (darija telle qu'on l'écrit au Maroc, mots français gardés tels qu'ils se disent).
+# Les 20 phrases ajoutées le 19/11/2026 (banque, administration, douane) sont à relire par un locuteur marocain.
 ECRITURE_ARABE = {
     "salam, bghit nhder m3a lmoudir 3afak": "سلام، بغيت نهضر مع المدير عافاك",
     "l'facture ghadi nsifetha lik lyoum": "الفاكتورة غادي نصيفطها ليك اليوم",
@@ -74,6 +98,26 @@ ECRITURE_ARABE = {
     "sift lia devis 3afak": "صيفط ليا الدوفي عافاك",
     "l'marchandise wslat f lw9t": "الماركانديز وصلات فالوقت",
     "chokran 3la l'khedma dyalkom": "شكرا على الخدمة ديالكم",
+    "bghit n7el compte f lbanka": "بغيت نحل كونط فالبنكة",
+    "chhal kayn f lcompte dyali": "شحال كاين فالكونط ديالي",
+    "bghit ndir virement": "بغيت ندير فيرمون",
+    "lcarte dyali tblokat": "لاكارط ديالي تبلوكات",
+    "chhal lfayda dyal had lkredi": "شحال الفايدة ديال هاد الكريدي",
+    "khassni carnet dyal chèque": "خاصني كارني ديال الشيك",
+    "wach lflous wslo": "واش الفلوس وصلو",
+    "fin kayna lmo9ata3a": "فين كاينة المقاطعة",
+    "khassni nsawb la carte nationale": "خاصني نصاوب لاكارط ناسيونال",
+    "chno lwata2i9 li khassni njib": "شنو الوثائق اللي خاصني نجيب",
+    "bghit nsawb chahadat ssokna": "بغيت نصاوب شهادة السكنى",
+    "imta ghadi ykoun lwra9 wajed": "إمتى غادي يكون الوراق واجد",
+    "fin ghadi nsini": "فين غادي نسيني",
+    "khassni nkhlles ttanber": "خاصني نخلص التنبر",
+    "had sel3a jat mn lkharij": "هاد السلعة جات من الخارج",
+    "chhal ddiwana 3la had sel3a": "شحال الديوانة على هاد السلعة",
+    "fin l'facture dyal chchira": "فين الفاكتورة ديال الشرية",
+    "sel3a ba9a f lport": "السلعة باقة فالبور",
+    "khassna transitaire": "خاصنا ترانزيتير",
+    "imta ghadi nkhrjo sel3a mn ddiwana": "إمتى غادي نخرجو السلعة من الديوانة",
 }
 SCORE_INCONNU = 60      # une phrase jamais essayée : ni facile ni difficile, elle passe avant une phrase bien maîtrisée
 

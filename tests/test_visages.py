@@ -56,7 +56,7 @@ def test_suivi_de_la_prononciation_en_darija(tmp_path):
     noter_prononciation(mem, "Aissa", "Darija", {"score": 81, "phrase": phrase, "quand": 2000})
     assert [e["score"] for e in suivi_prononciation(mem, "Aissa")] == [62, 81]
     assert suivi_prononciation(mem, "Autre") == []
-    assert "setTriggerValue('score'" in ATELIER_JS and len(PHRASES_PRO_DARIJA) >= 10
+    assert "setTriggerValue('score'" in ATELIER_JS and len(PHRASES_PRO_DARIJA) >= 30          # banque, administration, douane
 
 
 def test_bulle_une_ligne_par_langue_et_remontee_au_premier_affichage():
