@@ -45,9 +45,9 @@ def test_correction_enseigne_aussi_l_aiguilleur(labo):
 
 def test_revision_apprend_et_persiste(labo):
     mem, tmp = labo
-    question = "paiement de la facture maroc telecom"
-    assert ecole.repondre("comptabilite", question)[0]["reponse"] != "6145 Frais postaux et de télécommunications"
-    C.corriger(mem, "Aissa", "comptabilite", question, "6145")
+    question = "khlast lassurance dyal lmagasin"   # encore ratée par le cerveau d'école
+    assert ecole.repondre("comptabilite", question)[0]["reponse"] != "6134 Primes d'assurances"
+    C.corriger(mem, "Aissa", "comptabilite", question, "6134")
     bilan = C.reviser(mem, "comptabilite")
     assert bilan["adoptee"] and bilan["corrections_apres"] == 1.0
     assert bilan["examen_apres"] >= bilan["examen_avant"] - C.TOLERANCE_EXAMEN
@@ -55,7 +55,7 @@ def test_revision_apprend_et_persiste(labo):
     # redémarrage (nouvelle connexion, cache vidé) : le cerveau révisé revient de la base, l'original est intact
     assert not (ecole.dossier_revises() / "comptabilite.pt").exists()
     C.brancher(Memoire(f"sqlite:///{tmp / 'm.db'}"))
-    assert ecole.repondre("comptabilite", question)[0]["reponse"] == "6145 Frais postaux et de télécommunications"
+    assert ecole.repondre("comptabilite", question)[0]["reponse"] == "6134 Primes d'assurances"
     # nouvelle version de l'école (cerveau d'origine changé) : la révision périmée est oubliée, les corrections
     # repassent « à apprendre », puis sont réapprises sur le nouveau cerveau
     original = ecole.DOSSIER_CERVEAUX / "comptabilite.pt"
@@ -65,7 +65,7 @@ def test_revision_apprend_et_persiste(labo):
     assert mem2.matieres_revisees() == [] or "comptabilite" not in mem2.matieres_revisees()
     assert mem2.corrections_de("comptabilite", seulement_nouvelles=True)
     C.reviser_tout(mem2)
-    assert ecole.repondre("comptabilite", question)[0]["reponse"] == "6145 Frais postaux et de télécommunications"
+    assert ecole.repondre("comptabilite", question)[0]["reponse"] == "6134 Primes d'assurances"
 
 
 def test_revision_qui_regresse_est_refusee(labo, monkeypatch):
@@ -95,11 +95,11 @@ def test_etude_autonome_des_lacunes(labo):
     from types import SimpleNamespace as NS
     from ia_aissa import autonomie as A
     mem, _ = labo
-    for q in ["paiement de la facture maroc telecom", "bonjour comment ça va", "chrit pc jdid l charika"]:
+    for q in ["khlast lassurance dyal lmagasin", "bonjour comment ça va", "khlast lavocat"]:
         assert A.noter_si_lacune(mem, q)
     assert not A.noter_si_lacune(mem, "agadir")                       # IA AISSA est sûre d'elle : pas de lacune
-    reponses = {"paiement de la facture maroc telecom": ("comptabilite", "6145"),
-                "chrit pc jdid l charika": ("comptabilite", "2355 Matériel informatique")}
+    reponses = {"khlast lassurance dyal lmagasin": ("comptabilite", "6134"),
+                "khlast lavocat": ("comptabilite", "6136")}
 
     def moteur(**kw):
         consigne = kw["messages"][0]["content"]
@@ -117,7 +117,7 @@ def test_etude_autonome_des_lacunes(labo):
     assert mem.lacunes_ouvertes() == []
     revisions = {b["matiere"]: b["adoptee"] for b in bilan["revisions"]}
     assert revisions["comptabilite"] and "orientation" in revisions   # l'aiguilleur révise aussi (adopté ou refusé)
-    assert ecole.repondre("comptabilite", "paiement de la facture maroc telecom")[0]["reponse"].startswith("6145")
+    assert ecole.repondre("comptabilite", "khlast lassurance dyal lmagasin")[0]["reponse"].startswith("6134")
     assert {c["source"] for c in mem.croissance()} == {"étude autonome"}
 
 

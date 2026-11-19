@@ -855,6 +855,19 @@ _enrichir(PCM, {
     "4411": ["khlast lfournisseur", "règlement du fournisseur"],
     "3421": ["client khallas", "le client a payé sa facture"],
 })
+# Darija de la vie courante (séance du 19/11/2026) : formulations différentes de celles du banc d'essai
+_enrichir(OPERATIONS_BANCAIRES, {
+    "Crédit": ["kredi bach nchri dar", "kredi l tomobil jdida", "nsellef mn lbanka", "bghit kredi immobilier",
+               "nakhod 9ard mn lbanka", "قرض باش نشري الدار", "قرض ديال الطوموبيل", "kredi b taux mzyan",
+               "chhal nkhlles f chahr dyal lkredi", "tsalaft mn lbanka bach nchri lbo9"],
+})
+_enrichir(PCM, {
+    "2355": ["chrit pc l lmaktab", "laptop jdid l charika", "حاسوب للشركة", "chrit imprimante w pc",
+             "ordinateur portable acheté pour la société"],
+    "6145": ["fatoura dyal internet dyal lmaktab", "abonnement internet de l'agence", "fatoura dyal lportable dyal "
+             "charika", "فاتورة الانترنت ديال الشركة", "règlement de la facture de téléphone de la société"],
+    "2340": ["tomobil jdida l charika", "camion l charika", "سيارة جديدة للشركة"],
+})
 _enrichir(TVA_OPERATIONS, {
     "Exonéré": ["dwa", "médicaments en pharmacie", "khobz", "lma dyal dar", "الدوا"],
     "10 %": ["nuitée d'hôtel", "makla f restaurant", "frais bancaires"],
