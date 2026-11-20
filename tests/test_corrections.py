@@ -630,3 +630,24 @@ def test_loi_de_finances_ignore_les_exemples_et_les_anciennes_valeurs():
                                                  "dirhams.")
     assert [x["valeur"] for x in L.propositions("Le plafond des frais professionnels est porté de trente mille "
                                                 "(30 000) dirhams à quarante mille (40 000) dirhams.", {})] == [40000]
+
+
+def test_memoire_du_serveur_passages_et_index():
+    """Administration : nombre de passages (web / donnés), mémoire de l'index, alerte au-delà du seuil, sans rien
+    oublier."""
+    from ia_aissa import sauvegarde as SV
+    from ia_aissa.lecture import Index
+    m = Memoire("sqlite://")
+    m.garder_passages("IA AISSA", "Wikipédia — Koutoubia", ["La Koutoubia est une mosquée de Marrakech."] * 3)
+    m.garder_passages("aissa", "Mon livre", ["Le bilan comptable résume la situation de l'entreprise."] * 2)
+    etat = SV.etat_bibliotheque(m)
+    assert (etat["total"], etat["web"], etat["autres"]) == (5, 3, 2)
+    assert SV.alerte_passages(etat) is None
+    alerte = SV.alerte_passages(etat, seuil=4)
+    assert "5 passages" in alerte and "3 lus seule sur le web" in alerte and "jamais oubliés" in alerte
+    assert SV.etat_bibliotheque(m)["total"] == 5                                    # l'alerte n'efface rien
+    idx = Index([{"id": i, "utilisateur": "IA AISSA", "source": "s", "numero": i, "texte": f"mot{i} commun"}
+                 for i in range(200)], lecteur=lambda ids: {})
+    assert 0 < idx.memoire_mo() < 1
+    s = SV.sante()
+    assert "index_mo" in s

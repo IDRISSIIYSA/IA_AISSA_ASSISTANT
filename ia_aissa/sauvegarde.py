@@ -29,6 +29,7 @@ from .memoire import meta
 
 FORMAT = 1
 ALERTE_JOURS = 7                 # au-delà, l'administration rappelle de télécharger une sauvegarde
+SEUIL_PASSAGES = 60_000          # au-delà, l'index de lecture menace la mémoire du serveur en ligne (≈ 1 Go)
 
 
 def _vers_json(v):
@@ -104,6 +105,23 @@ def alerte_sauvegarde(memoire, aujourdhui=None):
     return None
 
 
+def etat_bibliotheque(memoire):
+    """Passages gardés dans la base : total, lus seule sur le web (« IA AISSA ») et donnés par des personnes."""
+    comptes = memoire.compter_passages()
+    total = sum(c["passages"] for c in comptes)
+    web = sum(c["passages"] for c in comptes if c["utilisateur"] == "IA AISSA")
+    return {"total": total, "web": web, "autres": total - web, "sources": len(comptes)}
+
+
+def alerte_passages(etat, seuil=SEUIL_PASSAGES):
+    """Message au-delà de `seuil` passages. Rien n'est oublié sans la décision de l'administrateur."""
+    if etat["total"] <= seuil:
+        return None
+    return (f"📚 {etat['total']:,} passages en mémoire (seuil {seuil:,}), dont {etat['web']:,} lus seule sur le web : "
+            "l'index de lecture risque de saturer la mémoire du serveur. À décider : oublier les lectures web jamais "
+            "utilisées pour répondre (les livres et documents donnés ne sont jamais oubliés).").replace(",", " ")
+
+
 # ==========================================
 # Santé du serveur
 # ==========================================
@@ -137,18 +155,20 @@ def sante():
     mem, proc = _meminfo(), _processus()
     disque = shutil.disk_usage(os.path.abspath(os.sep))
     lourds = {nom: nom in sys.modules for nom in ("torch", "faster_whisper", "cv2", "openpyxl", "openai", "anthropic")}
-    cerveaux, passages = [], None
+    cerveaux, passages, index_mo = [], None, None
     if "ia_aissa.ecole" in sys.modules:
         cerveaux = sorted(sys.modules["ia_aissa.ecole"]._CACHE)
     if "ia_aissa.lecture" in sys.modules:
         index = sys.modules["ia_aissa.lecture"]._INDEX.get("index")
-        passages = len(index) if index is not None else None
+        if index is not None:
+            passages, index_mo = len(index), round(index.memoire_mo(), 1)
     return {
         "memoire_totale_mo": round(mem.get("MemTotal", 0)), "memoire_disponible_mo": round(mem.get("MemAvailable", 0)),
         "processus_mo": round(proc.get("VmRSS", 0)), "processus_pic_mo": round(proc.get("VmHWM", 0)),
         "disque_libre_go": round(disque.free / 1e9, 1), "disque_total_go": round(disque.total / 1e9, 1),
         "age_s": chrono.age_du_processus(), "fils": threading.active_count(), "modules_lourds": lourds,
         "cerveaux_en_cache": cerveaux, "passages_indexes": passages,
+        "index_mo": index_mo,
         "python": sys.version.split()[0],
     }
 
@@ -166,7 +186,7 @@ def lignes_sante(s):
               f"Cerveaux d'école en mémoire : {len(s['cerveaux_en_cache'])}"
               + (f" ({', '.join(s['cerveaux_en_cache'][:8])}{'…' if len(s['cerveaux_en_cache']) > 8 else ''})"
                  if s["cerveaux_en_cache"] else "") + ".",
-              "Index de lecture : " + (f"{s['passages_indexes']} passages." if s["passages_indexes"] is not None
+              "Index de lecture : " + (f"{s['passages_indexes']} passages, environ {s.get('index_mo')} Mo." if s["passages_indexes"] is not None
                                        else "pas encore construit.")]
     if s["memoire_totale_mo"] and s["memoire_disponible_mo"] < 0.15 * s["memoire_totale_mo"]:
         lignes.insert(0, "⚠️ Moins de 15 % de mémoire libre : risque d'arrêt du serveur (erreur 502).")

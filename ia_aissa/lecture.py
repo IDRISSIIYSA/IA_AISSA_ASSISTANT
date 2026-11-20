@@ -96,6 +96,14 @@ class Index:
     def __len__(self):
         return len(self.meta)
 
+    def memoire_mo(self):
+        """Mémoire occupée par l'index, estimée sans tout parcourir : tableaux numpy exacts, plus un coût moyen par
+        mot (clé, entrées des dictionnaires postings et idf) et par passage (tuple de métadonnées, textes gardés)."""
+        tableaux = self.longueurs.nbytes + sum(ids.nbytes + tfs.nbytes for ids, tfs in self.postings.values())
+        mots = len(self.postings) * 1200                   # mesuré (tracemalloc) : objets numpy, array, dicts
+        passages = len(self.meta) * 90 + sum(len(t) for t in self._textes)
+        return (tableaux + mots + passages) / 2**20
+
     def textes_de(self, indices):
         """Les textes des passages demandés (positions dans l'index), relus dans la base au besoin."""
         if self.lecteur is None:

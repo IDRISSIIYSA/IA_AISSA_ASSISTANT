@@ -92,11 +92,17 @@ def tableau_de_bord(mem):
     from . import chrono
     for alerte in chrono.alertes():                     # 95e centile d'une page > 3 s sur 24 heures
         st.error(alerte)
-    from .sauvegarde import alerte_sauvegarde, lignes_sante, sante
+    from .sauvegarde import SEUIL_PASSAGES, alerte_passages, alerte_sauvegarde, etat_bibliotheque, lignes_sante, sante
     rappel = alerte_sauvegarde(mem)
     if rappel:
         st.warning(rappel)
-    etat_serveur = lignes_sante(sante())
+    biblio = etat_bibliotheque(mem)
+    trop = alerte_passages(biblio)
+    if trop:
+        st.warning(trop)
+    etat_serveur = lignes_sante(sante()) + [
+        f"Passages en mémoire : {biblio['total']} ({biblio['web']} lus seule sur le web, {biblio['autres']} donnés), "
+        f"seuil d'alerte {SEUIL_PASSAGES}."]
     with st.expander("🩺 Santé du serveur", expanded=etat_serveur[0].startswith("⚠️")):
         st.markdown("\n".join(f"- {l}" for l in etat_serveur))
     dernier = mem.reglage("moteur:dernier_appel")

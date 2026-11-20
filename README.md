@@ -380,7 +380,8 @@ sans l'attendre.
 
 Sauvegarde et santé (`ia_aissa/sauvegarde.py`) : dans l'administration, « 💾 Sauvegarde de la mémoire » télécharge
 toutes les tables (JSON compressé ; restauration dans une base vide en ligne de commande) et « 🩺 Santé du serveur »
-montre mémoire, disque, modules chargés et index de lecture. Sur un serveur dédié, deploy/sauvegarde.sh fait chaque
+montre mémoire, disque, modules chargés, index de lecture (passages et mémoire estimée) et passages gardés (lus
+sur le web ou donnés) ; au-delà de 60 000 passages, un avertissement apparaît (rien n'est oublié sans décision). Sur un serveur dédié, deploy/sauvegarde.sh fait chaque
 nuit un pg_dump (30 jours gardés).
 
 Comparer deux scénarios : sous chaque simulation, « 📌 Garder comme scénario A », changez vos chiffres, et IA AISSA
