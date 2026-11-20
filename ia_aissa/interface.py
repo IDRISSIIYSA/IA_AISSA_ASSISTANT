@@ -190,6 +190,13 @@ STYLE = """<style>
     [data-testid="stChatInputFileUploadButton"] button { width: 36px !important; height: 36px !important;
       min-width: 36px !important; }
     [data-testid="stChatInputTextArea"] { font-size: 14px !important; } }
+  /* ---------- Invite courte sur téléphone : la longue (385 px) serait coupée dans un champ de 136 à 176 px ---------- */
+  @media (max-width: 480px) {
+    [data-testid="stChatInputTextArea"]::placeholder { color: transparent !important; }
+    div:has(> [data-testid="stChatInputTextArea"]) { position: relative; }
+    div:has(> [data-testid="stChatInputTextArea"]:placeholder-shown)::before {
+      content: "Écris ou parle…"; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      color: rgb(148, 163, 184); font-size: 14px; white-space: nowrap; pointer-events: none; z-index: 1; } }
   @media (orientation: landscape) and (max-height: 500px) {
     /* l'alien entier, réduit, au-dessus de la barre de saisie (au lieu d'un alien coupé par la barre) */
     [data-testid="stIFrame"] { height: 640px !important; transform: scale(.33); transform-origin: top center; }

@@ -111,3 +111,13 @@ def test_prononciation_notee_contre_les_deux_ecritures(tmp_path):
     essais = suivi_prononciation(mem, "Aissa")
     assert [e["ecriture"] for e in essais] == ["latine", "arabe", "arabe", "latine"]
     assert comparer_ecritures(essais) == {"latine": (65, 2), "arabe": (90, 2)}
+
+
+def test_invite_courte_de_la_barre_de_saisie_sur_telephone():
+    """Sous 480 px, la longue invite (385 px dans un champ de 136 px à 360 px de large, mesuré au navigateur) est
+    cachée et remplacée par « Écris ou parle… » tant que le champ est vide ; l'ordinateur garde l'invite complète."""
+    from ia_aissa import interface
+    regle = interface.STYLE.split("@media (max-width: 480px) {\n    [data-testid=\"stChatInputTextArea\"]::placeholder")
+    assert len(regle) == 2 and "color: transparent" in regle[1].split("}")[0]
+    assert ':placeholder-shown)::before' in regle[1] and 'content: "Écris ou parle…"' in regle[1]
+    assert "pointer-events: none" in regle[1].split("} }")[0]
