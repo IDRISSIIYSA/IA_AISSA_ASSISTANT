@@ -1181,3 +1181,32 @@ def test_index_sans_textes_en_memoire_memes_resultats(tmp_path):
     assert "Rabat" in lecture.repondre_par_lecture("quelle est la capitale du Maroc", mem)["reponse"]
     assert lecture.examen_lecture(mem, n=3)["questions"] >= 0
     lecture._INDEX.clear()
+
+
+def test_index_enrichi_des_nouveaux_passages_sans_tout_relire(tmp_path):
+    """L'index est bâti une fois puis enrichi : mêmes résultats qu'un index refait, passages supprimés masqués,
+    document relu (même nombre de passages) pris en compte, reconstruction au-delà de 20 % de passages supprimés."""
+    from ia_aissa import lecture
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.garder_passages("IA AISSA", "Japon", ["La capitale du Japon est Tokyo, grande ville d'Asie."])
+    mem.garder_passages("IA AISSA", "Maroc", ["Le Maroc a pour capitale Rabat, au bord de l'Atlantique."])
+    for i in range(20):
+        mem.garder_passages("IA AISSA", f"Remplissage {i}", [f"Texte sans rapport numéro {i} sur la cuisine."])
+    lecture._INDEX.clear()
+    idx = lecture.index(mem)
+    assert len(idx) == 22
+    mem.garder_passages("IA AISSA", "Koutoubia", ["La Koutoubia de Marrakech a été construite par les Almohades."])
+    assert lecture.index(mem) is idx and len(idx) == 23                       # enrichi, pas refait
+    assert "Almohades" in idx.chercher("qui a construit la Koutoubia", n=1)[0]["texte"]
+    neuf = lecture.Index(mem.iter_passages(), lecteur=mem.textes_passages)
+    for q in ["capitale du Maroc", "Koutoubia Almohades", "cuisine numéro 3"]:
+        assert [r["id"] for r in idx.chercher(q, n=5)] == [r["id"] for r in neuf.chercher(q, n=5)]
+    mem.garder_passages("IA AISSA", "Maroc", ["Rabat est la capitale administrative du Royaume du Maroc."])
+    assert lecture.index(mem) is idx and len(idx) == 23                       # relu : l'ancien passage est masqué
+    r = idx.chercher("capitale du Maroc", n=3)
+    assert "administrative" in r[0]["texte"] and all(x["texte"] for x in r)
+    for i in range(6):                                                         # 6 documents relus sur 23 : > 20 %
+        mem.garder_passages("IA AISSA", f"Remplissage {i}", [f"Nouveau texte {i} sur la cuisine marocaine."])
+    assert lecture.index(mem) is not idx and len(lecture.index(mem)) == 23 and not lecture.index(mem).morts
+    lecture._INDEX.clear()

@@ -362,16 +362,37 @@ class Memoire:
         with self.moteur.connect() as c:
             return [dict(l._mapping) for l in c.execute(requete.order_by(passages.c.id))]
 
-    def iter_passages(self, utilisateurs=None, paquet=2000):
+    def iter_passages(self, utilisateurs=None, paquet=2000, apres_id=None):
         """Les passages un par un, lus par paquets (la base n'est jamais chargée d'un bloc en mémoire : pic de
-        mémoire bien plus bas quand la bibliothèque est grande)."""
+        mémoire bien plus bas quand la bibliothèque est grande). apres_id : seulement les plus récents."""
         requete = select(passages.c.id, passages.c.utilisateur, passages.c.source, passages.c.numero, passages.c.texte)
         if utilisateurs is not None:
             requete = requete.where(passages.c.utilisateur.in_(list(utilisateurs)))
+        if apres_id is not None:
+            requete = requete.where(passages.c.id > apres_id)
         with self.moteur.connect() as c:
             resultat = c.execution_options(stream_results=True, yield_per=paquet).execute(requete.order_by(passages.c.id))
             for l in resultat:
                 yield l._mapping
+
+    def ids_passages(self, utilisateurs=None, jusqu_a=None):
+        """Les numéros des passages (jusqu'à `jusqu_a`) : l'index y voit ceux qui ont été supprimés."""
+        requete = select(passages.c.id)
+        if utilisateurs is not None:
+            requete = requete.where(passages.c.utilisateur.in_(list(utilisateurs)))
+        if jusqu_a is not None:
+            requete = requete.where(passages.c.id <= jusqu_a)
+        with self.moteur.connect() as c:
+            return set(c.execute(requete).scalars())
+
+    def signature_passages(self, utilisateurs=None):
+        """(nombre de passages, plus grand numéro) : change à chaque ajout, suppression ou document relu."""
+        requete = select(func.count(), func.max(passages.c.id))
+        if utilisateurs is not None:
+            requete = requete.where(passages.c.utilisateur.in_(list(utilisateurs)))
+        with self.moteur.connect() as c:
+            nombre, plus_grand = c.execute(requete).one()
+        return int(nombre), int(plus_grand or 0)
 
     def textes_passages(self, ids):
         """{id: texte} pour les passages demandés (les meilleurs résultats d'une recherche)."""

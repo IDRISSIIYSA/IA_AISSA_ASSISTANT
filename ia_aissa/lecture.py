@@ -16,6 +16,7 @@ import json
 import math
 import random
 import re
+import threading
 import time
 
 from .ecole import mots
@@ -65,18 +66,30 @@ class Index:
         seuls meilleurs résultats d'une recherche (environ un tiers de mémoire en moins). Sans lecteur (tests,
         petites listes), les textes sont gardés."""
         import numpy as np
-        import time as _time
         self.k1, self.b = k1, b
         self.champs = ("id", "utilisateur", "source", "numero")
         self.meta, self._textes, self.lecteur = [], [], lecteur
-        noms = {}                                          # une seule copie de chaque source et de chaque utilisateur
+        self._noms = {}                                    # une seule copie de chaque source et de chaque utilisateur
+        self.postings, self.longueurs = {}, np.zeros(0, np.float32)
+        self.morts = set()                                 # positions des passages supprimés depuis la construction
+        self._morts = np.zeros(0, np.int64)
+        self.dernier_id = 0
+        self.ajouter(lignes)
+
+    def ajouter(self, lignes):
+        """Ajoute des passages sans relire les anciens : seuls les mots des nouveaux passages sont comptés, leurs
+        tableaux mis bout à bout avec les anciens. Renvoie le nombre de passages ajoutés."""
+        import numpy as np
+        import time as _time
+        debut = len(self.meta)
         postings = collections.defaultdict(lambda: (array("I"), array("H")))
         longueurs = array("I")
-        for i, l in enumerate(lignes):                     # lignes : une liste ou un flux (lu une seule fois)
+        noms = self._noms
+        for i, l in enumerate(lignes, start=debut):        # lignes : une liste ou un flux (lu une seule fois)
             texte = l["texte"]
             self.meta.append((l["id"], noms.setdefault(l["utilisateur"], l["utilisateur"]),
                               noms.setdefault(l["source"], l["source"]), l["numero"]))
-            if lecteur is None:
+            if self.lecteur is None:
                 self._textes.append(texte)
             if i % 500 == 499:
                 _time.sleep(0)                             # laisse respirer la page pendant une longue construction
@@ -86,15 +99,41 @@ class Index:
                 ids, tfs = postings[t]
                 ids.append(i)
                 tfs.append(min(f, 65535))
+        ajoutes = len(self.meta) - debut
+        if ajoutes:
+            self.dernier_id = max(self.dernier_id, max(m[0] for m in self.meta[debut:]))
+            anciens = self.postings
+            nouveaux = dict(anciens)                       # les recherches en cours gardent l'ancien dictionnaire
+            for t, (ids, tfs) in postings.items():
+                ids, tfs = np.frombuffer(ids, dtype=np.uint32), np.frombuffer(tfs, dtype=np.uint16)
+                if t in anciens:
+                    ids, tfs = np.concatenate([anciens[t][0], ids]), np.concatenate([anciens[t][1], tfs])
+                nouveaux[t] = (ids, tfs)
+            self.postings = nouveaux
+            self.longueurs = np.concatenate([self.longueurs,
+                                             np.frombuffer(longueurs, dtype=np.uint32).astype(np.float32)])
+        if ajoutes or debut == 0:
+            self._recalculer()
+        return ajoutes
+
+    def retirer(self, ids):
+        """Les passages supprimés de la base (document relu) ne sortent plus dans les résultats. Renvoie le nombre."""
+        import numpy as np
+        ids = set(ids)
+        if not ids:
+            return 0
+        positions = {i for i, m in enumerate(self.meta) if m[0] in ids} - self.morts
+        self.morts |= positions
+        self._morts = np.fromiter(sorted(self.morts), dtype=np.int64)
+        return len(positions)
+
+    def _recalculer(self):
         n = len(self.meta)
-        self.longueurs = np.frombuffer(longueurs, dtype=np.uint32).astype(np.float32) if n else np.zeros(0, np.float32)
         self.moyenne = float(self.longueurs.mean()) if n else 0.0
-        self.postings = {t: (np.frombuffer(ids, dtype=np.uint32), np.frombuffer(tfs, dtype=np.uint16))
-                         for t, (ids, tfs) in postings.items()}
         self.idf = {t: math.log(1 + (n - len(ids) + .5) / (len(ids) + .5)) for t, (ids, _) in self.postings.items()}
 
     def __len__(self):
-        return len(self.meta)
+        return len(self.meta) - len(self.morts)
 
     def memoire_mo(self):
         """Mémoire occupée par l'index, estimée sans tout parcourir : tableaux numpy exacts, plus un coût moyen par
@@ -113,18 +152,24 @@ class Index:
 
     def chercher(self, question, n=5):
         import numpy as np
-        q = [t for t in set(jetons(question)) if t in self.idf]
-        if not q or not self.meta:
+        idf, postings, longueurs = self.idf, self.postings, self.longueurs   # instantané : un ajout peut arriver
+        q = [t for t in set(jetons(question)) if t in idf and t in postings]
+        if not q or not len(longueurs):
             return []
-        scores = np.zeros(len(self.meta), dtype=np.float32)
-        normes = self.k1 * (1 - self.b + self.b * self.longueurs / max(self.moyenne, 1e-9))
+        taille = len(longueurs)
+        scores = np.zeros(taille, dtype=np.float32)
+        normes = self.k1 * (1 - self.b + self.b * longueurs / max(self.moyenne, 1e-9))
         for t in q:
-            ids, tfs = self.postings[t]
-            f = tfs.astype(np.float32)
-            scores[ids] += self.idf[t] * f * (self.k1 + 1) / (f + normes[ids])
+            ids, tfs = postings[t]
+            fin = int(np.searchsorted(ids, taille))               # passages ajoutés après l'instantané : ignorés
+            ids, f = ids[:fin], tfs[:fin].astype(np.float32)
+            scores[ids] += idf[t] * f * (self.k1 + 1) / (f + normes[ids])
+        morts = self._morts
+        if len(morts):
+            scores[morts[morts < taille]] = 0
         touches = np.flatnonzero(scores)
         meilleurs = touches[np.argsort(-scores[touches], kind="stable")[:n]]
-        maximum = sum(self.idf[t] for t in q) * (self.k1 + 1) or 1
+        maximum = sum(idf[t] for t in q) * (self.k1 + 1) or 1
         entiers = [t for t in q if not t.startswith("<")]
         resultats = []
         textes = self.textes_de([int(i) for i in meilleurs])
@@ -140,18 +185,50 @@ class Index:
 
 
 _INDEX = {}
+_VERROU_INDEX = threading.Lock()
+PART_MORTS_MAX = 0.2             # au-delà de 20 % de passages supprimés dans l'index, il est rebâti en entier
+
+
+def _signature(memoire, visibles):
+    if hasattr(memoire, "signature_passages"):
+        return memoire.signature_passages(visibles)       # (nombre, plus grand numéro) : un document relu la change
+    comptes = memoire.compter_passages()
+    return sum(c["passages"] for c in comptes), len(comptes)
+
+
+def mettre_a_jour(idx, memoire, visibles):
+    """Enrichit l'index des seuls passages nouveaux et masque ceux qui ont disparu. False s'il vaut mieux le rebâtir
+    (base sans ces fonctions, ou trop de passages supprimés)."""
+    if not hasattr(memoire, "ids_passages") or not hasattr(memoire, "iter_passages"):
+        return False
+    presents = memoire.ids_passages(visibles, jusqu_a=idx.dernier_id)
+    disparus = {m[0] for i, m in enumerate(idx.meta) if i not in idx.morts} - presents
+    if len(idx.morts) + len(disparus) > PART_MORTS_MAX * max(len(idx.meta), 1):
+        return False
+    idx.retirer(disparus)
+    idx.ajouter(memoire.iter_passages(visibles, apres_id=idx.dernier_id))
+    return True
 
 
 def index(memoire, utilisateur=None):
-    """L'index des passages visibles par la personne (ses documents + le savoir commun), refait quand ils changent."""
+    """L'index des passages visibles par la personne (ses documents + le savoir commun). Bâti une fois, puis enrichi
+    des seuls nouveaux passages (au lieu de tout relire et tout recompter à chaque ajout)."""
     visibles = None if utilisateur is None else {utilisateur, *COMMUN}
-    comptes = memoire.compter_passages()
-    signature = (id(memoire), tuple(sorted(visibles or [])), sum(c["passages"] for c in comptes), len(comptes))
-    if _INDEX.get("signature") != signature:
+    cle = (id(memoire), tuple(sorted(visibles or [])))
+    signature = _signature(memoire, visibles)
+    if _INDEX.get("cle") == cle and _INDEX.get("signature") == signature:
+        return _INDEX["index"]
+    with _VERROU_INDEX:                                    # deux visiteurs ne bâtissent pas l'index en même temps
+        if _INDEX.get("cle") == cle and _INDEX.get("signature") == signature:
+            return _INDEX["index"]
+        idx = _INDEX.get("index")
+        if _INDEX.get("cle") == cle and idx is not None and mettre_a_jour(idx, memoire, visibles):
+            _INDEX.update(signature=signature)
+            return idx
         flux = memoire.iter_passages(visibles) if hasattr(memoire, "iter_passages") else memoire.passages(visibles)
-        _INDEX.update(signature=signature, index=None)     # l'ancien index est libéré avant d'en bâtir un nouveau
+        _INDEX.update(cle=cle, signature=None, index=None)  # l'ancien index est libéré avant d'en bâtir un nouveau
         lecteur = memoire.textes_passages if hasattr(memoire, "textes_passages") else None
-        _INDEX.update(signature=signature, index=Index(flux, lecteur=lecteur))
+        _INDEX.update(cle=cle, signature=signature, index=Index(flux, lecteur=lecteur))
     return _INDEX["index"]
 
 
