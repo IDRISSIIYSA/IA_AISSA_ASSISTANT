@@ -163,6 +163,37 @@ setTimeout(() => { try { const c = window.parent.document.querySelector('[data-t
 </script>"""
 
 
+_LIEN = re.compile(r"\[([^\]]+)\]\((?:https?://|/)[^)\s]*\)")
+_GRAS_ITALIQUE = re.compile(r"\*\*\*(?=\S)(.+?)(?<=\S)\*\*\*")
+_GRAS = re.compile(r"\*\*(?=\S)(.+?)(?<=\S)\*\*|__(?=\S)(.+?)(?<=\S)__")
+_ITALIQUE = re.compile(r"(?<![\w*])\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?![\w*])|(?<![\w])_(?=\S)(.+?)(?<=\S)_(?!\w)")
+_CODE = re.compile(r"`([^`]+)`")
+_TITRE = re.compile(r"^\s*#{1,6}\s+")
+
+
+def markdown_en_html(ligne):
+    """Une ligne de réponse (Markdown simple) en HTML sûr pour la bulle : **gras**, *italique* / _italique_, `code`,
+    [lien](adresse) → son texte, titres « ### » sans dièses. Le texte est échappé d'abord : aucune balise ne passe.
+    Les mots composés (« taux_is ») et les multiplications (« 2 * 3 ») restent tels quels."""
+    t = html.escape(_TITRE.sub("", ligne))
+    t = _LIEN.sub(r"\1", t)
+    t = _CODE.sub(r"<code>\1</code>", t)
+    t = _GRAS_ITALIQUE.sub(r"<b><i>\1</i></b>", t)
+    t = _GRAS.sub(lambda m: f"<b>{m.group(1) or m.group(2)}</b>", t)
+    t = _ITALIQUE.sub(lambda m: f"<i>{m.group(1) or m.group(2)}</i>", t)
+    return t.replace("**", "")                     # gras coupé par le découpage en lignes : étoiles retirées
+
+
+def sans_markdown(texte):
+    """Le texte à dire à voix haute : sans étoiles, tirets bas, accents graves ni dièses (la voix les lirait)."""
+    lignes = []
+    for ligne in (texte or "").split("\n"):
+        t = _CODE.sub(r"\1", _LIEN.sub(r"\1", _TITRE.sub("", ligne)))
+        t = _GRAS.sub(lambda m: m.group(1) or m.group(2), _GRAS_ITALIQUE.sub(r"\1", t))
+        lignes.append(_ITALIQUE.sub(lambda m: m.group(1) or m.group(2), t).replace("**", ""))
+    return "\n".join(lignes)
+
+
 def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="image/png", lecture_auto=True,
            bulle=True, etat="normal", indicateur=None, en_3d=True, rendu="3d", en_haut=False):
     """Le visage d'IA AISSA qui dit `texte` : avec l'audio MP3 fourni, sinon avec la voix du navigateur.
@@ -184,7 +215,7 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
     son = f"data:audio/mpeg;base64,{base64.b64encode(audio).decode()}" if audio else ""
     # une ligne par langue (« darija — français ») : chacune garde son sens d'écriture et sa ponctuation
     lignes = [l.strip() for l in re.split(r"\n+| — ", texte or "") if l.strip()]
-    texte_bulle = ('<div class="bulle">' + "".join(f'<p dir="auto">{html.escape(l)}</p>' for l in lignes) + '</div>'
+    texte_bulle = ('<div class="bulle">' + "".join(f'<p dir="auto">{markdown_en_html(l)}</p>' for l in lignes) + '</div>'
                    if texte and bulle else "")
     meta = ""
     if indicateur:
@@ -197,7 +228,7 @@ def avatar(texte="", audio=None, code_voix="fr-FR", image=None, type_image="imag
 {REMONTER if en_haut else ""}
 <div style="margin-top:8px; text-align:center"><button id="ecouter" class="principal" style="display:none; border-radius:999px; padding:8px 18px; background:linear-gradient(180deg,#38bdf8,#0284c7); border:none; color:#fff; font-weight:600; box-shadow:0 4px 0 #075985, 0 8px 18px rgba(2,132,199,.3)">🔊 Écouter IA AISSA</button></div>
 <script>
-const TEXTE = {js(texte)}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};
+const TEXTE = {js(sans_markdown(texte))}, VOIX = {js(code_voix)}, SON = {js(son)}, AUTO = {js(bool(lecture_auto))};
 const alien = document.getElementById('alien'), bouton = document.getElementById('ecouter');
 const parle = oui => {{ alien.classList.toggle('parle', oui); window.alienParle = oui; }};
 function dire() {{

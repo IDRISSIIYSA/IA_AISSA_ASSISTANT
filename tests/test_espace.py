@@ -1210,3 +1210,17 @@ def test_index_enrichi_des_nouveaux_passages_sans_tout_relire(tmp_path):
         mem.garder_passages("IA AISSA", f"Remplissage {i}", [f"Nouveau texte {i} sur la cuisine marocaine."])
     assert lecture.index(mem) is not idx and len(lecture.index(mem)) == 23 and not lecture.index(mem).morts
     lecture._INDEX.clear()
+
+
+def test_bulle_de_l_alien_sans_markdown_brut():
+    """La bulle met en gras et en italique au lieu d'afficher « **…** » ; la voix ne lit pas les étoiles."""
+    from ia_aissa.avatar import avatar, markdown_en_html, sans_markdown
+    assert markdown_en_html("Les **Almohades** — _Histoire_") == "Les <b>Almohades</b> — <i>Histoire</i>"
+    assert markdown_en_html("*confiance* et ***très***") == "<i>confiance</i> et <b><i>très</i></b>"
+    assert markdown_en_html("<script>**x**</script>") == "&lt;script&gt;<b>x</b>&lt;/script&gt;"   # rien ne passe
+    assert markdown_en_html("taux_is et 2 * 3 = 6") == "taux_is et 2 * 3 = 6"
+    assert markdown_en_html("### Voir [la DGI](https://www.tax.gov.ma)") == "Voir la DGI"
+    assert markdown_en_html("**Almohades") == "Almohades"                                      # gras coupé
+    assert sans_markdown("Les **Almohades** (1121-1269), *confiance* 99 %") == "Les Almohades (1121-1269), confiance 99 %"
+    page = avatar("La Koutoubia a été construite par les **Almohades** — _Histoire_", en_3d=False)
+    assert "<b>Almohades</b>" in page and "<i>Histoire</i>" in page and "**Almohades**" not in page
