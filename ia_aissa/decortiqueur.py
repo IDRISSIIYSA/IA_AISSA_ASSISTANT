@@ -141,11 +141,14 @@ FICHES = {
             ("Sanctions", ["Retard : art. 184 et 208 ; facture fictive : sanctions pénales de l'art. 192."]),
         ],
         "secteurs": {
-            "Banques et assurances": "Opérations de banque et de crédit : taux de 10 % (art. 99) ; assurances : hors "
+            "Banques et assurances": "Opérations de banque et de crédit, commissions de change : 10 % avec droit à "
+                                     "déduction (art. 99-B-1°) ; assurances : hors "
                                      "champ, soumises à la taxe sur les contrats d'assurance.",
-            "Hôtellerie et restauration": "Hébergement et restauration : taux de 10 % (art. 99).",
-            "Services et professions libérales": "Taux normal de 20 % en principe ; certaines professions judiciaires "
-                                                 "et juridiques à 10 % (art. 99) : vérifiez la vôtre.",
+            "Hôtellerie et restauration": "Hébergement, restauration et cafés : 10 % avec droit à déduction "
+                                          "(art. 99-B-1°).",
+            "Services et professions libérales": "Taux normal de 20 % (art. 99-A), avocats, notaires, adoul, "
+                                                 "huissiers et vétérinaires compris : l'article 99 de l'édition 2026 "
+                                                 "ne leur prévoit plus de taux réduit.",
             "Export": "Exportations exonérées avec droit à déduction (art. 92) : demandez le remboursement du crédit "
                       "de TVA (art. 103).",
             "Agriculture": "Produits agricoles non transformés : exonérés sans droit à déduction (art. 91) ; matériel "

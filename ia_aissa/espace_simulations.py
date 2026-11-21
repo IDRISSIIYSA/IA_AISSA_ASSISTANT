@@ -508,7 +508,7 @@ def construire(nom, memoire):
                        ["Taux de marge = marge ÷ coût de revient ; taux de marque = marge ÷ prix de vente HT.",
                         "Prix HT = coût × (1 + taux de marge) ou coût ÷ (1 − taux de marque)."],
                        ["Définitions du Code général de normalisation comptable (CGNC) et de la gestion commerciale",
-                        "CGI, art. 98 et 99 (TVA au taux normal de 20 %)"], 2026, conseils=conseils)
+                        "CGI, art. 99-A (TVA au taux normal de 20 %)"], 2026, conseils=conseils)
     if nom == "Trésorerie sur 12 mois":
         solde = c[0].number_input("Solde de départ (DH)", value=50_000.0, step=5_000.0, key="tr_s")
         enc = c[1].text_input("Encaissements (;)", "80000; 60000; 90000; 70000; 85000; 60000; 95000; 70000; 80000; "

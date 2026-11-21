@@ -27,14 +27,15 @@ TVA = [
      "taux": {"normal": 0.20, "réduits": [0.14, 0.10, 0.07]},
      "sources": ["Wikipédia — TVA au Maroc", "upsilon-consulting.com — réforme TVA 2024-2026"],
      "remarque": "Quatre taux : 20 % (normal), 14 %, 10 % et 7 %, selon les produits et services."},
-    {"de": 2024, "a": 2025, "loi": "Loi de finances 2024 (réforme progressive de la TVA) ; CGI, art. 98, 99 et 247-XXXXI-D",
+    {"de": 2024, "a": 2025, "loi": "Loi de finances 2024 (réforme progressive de la TVA) ; CGI, art. 99 et 247-XXXXI "
+            "(art. 98 abrogé par la LF 2024)",
      "taux": {"normal": 0.20, "réduits": [0.10, "taux de transition par produit (électricité, transport, sucre…)"]},
      "sources": ["DGI — note circulaire n° 735 (LF 2024), tableau des taux avant et après la réforme",
                  "upsilon-consulting.com — réforme TVA 2024-2026"],
      "remarque": "Période de transition : électricité 16 % puis 18 %, compteur d'électricité 11 % puis 15 %, transport "
                  "urbain et routier 13 % puis 12 %, autres transports 16 % puis 18 %, sucre 8 % puis 9 % (taux exacts "
                  "par produit et par année dans le module taux_exercice)."},
-    {"de": 2026, "a": 2026, "loi": "Lois de finances 2024 à 2026 ; CGI, art. 98 et 99",
+    {"de": 2026, "a": 2026, "loi": "Lois de finances 2024 à 2026 ; CGI, art. 99 (édition 2026, vérifiée)",
      "taux": {"normal": 0.20, "réduits": [0.10]},
      "sources": ["upsilon-consulting.com — guide pratique TVA 2026", "hespress.com"],
      "remarque": "Deux taux seulement depuis le 1er janvier 2026 : 20 % et 10 % (7 % et 14 % supprimés)."},

@@ -86,7 +86,7 @@ def calendrier(forme, annee, debut_activite, ca_annuel_ht, salaries, masse_brute
         for t, m in enumerate((3, 6, 9, 12), 1):
             a, ms = mois_suivant(annee, m)
             ajouter(fin_de_mois(a, ms), "Impôt", f"Auto-entrepreneur : déclaration et paiement du chiffre d'affaires "
-                    f"du trimestre {t}/{annee} (ou chaque mois, sur option)", round(ca_annuel_ht / 4 * 0.01, 2), "CGI, art. 41, 73-III et 82 bis ; loi 114-13")
+                    f"du trimestre {t}/{annee} (ou chaque mois, sur option)", round(ca_annuel_ht / 4 * 0.01, 2), "CGI, art. 42 bis, 73-III et 82 bis ; loi 114-13")
     else:
         ajouter(datetime.date(annee, 4, 30), "Déclaration", f"IR : déclaration du revenu global {annee - 1} (revenus "
                 "professionnels au réel ou simplifié, avant le 1er mai, SIMPL-IR), et paiement du solde", 0.0,

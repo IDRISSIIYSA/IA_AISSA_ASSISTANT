@@ -651,3 +651,29 @@ def test_memoire_du_serveur_passages_et_index():
     assert 0 < idx.memoire_mo() < 1
     s = SV.sante()
     assert "index_mo" in s
+
+
+def test_articles_du_cgi_cites_existent_dans_l_edition_2026():
+    """Chaque article du CGI cité par IA AISSA existe dans l'édition 2026 (PDF officiel lu le 21/11/2026) et n'est pas
+    abrogé : l'article 98 (TVA) n'est plus cité pour 2024 et après, l'auto-entrepreneur renvoie à l'article 42 bis."""
+    import re
+    from pathlib import Path
+    from ia_aissa import cgi_2026 as CGI
+    cites = set()
+    for f in Path("ia_aissa").glob("*.py"):
+        s = f.read_text(encoding="utf-8")
+        for m in re.finditer(r"CGI,? art(?:icle|\.)s? ?((?:\d+(?: bis| ter)?(?:-[IVXLC]+)?(?:-[A-Z]\d*°?)?[ ,]*(?:et |à )?)+)", s):
+            cites |= {n.strip() for n in re.findall(r"\d+(?: bis| ter)?", m.group(1))}
+        for m in re.finditer(r"article (\d+(?: bis)?)[-\w]* du CGI", s):
+            cites.add(m.group(1))
+    assert {"19", "73", "99", "144", "247", "42 bis"} <= cites
+    assert not cites - set(CGI.ARTICLES) - CGI.ABROGES, cites - set(CGI.ARTICLES)
+    for f in Path("ia_aissa").glob("*.py"):
+        for ligne in f.read_text(encoding="utf-8").splitlines():
+            if re.search(r"art\. 98\b", ligne):
+                assert "avant la réforme" in ligne or "abrogé" in ligne, (f, ligne)
+            assert "art. 41, 73-III" not in ligne
+    assert "abrogé" in CGI.article("98") and CGI.livre_de("210") == "Livre II" and CGI.livre_de("42 bis") == "Livre premier"
+    assert CGI.article("99").startswith("Article 99 du CGI (édition 2026, livre premier)")
+    from ia_aissa.decortiqueur import FICHES
+    assert "ne leur prévoit plus de taux réduit" in str(FICHES)

@@ -371,6 +371,10 @@ Taux par exercice (`ia_aissa/taux_exercice.py`) : les taux transitoires de l'IS 
 et ceux de la TVA des produits de la réforme 2024-2026 (note circulaire DGI n° 735), par catégorie et par tranche.
 « taux IS 2024 », « TVA sur 1000 DH d'électricité en 2025 » : la réponse cite le taux de l'exercice et sa source.
 
+Articles du CGI (`ia_aissa/cgi_2026.py`) : intitulé et livre de chaque article cité, vérifiés le 21/11/2026 dans le PDF
+officiel de l'édition 2026 (numérotation inchangée ; l'article 98 est abrogé). Un test refuse toute citation d'un
+article absent ou abrogé.
+
 Rappel des échéances : dans « Mes impôts et déclarations (calendrier) », le bouton « 💾 Retenir mon profil » garde votre
 statut et vos chiffres ; demandez ensuite dans le chat « qu'est-ce que je dois payer ce mois-ci ? » (ou « chno khassni
 nkhalles ? ») : échéances du mois, montants estimés, base légale et prochaine échéance.
