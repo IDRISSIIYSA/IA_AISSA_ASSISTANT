@@ -116,6 +116,7 @@ marocains (taux, lois) sur des sources fiables avant de les encoder, et noter le
 - [ ] Alien : couper la bulle à la fin d'une phrase (et non à 400 caractères au milieu d'un mot) et proposer « lire la suite » quand la réponse est longue
 - [ ] Mobile : vérifier en mode sombre la couleur de l'invite courte et du texte saisi (contraste ≥ 4,5:1)
 - [ ] Fiscalité : répondre dans le chat à « que dit l'article 99 du CGI ? » avec l'intitulé, le livre et le lien du PDF officiel (module cgi_2026), puis les passages lus du CGI 2026 si l'administrateur dépose le PDF dans la bibliothèque
+- [ ] Fiscalité : « Quels sont les taux de TVA en 2026 ? » reçoit en ligne (21/11/2026) un passage sans rapport du CGI 2026 lu (remboursement de TVA) au lieu des barèmes datés (20 % et 10 %, art. 99) : faire passer la réponse exacte du barème avant la lecture
 
 ## Fait
 - [x] Registre des taux et seuils (SMIG, CNSS, AMO, frais professionnels, cotisation minimale…) avec texte légal, source, date de vérification ; mises à jour par l'administrateur appliquées aussitôt à toutes les simulations, historique et annulation ; alertes de nouvelle loi de finances ; simulation « Choisir son statut » ; interrupteur « 🔊 Lecture » et voix choisie selon la vraie langue de la réponse
