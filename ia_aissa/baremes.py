@@ -43,8 +43,8 @@ TVA = [
 IS = [
     {"de": 2023, "a": 2025, "loi": "Loi de finances n° 50-22 pour 2023 ; CGI, art. 247-XXXVII-A (période transitoire)",
      "taux": {"selon le bénéfice, la catégorie et l'exercice": "voir le tableau des taux transitoires"},
-     "cotisation_minimale": {"taux": 0.0025, "minimum": 3_000, "loi": "CGI, art. 144 (paramètres 2026, à vérifier "
-                                                                       "pour l'exercice)"},
+     "cotisation_minimale": {"taux": 0.0025, "minimum": 3_000, "loi": "CGI, art. 144-I-D (0,25 % depuis la LF "
+                                                                       "2023 ; historique : taux_exercice.CM_PAR_EXERCICE)"},
      "sources": ["DGI — note circulaire n° 733 (LF 2023), convergence progressive des taux d'IS"]},
     {"de": 2026, "a": 2026, "loi": "Loi de finances n° 50-22 pour 2023 (convergence 2023-2026) ; CGI, art. 19",
      "taux": {"bénéfice < 100 MDH": 0.20, "bénéfice ≥ 100 MDH": 0.35, "banques et assurances": 0.40},

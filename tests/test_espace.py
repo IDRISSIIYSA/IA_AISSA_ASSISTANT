@@ -1224,3 +1224,40 @@ def test_bulle_de_l_alien_sans_markdown_brut():
     assert sans_markdown("Les **Almohades** (1121-1269), *confiance* 99 %") == "Les Almohades (1121-1269), confiance 99 %"
     page = avatar("La Koutoubia a été construite par les **Almohades** — _Histoire_", en_3d=False)
     assert "<b>Almohades</b>" in page and "<i>Histoire</i>" in page and "**Almohades**" not in page
+
+
+def test_cotisation_minimale_exercice_par_exercice_2020_a_2026(tmp_path, monkeypatch):
+    """CGI art. 144-I-D : LF 2020 (0,50 % / 0,60 %), LF 2022 (0,40 % si RCHA positif), LF 2023 (0,25 %, 0,15 %, 4 %),
+    inchangé jusqu'en 2026 (CGI 2026 lu le 21/11/2026) ; chat et simulation IS prennent le taux de l'exercice."""
+    from ia_aissa import taux_exercice as T
+    assert T.taux_cm(2020) == T.taux_cm(2021) == .005 and T.taux_cm(2021, rcha_negatif_2_exercices=True) == .006
+    assert T.taux_cm(2021, rcha_positif=True) == .005 and T.taux_cm(2022, rcha_positif=True) == .004
+    assert T.taux_cm(2022, rcha_negatif_2_exercices=True) == .006
+    assert {T.taux_cm(a, rcha_negatif_2_exercices=True) for a in range(2023, 2027)} == {.0025}
+    assert T.taux_cm(2022, "produits de base") == .0025 and T.taux_cm(2023, "produits de base") == .0015
+    assert T.taux_cm(2022, "professions libérales") == .06 and T.taux_cm(2026, "professions libérales") == .04
+    assert T.taux_cm(2018) is None and T.taux_cm(2027) is None                       # rien d'inventé
+    assert T.cotisation_minimale(400_000, 2025)["montant"] == 3_000                    # minimum légal IS
+    assert T.cotisation_minimale(400_000, 2025, "IR", cas="professions libérales")["montant"] == 16_000
+    assert len(T.historique_cm()) == 7 and "LF 2022" in T.historique_cm()[2]
+    from ia_aissa.pensee import penser
+    r = penser("cotisation minimale 2021 sur 2 000 000 dh de chiffre d'affaires")[0]
+    assert "10 000 DH" in r and "0,6 %" in r and "art. 144-I-D" in r
+    assert "0,4 %" in penser("quel est le taux de la cotisation minimale en 2022")[0]
+    assert "4 %" in penser("cotisation minimale 2024 pour un médecin")[0]
+    assert "0,75 %" in penser("cotisation minimale 2019")[0]
+    # Simulation IS : taux réduit des produits de base
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    at = AppTest.from_file(str(RACINE / "controle_gestion_ia.py"), default_timeout=300).run()
+    liste = at.sidebar.selectbox[0]
+    liste.select(next(o for o in liste.options if o.endswith("IS (impôt sur les sociétés)"))).run()
+    at.number_input(key="is_ben").set_value(-50_000.0).run()
+    at.number_input(key="is_prod").set_value(4_000_000.0).run()
+    texte = lambda: " ".join(str(getattr(e, "value", "")) for e in list(at.markdown) + list(at.caption) + list(at.table)
+                             + list(at.dataframe))
+    assert not at.exception and "10 000 DH" in texte().replace(" ", " ")         # 0,25 % × 4 MDH
+    at.checkbox(key="is_base").check().run()
+    assert not at.exception and "6 000 DH" in texte().replace(" ", " ")          # 0,15 % × 4 MDH

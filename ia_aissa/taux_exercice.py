@@ -15,6 +15,77 @@ TVA…) sont signalés dans la réponse, pas calculés.
 
 SOURCE_IS = "DGI, note circulaire n° 733 (loi de finances 2023), art. 247-XXXVII-A et 19-I du CGI"
 SOURCE_TVA = "DGI, note circulaire n° 735 (loi de finances 2024), art. 99, 91 et 247-XXXXI-D du CGI"
+
+# ==========================================
+# Cotisation minimale (CGI, art. 144-I-D), exercice par exercice — lu le 21/11/2026 dans :
+# - la loi de finances n° 70-19 pour 2020, art. 6 (Bulletin officiel, finances.gov.ma/Publication/db/2019/lf2020.pdf) :
+#   0,50 %, porté à 0,60 % si le résultat courant hors amortissement est négatif deux exercices de suite (après la
+#   période d'exonération) ; 0,25 % (produits de base) ; 6 % (professions libérales à l'IR) ; applicable aux
+#   déclarations souscrites à compter du 1er janvier 2020 (l'exercice 2019, déclaré en 2020, en relève : le 0,75 %
+#   voté par la LF 2019 n'a pas été appliqué aux déclarations) ;
+# - la note circulaire n° 732 (LF 2022) : 0,40 % quand ce résultat est positif, exercices ouverts dès le 01/01/2022 ;
+# - la note circulaire n° 733 (LF 2023) : 0,25 % quel que soit ce résultat, 0,15 % (produits de base), 4 %
+#   (professions libérales), exercices ouverts dès le 01/01/2023 ;
+# - le CGI 2026 (art. 144-I-D et ses notes) : aucun changement par les lois de finances 2024, 2025 et 2026 ; minimums
+#   de 3 000 DH (IS) et 1 500 DH (IR, résultat net réel ou simplifié) inchangés depuis la LF 2014.
+# ==========================================
+SOURCE_CM = ("CGI, art. 144-I-D ; loi de finances n° 70-19 (2020), notes circulaires DGI n° 732 (LF 2022) et n° 733 "
+             "(LF 2023) ; CGI 2026 (lu le 21/11/2026)")
+PRODUITS_DE_BASE = ("produits pétroliers, gaz, beurre, huile, sucre, farine, eau, électricité et médicaments "
+                    "(ventes des entreprises commerciales)")
+_CM_2020 = {"normal": .005, "rcha_positif": None, "rcha_negatif_2_exercices": .006, "produits de base": .0025,
+            "professions libérales": .06}
+_CM_2022 = dict(_CM_2020, rcha_positif=.004)
+_CM_2023 = {"normal": .0025, "rcha_positif": None, "rcha_negatif_2_exercices": None, "produits de base": .0015,
+            "professions libérales": .04}
+CM_PAR_EXERCICE = {2020: _CM_2020, 2021: _CM_2020, 2022: _CM_2022, 2023: _CM_2023, 2024: _CM_2023, 2025: _CM_2023,
+                   2026: _CM_2023}
+CM_MINIMUM = {"IS": 3_000, "IR": 1_500}
+CM_LOI = {2020: "LF 2020", 2021: "LF 2020", 2022: "LF 2022", 2023: "LF 2023", 2024: "LF 2023", 2025: "LF 2023",
+          2026: "LF 2023"}
+
+
+def taux_cm(exercice, cas="normal", rcha_positif=None, rcha_negatif_2_exercices=False):
+    """Taux de la cotisation minimale de l'exercice. cas : « normal », « produits de base », « professions libérales ».
+    Pour le cas normal en 2020-2022, le résultat courant hors amortissement (RCHA) compte : positif → 0,40 % en 2022 ;
+    négatif deux exercices de suite → 0,60 %. None si l'exercice n'est pas couvert (rien n'est inventé)."""
+    regime = CM_PAR_EXERCICE.get(exercice)
+    if regime is None:
+        return None
+    if cas != "normal":
+        return regime[cas]
+    if rcha_negatif_2_exercices and regime["rcha_negatif_2_exercices"]:
+        return regime["rcha_negatif_2_exercices"]
+    if rcha_positif and regime["rcha_positif"]:
+        return regime["rcha_positif"]
+    return regime["normal"]
+
+
+def cotisation_minimale(base, exercice, impot="IS", **cas):
+    """{taux, montant, minimum, regle} : le plus élevé du taux × base (produits HT) et du minimum légal."""
+    taux = taux_cm(exercice, **cas)
+    if taux is None:
+        return None
+    minimum = CM_MINIMUM[impot]
+    calcul = round(max(base, 0) * taux, 2)
+    return {"taux": taux, "montant": max(calcul, minimum), "minimum": minimum, "calcul": calcul,
+            "regle": "minimum légal" if minimum > calcul else "taux × produits"}
+
+
+def historique_cm():
+    """Les lignes « 2020 : 0,5 % (0,6 % si…) ; … » pour la réponse et le rapport."""
+    lignes = []
+    for annee, r in CM_PAR_EXERCICE.items():
+        normal = pct(r["normal"])
+        if r["rcha_positif"]:
+            normal += f" ({pct(r['rcha_positif'])} si le résultat courant hors amortissement est positif"
+            normal += f", {pct(r['rcha_negatif_2_exercices'])} s'il est négatif deux exercices de suite)"
+        elif r["rcha_negatif_2_exercices"]:
+            normal += f" ({pct(r['rcha_negatif_2_exercices'])} si le résultat courant hors amortissement est négatif " \
+                      "deux exercices de suite)"
+        lignes.append(f"{annee} : {normal} ; produits de base {pct(r['produits de base'])} ; professions libérales "
+                      f"{pct(r['professions libérales'])} ({CM_LOI[annee]})")
+    return lignes
 EXERCICES = (2022, 2023, 2024, 2025, 2026)
 SEUIL_PETIT, SEUIL_MOYEN, SEUIL_GRAND = 300_000, 1_000_000, 100_000_000
 
@@ -156,6 +227,7 @@ def fiche_tva_par_exercice():
 import re as _re
 
 ANNEE = _re.compile(r"(?<![\d.,])(202[2-6])(?![\d.,])(?!\s*(dh|dhs|dirhams?|mad)\b)")   # « 2026 dh » : un montant
+ANNEE_CM = _re.compile(r"(?<![\d.,])(20(?:19|2[0-6]))(?![\d.,])(?!\s*(dh|dhs|dirhams?|mad)\b)")
 CONTEXTE_IS = _re.compile(r"(impôt sur les sociétés|impot sur les societes|\bis\b|dariba\b.*\b(charika|chrika|rb7)|"
                           r"\b(rb7|arba7)\b.*\bcharika\b)")
 CONTEXTE_FISCAL = _re.compile(r"(taux|bénéfice|benefice|société|societe|dh\b|dirhams?|exercice|impôt|impot|combien|"
@@ -170,6 +242,9 @@ def exercice_dans(texte):
                           r"industri|\btva\b|exercice|dariba|charika|\bcfc\b|\bzai\b|export|hôtel|hotel)", t)
     if detecter_langue(texte) == "English" and not francais:   # « what is … in 2024 » : « is » anglais, pas l'impôt
         return None
+    if _re.search(r"cotisation minimale|\bcm\b", t):
+        m = ANNEE_CM.search(t)
+        return int(m.group(1)) if m else None
     m = ANNEE.search(t)
     if not m or not ((_re.search(r"\btva\b", t) or CONTEXTE_IS.search(t)) and CONTEXTE_FISCAL.search(t)):
         return None
@@ -216,6 +291,8 @@ def repondre_par_exercice(texte, valeurs, exercice):
                 f"_Source : {SOURCE_TVA}._",
                 [f"Exercice trouvé : {exercice} ; produit reconnu : {produit}.",
                  "Taux lu dans le tableau de la réforme de la TVA (taux en vigueur au 1er janvier)."])
+    if _re.search(r"cotisation minimale|\bcm\b", t):
+        return repondre_cm(t, valeurs, exercice)
     if CONTEXTE_IS.search(t):
         categorie = categorie_dans(t)
         if _re.search(r"(chiffre d['’ ]?\s*affaires|\bca\b|produits|ventes|recettes|cotisation minimale)", t):
@@ -227,8 +304,8 @@ def repondre_par_exercice(texte, valeurs, exercice):
                 return None
             return (f"Exercice {exercice}, {CATEGORIES_IS[categorie].split(' (')[0].lower()} : bénéfice net fiscal "
                     f"**{dh(b)}** ({r['regle']}) → taux **{pct(r['taux'])}** sur tout le bénéfice → **IS {dh(r['is'])}**."
-                    f"\n\nÀ comparer à la cotisation minimale (0,25 % des produits, au moins 3 000 DH) : le plus élevé "
-                    f"est dû. _Source : {r['source']}._",
+                    f"\n\nÀ comparer à la cotisation minimale ({pct(taux_cm(exercice))} des produits en {exercice}, "
+                    f"au moins 3 000 DH) : le plus élevé est dû. _Source : {r['source']}._",
                     [f"Exercice trouvé : {exercice} ; catégorie : {categorie}.",
                      "Taux transitoire de l'exercice (taux proportionnel, appliqué à tout le bénéfice)."])
         lignes = [("bénéfice ≤ 300 000 DH", taux_is(1, exercice, categorie)),
@@ -242,3 +319,43 @@ def repondre_par_exercice(texte, valeurs, exercice):
                 f"Le taux s'applique à tout le bénéfice. _Source : {SOURCE_IS}._",
                 [f"Exercice trouvé : {exercice} ; catégorie : {categorie}.", "Taux transitoires 2023-2026 de l'IS."])
     return None
+
+
+def repondre_cm(texte, valeurs, exercice):
+    """« cotisation minimale 2022 », « CM 2021 sur 2 000 000 DH de chiffre d'affaires » : taux et montant de l'exercice."""
+    if exercice not in CM_PAR_EXERCICE:
+        if exercice == 2019:
+            return ("Pour 2019, la loi de finances avait voté 0,75 %, mais la loi de finances 2020 a ramené la cotisation "
+                    "minimale à 0,50 % pour toutes les déclarations déposées à partir du 1er janvier 2020 : l'exercice "
+                    "2019, déclaré en 2020, relève donc de 0,50 % (0,60 % si le résultat courant hors amortissement "
+                    f"était négatif deux exercices de suite). _Source : {SOURCE_CM}._", ["Exercice trouvé : 2019."])
+        return None
+    t = texte.lower()
+    cas = ("professions libérales" if _re.search(r"(profession libérale|professions libérales|médecin|avocat|"
+                                                  r"architecte|notaire|expert[- ]comptable)", t)
+           else "produits de base" if _re.search(r"(pétrol|petrol|carburant|\bgaz\b|beurre|huile|sucre|farine|"
+                                                  r"médicament|medicament|pharmacie)", t) else "normal")
+    impot = "IR" if cas == "professions libérales" or _re.search(r"(\bir\b|personne physique|impôt sur le revenu)",
+                                                                  t) else "IS"
+    regime = CM_PAR_EXERCICE[exercice]
+    etapes = [f"Exercice trouvé : {exercice} ; cas : {cas} ; impôt : {impot}."]
+    if valeurs:
+        base = max(valeurs)
+        r = cotisation_minimale(base, exercice, impot, cas=cas)
+        debut = (f"Cotisation minimale {exercice} ({cas}) : {dh(base)} × **{pct(r['taux'])}** = {dh(r['calcul'])} ; "
+                 f"minimum légal {dh(r['minimum'])} → **{dh(r['montant'])}** à payer si l'impôt calculé sur le "
+                 "bénéfice est plus faible.")
+        etapes.append("Base : produits hors TVA (chiffre d'affaires, produits financiers, subventions).")
+    else:
+        debut = f"Taux de la cotisation minimale en {exercice} : **{pct(taux_cm(exercice, cas))}** ({cas})."
+    if cas == "normal" and regime["rcha_negatif_2_exercices"]:
+        debut += (f" Attention : en {exercice}, ce taux dépendait du résultat courant hors amortissement — "
+                  + (f"{pct(regime['rcha_positif'])} s'il était positif, " if regime["rcha_positif"] else "")
+                  + f"{pct(regime['rcha_negatif_2_exercices'])} s'il était négatif deux exercices de suite.")
+    return (debut + f" Minimums : {dh(CM_MINIMUM['IS'])} (IS), {dh(CM_MINIMUM['IR'])} (IR) ; exonération pendant "
+            "les 36 premiers mois d'exploitation (sociétés) ou les 3 premiers exercices (IR).\n\nHistorique :\n"
+            + "\n".join(f"- {l}" for l in historique_cm()) + f"\n\n_Source : {SOURCE_CM}._", etapes)
+
+
+def dh(v):
+    return f"{v:,.0f}".replace(",", " ") + " DH"

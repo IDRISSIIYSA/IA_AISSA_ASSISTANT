@@ -255,9 +255,13 @@ def construire(nom, memoire):
         c2 = st.columns(3)
         exercice = c2[0].selectbox("Exercice (ouvert à compter du 1er janvier)", [2026, 2025, 2024, 2023], key="is_ex")
         debut = c2[1].date_input("Début d'activité de la société", value=datetime.date(2015, 1, 1), key="is_debut")
+        base_cm = c2[2].checkbox("Vente de produits de base", key="is_base",
+                                 help=f"Taux réduit de cotisation minimale pour : {TE.PRODUITS_DE_BASE} (CGI, art. 144-I-D).")
         secteur = TE.CATEGORIES_IS[categorie].split(" (")[0]
         mois_activite = (exercice - debut.year) * 12 + (12 - debut.month + 1)
         x = K.calculer_is_du(benefice, produits)
+        cm = TE.cotisation_minimale(produits, exercice, "IS", cas="produits de base" if base_cm else "normal")
+        x["cotisation_minimale"] = cm["montant"]                      # taux de l'exercice (CGI, art. 144-I-D)
         transitoire = TE.taux_is(benefice, exercice, categorie)        # taux de l'exercice (2023-2026)
         x["taux"] = transitoire["taux"]
         x["is"] = round(max(benefice, 0) * x["taux"], 2)
@@ -288,14 +292,15 @@ def construire(nom, memoire):
                        [f"Taux de l'exercice {exercice} ({transitoire['regle']}) : {TE.pct(x['taux'])}, appliqué à "
                         "tout le bénéfice (taux proportionnel, transitoire 2023-2026 : 20 %, 35 % ou 40 % en 2026).",
                         f"IS proportionnel = {dh(max(benefice, 0))} × {TE.pct(x['taux'])} = {dh(x['is'])}.",
-                        f"Cotisation minimale = max(3 000 DH ; 0,25 % × {dh(produits)}) = {dh(x['cotisation_minimale'])}.",
+                        f"Cotisation minimale {exercice} = max(3 000 DH ; {TE.pct(cm['taux'])} × {dh(produits)}) = "
+                        f"{dh(cm['montant'])}" + (" (taux réduit des produits de base)." if base_cm else "."),
                         f"IS dû = le plus élevé des deux = {dh(x['is_du'])}."],
                        [p["loi"], TE.SOURCE_IS + " (taux de chaque exercice, lus le 04/11/2026)",
-                        p["cotisation_minimale"]["loi"] + " (cotisation minimale)",
+                        TE.SOURCE_CM + " (cotisation minimale de chaque exercice)",
                         *(f"Source consultée : {s}" for s in p["sources"]), f"Vérifié le {B.VERIFIE_LE}."],
                        exercice, remarques=[
-                           "Cotisation minimale calculée avec les paramètres 2026 (0,25 %, minimum 3 000 DH) : pour un "
-                           "exercice antérieur, vérifiez le taux dans le CGI de l'année.",
+                           "Cotisation minimale de l'exercice choisi (0,25 % de 2023 à 2026, 0,15 % pour les produits de "
+                           "base ; historique depuis 2020 : demandez « cotisation minimale 2021 » dans le chat).",
                            "Non appliqués : sociétés conventionnées à 1,5 milliard de DH (20 % permanent), maintien à "
                            "35 % pendant trois exercices après un bénéfice ≥ 100 MDH, réductions d'impôt spécifiques. "
                            "Appliqué : exonération de cotisation minimale pendant les 36 premiers mois d'activité "

@@ -370,6 +370,8 @@ saisie ; dès 6 messages, un bouton ⬆️👽 ramène à l'alien.
 Taux par exercice (`ia_aissa/taux_exercice.py`) : les taux transitoires de l'IS 2023-2026 (note circulaire DGI n° 733)
 et ceux de la TVA des produits de la réforme 2024-2026 (note circulaire DGI n° 735), par catégorie et par tranche.
 « taux IS 2024 », « TVA sur 1000 DH d'électricité en 2025 » : la réponse cite le taux de l'exercice et sa source.
+Cotisation minimale (CGI, art. 144-I-D) exercice par exercice de 2020 à 2026 (LF 2020, notes circulaires n° 732 et
+733, CGI 2026) : « cotisation minimale 2021 sur 2 000 000 DH » donne le taux, le montant et l'historique.
 
 Articles du CGI (`ia_aissa/cgi_2026.py`) : intitulé et livre de chaque article cité, vérifiés le 21/11/2026 dans le PDF
 officiel de l'édition 2026 (numérotation inchangée ; l'article 98 est abrogé). Un test refuse toute citation d'un
