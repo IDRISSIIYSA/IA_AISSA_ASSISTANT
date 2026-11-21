@@ -958,6 +958,16 @@ def traiter(r, utilisateur, texte, fichiers):
                   for d in mem.digestions(200) if visible_par(d, utilisateur)][:30]
         return ("Voici ce que j'ai lu et digéré." if lignes else "Je n'ai encore rien lu : donne-moi un lien ou un livre !"), \
             [{"type": "liste", "titre": "📚 Ma bibliothèque", "lignes": lignes}], [], "lecteur", "normal"
+    if voulu == "paiement_fait" and not re.search(r"\d{3,}|\bdh\b|dirham", texte, re.I):   # un montant : calcul
+        from .obligations import PAIEMENTS, marquer_payee
+        if any(re.search(q, texte.lower()) for q, _ in PAIEMENTS):
+            reponse, _ = marquer_payee(mem, utilisateur, texte)
+            st.session_state.pop("rappel_echeance", None)       # le rappel discret est recalculé
+            return reponse, [], [{"outil": "pensee_propre", "entree": "échéance cochée"}], "comptable", "normal"
+    if voulu == "annuler_paiement":
+        from .obligations import annuler_dernier_paiement
+        st.session_state.pop("rappel_echeance", None)
+        return annuler_dernier_paiement(mem, utilisateur), [], [], "comptable", "normal"
     if voulu == "echeances" and not re.search(r"\d", texte):   # avec un montant, c'est un calcul : pensée propre
         from .obligations import reponse_rappel
         reponse, elements = reponse_rappel(mem, utilisateur)
@@ -1285,6 +1295,14 @@ def espace_visiteur():
     if not st.session_state["affichage"]:
         st.markdown('<p class="astuce">🎙️ Appuie sur le micro bleu pour parler · ✅ pour envoyer ta voix · '
                     '📎 pour déposer un fichier · ou écris simplement</p>', unsafe_allow_html=True)
+        if "rappel_echeance" not in st.session_state:         # une seule lecture du profil par visite
+            from .obligations import rappel_discret
+            try:
+                st.session_state["rappel_echeance"] = rappel_discret(mem, st.session_state.get("utilisateur", "Aissa"))
+            except Exception:                                 # un profil abîmé ne bloque jamais l'ouverture
+                st.session_state["rappel_echeance"] = None
+        if st.session_state["rappel_echeance"]:
+            st.caption(st.session_state["rappel_echeance"])
     for i, m in enumerate(st.session_state["affichage"]):
         afficher_message(m, i, r["voir_outils"])
     if len(st.session_state["affichage"]) >= SEUIL_REMONTER:       # conversation longue : l'alien d'un geste

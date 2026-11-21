@@ -188,9 +188,37 @@ def profil_de(memoire, utilisateur):
     return _json.loads(brut) if brut else None
 
 
-def rappel(profil, aujourdhui=None, horizon_jours=45):
-    """Échéances du mois en cours (et en retard de ce mois), puis celles des `horizon_jours` suivants.
-    Renvoie {"ce_mois": DataFrame, "a_venir": DataFrame, "prochaine": dict ou None, "total_ce_mois": float}."""
+CLE_PAYEES = "echeances_payees:{}"
+GARDER_PAYEES_JOURS = 400            # au-delà, une échéance cochée est oubliée (la liste reste courte)
+JOURS_RAPPEL_DISCRET = 5
+# « j'ai payé la CNSS » → les obligations du calendrier qu'elle désigne
+PAIEMENTS = [
+    (r"\bcnss\b|damancom", r"^CNSS"),
+    (r"\btva\b", r"^TVA"),
+    (r"\bir\b.*salaire|retenue|salaires|\bir\b", r"^IR sur salaires|^IR : déclaration"),
+    (r"acompte|\bis\b|impôt sur les sociétés|liquidation", r"^IS : acompte|^IS \d{4} : liquidation"),
+    (r"auto[- ]?entrepreneur", r"^Auto-entrepreneur"),
+    (r"9421|déclaration annuelle des (traitements|salaires)", r"^Déclaration annuelle des traitements"),
+]
+
+
+def cle_echeance(date, obligation):
+    return f"{date.isoformat() if hasattr(date, 'isoformat') else date}|{obligation}"
+
+
+def _liste_payees(memoire, utilisateur):
+    brut = memoire.reglage(CLE_PAYEES.format(utilisateur)) if memoire is not None else None
+    return _json.loads(brut) if brut else []                     # dans l'ordre où elles ont été cochées
+
+
+def payees_de(memoire, utilisateur):
+    return set(_liste_payees(memoire, utilisateur))
+
+
+def rappel(profil, aujourdhui=None, horizon_jours=45, payees=frozenset()):
+    """Échéances du mois en cours (et en retard de ce mois), puis celles des `horizon_jours` suivants ; les échéances
+    cochées comme payées (`payees` : clés « AAAA-MM-JJ|obligation ») sont retirées.
+    Renvoie {"ce_mois", "a_venir", "prochaine", "total_ce_mois", "payees": DataFrame des échéances du mois cochées}."""
     aujourdhui = aujourdhui or datetime.date.today()
     debut = datetime.date.fromisoformat(profil["debut"])
     salaries = int(profil.get("salaries") or 0)
@@ -202,6 +230,9 @@ def rappel(profil, aujourdhui=None, horizon_jours=45):
         tables.append(cal["tableau"])
     t = pd.concat(tables, ignore_index=True).drop_duplicates(subset=["Date limite", "Obligation"])
     dates = pd.to_datetime(t["Date limite"], format="%d/%m/%Y").dt.date
+    cochee = pd.Series([cle_echeance(d, o) in payees for d, o in zip(dates, t["Obligation"])], index=t.index)
+    deja = t[cochee & (dates >= aujourdhui.replace(day=1)) & (dates <= fin_de_mois(aujourdhui.year, aujourdhui.month))]
+    t, dates = t[~cochee], dates[~cochee]
     ce_mois = t[(dates >= aujourdhui.replace(day=1)) & (dates <= fin_de_mois(aujourdhui.year, aujourdhui.month))]
     a_venir = t[(dates > fin_de_mois(aujourdhui.year, aujourdhui.month))
                 & (dates <= aujourdhui + datetime.timedelta(days=horizon_jours))]
@@ -215,7 +246,7 @@ def rappel(profil, aujourdhui=None, horizon_jours=45):
         ligne["jours"] = (ligne["_date"] - aujourdhui).days
         prochaine = ligne
     return {"ce_mois": ce_mois.sort_values("_date"), "a_venir": a_venir.sort_values("_date").drop(columns="_date"),
-            "prochaine": prochaine, "total_ce_mois": float(ce_mois["Montant estimé"].sum())}
+            "prochaine": prochaine, "total_ce_mois": float(ce_mois["Montant estimé"].sum()), "payees": deja}
 
 
 def reponse_rappel(memoire, utilisateur, aujourdhui=None):
@@ -227,7 +258,7 @@ def reponse_rappel(memoire, utilisateur, aujourdhui=None):
                 "clique sur « 💾 Retenir mon profil » : ensuite, demande-moi simplement « qu'est-ce que je dois payer ce "
                 "mois-ci ? ».", [])
     aujourdhui = aujourdhui or datetime.date.today()
-    r = rappel(profil, aujourdhui)
+    r = rappel(profil, aujourdhui, payees=payees_de(memoire, utilisateur))
     dh = lambda v: f"{v:,.0f}".replace(",", " ") + " DH"
     mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
             "novembre", "décembre"][aujourdhui.month - 1]
@@ -244,6 +275,10 @@ def reponse_rappel(memoire, utilisateur, aujourdhui=None):
                   + f"\n\nTotal estimé du mois : **{dh(r['total_ce_mois'])}**.")
     else:
         texte += f"Rien à payer ni à déclarer en {mois} {aujourdhui.year} d'après ton profil."
+    if len(r["payees"]):
+        texte += "\n\n✅ Déjà payé ce mois-ci : " + " ; ".join(r["payees"]["Obligation"]) + "."
+    if lignes:
+        texte += "\n\nUne échéance réglée ? Dis-moi « j'ai payé la CNSS » (ou la TVA, l'IR, l'acompte d'IS) : je ne te la rappellerai plus."
     p = r["prochaine"]
     if p:
         texte += (f"\n\n⏰ Prochaine échéance : **{p['_date'].strftime('%d/%m/%Y')}** "
@@ -254,3 +289,84 @@ def reponse_rappel(memoire, utilisateur, aujourdhui=None):
     if len(r["a_venir"]):
         elements.append({"type": "tableau", "titre": "📅 Les semaines suivantes", "donnees": r["a_venir"]})
     return texte, elements
+
+
+def marquer_payee(memoire, utilisateur, texte, aujourdhui=None):
+    """« j'ai payé la CNSS et la TVA » : pour chaque obligation nommée, coche l'échéance non payée la plus proche — la
+    première à partir du début du mois (jusqu'à 31 jours après aujourd'hui), sinon la plus récente des 60 derniers
+    jours. Renvoie (réponse, échéances cochées)."""
+    profil = profil_de(memoire, utilisateur)
+    if not profil:
+        return reponse_rappel(memoire, utilisateur, aujourdhui)[0], []
+    import re
+    aujourdhui = aujourdhui or datetime.date.today()
+    t = texte.lower()
+    motifs = [o for q, o in PAIEMENTS if re.search(q, t)]
+    if not motifs:
+        return ("Laquelle as-tu payée ? Dis-moi par exemple « j'ai payé la CNSS », « la TVA », « l'IR sur salaires » "
+                "ou « l'acompte d'IS ».", [])
+    liste = _liste_payees(memoire, utilisateur)
+    payees = set(liste)
+    tables = [calendrier(profil["forme"], a, datetime.date.fromisoformat(profil["debut"]), float(profil.get("ca") or 0),
+                         int(profil.get("salaries") or 0), float(profil.get("masse") or 0),
+                         float(profil.get("is_precedent") or 0), float(profil.get("tva_mensuelle") or 0),
+                         aujourdhui)["tableau"] for a in (aujourdhui.year - 1, aujourdhui.year, aujourdhui.year + 1)]
+    t_ = pd.concat(tables, ignore_index=True).drop_duplicates(subset=["Date limite", "Obligation"])
+    t_ = t_.assign(_date=pd.to_datetime(t_["Date limite"], format="%d/%m/%Y").dt.date).sort_values("_date")
+    fenetre = t_[(t_["_date"] >= aujourdhui - datetime.timedelta(days=60))
+                 & (t_["_date"] <= aujourdhui + datetime.timedelta(days=31))]
+    debut_mois = aujourdhui.replace(day=1)
+    cochees = []
+    for motif in motifs:
+        libres = [e for _, e in fenetre.iterrows() if re.search(motif, e["Obligation"])
+                  and cle_echeance(e["_date"], e["Obligation"]) not in payees]
+        actuelles = [e for e in libres if e["_date"] >= debut_mois]
+        e = actuelles[0] if actuelles else (libres[-1] if libres else None)
+        if e is not None:
+            cle = cle_echeance(e["_date"], e["Obligation"])
+            payees.add(cle)
+            liste.append(cle)
+            cochees.append(e)
+    if not cochees:
+        return ("Je ne trouve pas d'échéance non payée de ce type autour d'aujourd'hui dans ton calendrier : tout est "
+                "déjà coché, ou ton profil ne la prévoit pas.", [])
+    limite = (aujourdhui - datetime.timedelta(days=GARDER_PAYEES_JOURS)).isoformat()
+    liste = [c for c in liste if c.split("|")[0] >= limite]
+    memoire.definir_reglage(CLE_PAYEES.format(utilisateur), _json.dumps(liste, ensure_ascii=False))
+    lignes = "\n".join(f"- ✅ **{e['_date'].strftime('%d/%m/%Y')}** : {e['Obligation']}" for e in cochees)
+    return (f"C'est noté, je ne te les rappellerai plus :\n{lignes}\n\nUne erreur ? Dis-moi « annule mon dernier "
+            "paiement ».", cochees)
+
+
+def annuler_dernier_paiement(memoire, utilisateur):
+    """Décoche la dernière échéance cochée."""
+    liste = _liste_payees(memoire, utilisateur)
+    if not liste:
+        return "Aucune échéance n'est cochée comme payée."
+    derniere = liste.pop()
+    memoire.definir_reglage(CLE_PAYEES.format(utilisateur), _json.dumps(liste, ensure_ascii=False))
+    date, obligation = derniere.split("|", 1)
+    return f"D'accord, « {obligation} » ({datetime.date.fromisoformat(date).strftime('%d/%m/%Y')}) est de nouveau à payer."
+
+
+def rappel_discret(memoire, utilisateur, aujourdhui=None):
+    """Une ligne à l'ouverture quand une échéance non payée tombe dans moins de JOURS_RAPPEL_DISCRET jours (ou est
+    passée ce mois-ci), sinon None. Rien sans profil enregistré."""
+    profil = profil_de(memoire, utilisateur)
+    if not profil:
+        return None
+    aujourdhui = aujourdhui or datetime.date.today()
+    r = rappel(profil, aujourdhui, horizon_jours=JOURS_RAPPEL_DISCRET, payees=payees_de(memoire, utilisateur))
+    proches = [e for _, e in r["ce_mois"].iterrows() if (e["_date"] - aujourdhui).days < JOURS_RAPPEL_DISCRET]
+    proches += [e for _, e in r["a_venir"].assign(
+        _date=pd.to_datetime(r["a_venir"]["Date limite"], format="%d/%m/%Y").dt.date).iterrows()
+        if (e["_date"] - aujourdhui).days < JOURS_RAPPEL_DISCRET]
+    if not proches:
+        return None
+    e = min(proches, key=lambda x: x["_date"])
+    jours = (e["_date"] - aujourdhui).days
+    quand = ("date passée" if jours < 0 else "aujourd'hui" if jours == 0 else "demain" if jours == 1
+             else f"dans {jours} jours")
+    autres = f" (+{len(proches) - 1} autre(s))" if len(proches) > 1 else ""
+    return (f"⏰ {e['Obligation']} — {e['_date'].strftime('%d/%m')} ({quand}){autres}. "
+            "Déjà réglée ? Dis « j'ai payé… ».")

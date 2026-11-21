@@ -101,6 +101,10 @@ INTENTIONS = {
                                 r"(livres?|pdf|e-?books?) (gratuits?|libres?)|où (trouver|télécharger) des (livres|pdf))",
                                 re.I),
     "prononciation": re.compile(r"(pronon\w+|apprends?[- ]moi à (dire|parler)|accent)", re.I),
+    "annuler_paiement": re.compile(r"(annule\w*|décoche\w*) (mon |le )?dernier paiement|"
+                                   r"je n'ai pas (encore )?(payé|réglé) (la|le|l')", re.I),
+    "paiement_fait": re.compile(r"\b(j'?ai|jai|on a|c'est|déjà|deja) (bien |déjà |deja )?(payé|réglé|versé|"
+                                r"déclaré)\b|\b(khallest|khlest|khellest|khallast|khlast|sallit|salit)\b", re.I),
     "echeances": re.compile(r"((qu'est[- ]ce que|que|quoi) (je dois|dois[- ]je) (payer|déclarer|verser)|"
                             r"(mes|prochaines?|les) (échéances?|obligations? (fiscales?|du mois))|"
                             r"(payer|déclarer) ce mois|ce que je dois (payer|déclarer)|"

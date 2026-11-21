@@ -531,6 +531,51 @@ def test_rappel_des_echeances_dans_le_chat_depuis_le_profil(tmp_path):
     assert intention("TVA sur 1000 dh") != "echeances"
 
 
+def test_echeance_payee_cochee_dans_le_chat_et_rappel_discret(tmp_path, monkeypatch):
+    """« j'ai payé la CNSS » coche l'échéance courante (plus rappelée) ; « annule mon dernier paiement » la décoche ;
+    à l'ouverture, une ligne discrète signale une échéance non payée à moins de 5 jours."""
+    import datetime
+    from ia_aissa import obligations as O
+    from ia_aissa.espace import intention
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    j = datetime.date(2026, 11, 27)
+    assert O.rappel_discret(mem, "Aissa", j) is None                                    # pas de profil : rien
+    O.garder_profil(mem, "Aissa", {"forme": O.FORMES[0], "debut": datetime.date(2015, 1, 1), "ca": 3_000_000,
+                                   "salaries": 3, "masse": 20_000, "is_precedent": 50_000, "tva_mensuelle": 0})
+    assert "CNSS" in O.rappel_discret(mem, "Aissa", j) and "date passée" in O.rappel_discret(mem, "Aissa", j)
+    texte, cochees = O.marquer_payee(mem, "Aissa", "j'ai payé la CNSS et la TVA", j)
+    assert [e["Date limite"] for e in cochees] == ["10/11/2026", "30/11/2026"]           # celles du mois, pas septembre
+    assert "C'est noté" in texte and "TVA du mois 10/2026" in texte
+    assert O.rappel_discret(mem, "Aissa", j).startswith("⏰ IR sur salaires de 10/2026")
+    mois = O.reponse_rappel(mem, "Aissa", j)[0]
+    assert "✅ Déjà payé ce mois-ci : CNSS" in mois and "**10/11** (⚠️" not in mois
+    O.marquer_payee(mem, "Aissa", "khallest l'IR", j)
+    assert O.rappel_discret(mem, "Aissa", j) is None                                    # tout est réglé
+    assert "IR sur salaires" in O.annuler_dernier_paiement(mem, "Aissa")
+    assert O.rappel_discret(mem, "Aissa", j).startswith("⏰ IR")
+    assert "Laquelle" in O.marquer_payee(mem, "Aissa", "j'ai payé", j)[0]
+    assert O.rappel_discret(mem, "Aissa", datetime.date(2026, 11, 15)) is None         # rien à moins de 5 jours
+    for q in ("j'ai payé la CNSS", "j'ai déjà réglé la TVA", "khallest l'IR"):
+        assert intention(q) == "paiement_fait", q
+    assert intention("annule mon dernier paiement") == "annuler_paiement"
+    # Dans l'application : le chat coche l'échéance
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+    import ia_aissa.parole as P
+    monkeypatch.setattr(P, "synthetiser", lambda t, l: b"ID3")
+    monkeypatch.setattr(O, "rappel_discret", lambda m, u, a=None: "⏰ Test du rappel discret")
+    at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "controle_gestion_ia.py"),
+                           default_timeout=300).run()
+    assert any("Test du rappel discret" in c.value for c in at.caption)
+    visiteur = at.session_state["utilisateur"]
+    O.garder_profil(mem, visiteur, O.profil_de(mem, "Aissa"))
+    at.chat_input[0].set_value("j'ai payé la CNSS").run()
+    assert not at.exception
+    assert any("C'est noté" in str(m.value) and "CNSS" in str(m.value) for m in at.markdown)
+    assert len(O.payees_de(mem, visiteur)) == 1 and O.payees_de(mem, "Aissa") != O.payees_de(mem, visiteur)
+
+
 def test_sauvegarde_complete_et_restauration_dans_une_base_vide(tmp_path):
     """Toute la mémoire exportée puis restaurée à l'identique dans une base vide ; refus si la base n'est pas vide."""
     import datetime

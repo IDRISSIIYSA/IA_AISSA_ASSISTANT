@@ -380,6 +380,8 @@ article absent ou abrogé.
 Rappel des échéances : dans « Mes impôts et déclarations (calendrier) », le bouton « 💾 Retenir mon profil » garde votre
 statut et vos chiffres ; demandez ensuite dans le chat « qu'est-ce que je dois payer ce mois-ci ? » (ou « chno khassni
 nkhalles ? ») : échéances du mois, montants estimés, base légale et prochaine échéance.
+« j'ai payé la CNSS » coche l'échéance du mois (plus rappelée), « annule mon dernier paiement » la décoche ; à
+l'ouverture, une ligne ⏰ signale une échéance non payée à moins de 5 jours.
 
 Démarrage rapide : PyTorch n'est importé qu'au premier cerveau utilisé (`ia_aissa/reseaux.py`) ; la page s'affiche
 sans l'attendre.
