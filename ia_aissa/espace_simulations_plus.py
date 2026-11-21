@@ -40,14 +40,22 @@ def construire_plus(nom, memoire, c):
         is_prec = c3[1].number_input("IS de l'exercice précédent (DH)", 0.0, value=40_000.0, step=1_000.0, key="ob_isp",
                                      help="Sert à calculer les 4 acomptes provisionnels (25 % chacun).")
         tva = c3[2].number_input("TVA à payer par mois, estimée (DH)", 0.0, value=10_000.0, step=500.0, key="ob_tva")
-        cal = O.calendrier(forme, annee, debut, ca, salaries if masse else 0, masse, is_prec, tva, aujourdhui)
+        c4 = st.columns(3)
+        loyer = c4[0].number_input("Loyer mensuel versé à un propriétaire particulier (DH)", 0.0, value=0.0, step=500.0,
+                                   key="ob_loyer", help="Retenue à la source de 10 % (15 % si le loyer annuel atteint "
+                                   "120 000 DH), sauf si le loyer annuel ne dépasse pas 40 000 DH (CGI, art. 160 bis).")
+        honoraires = c4[1].number_input("Honoraires mensuels HT versés à des personnes physiques (DH)", 0.0, value=0.0,
+                                        step=500.0, key="ob_hono", help="Avocat, consultant, architecte… au résultat "
+                                        "net réel ou simplifié : retenue à la source de 10 % (CGI, art. 157 et 73-II).")
+        cal = O.calendrier(forme, annee, debut, ca, salaries if masse else 0, masse, is_prec, tva, aujourdhui,
+                           loyer, honoraires)
         utilisateur = st.session_state.get("utilisateur", "Aissa")
         if c3[0].button("💾 Retenir mon profil", key="ob_garder",
                         help="Pour que je vous rappelle vos échéances dans le chat : « qu'est-ce que je dois payer "
                              "ce mois-ci ? »"):
             O.garder_profil(memoire, utilisateur, {"forme": forme, "debut": debut, "ca": ca, "benefice": benefice,
                                                    "salaries": salaries, "masse": masse, "is_precedent": is_prec,
-                                                   "tva_mensuelle": tva})
+                                                   "tva_mensuelle": tva, "loyer": loyer, "honoraires": honoraires})
             st.success("Profil retenu : demandez-moi dans le chat « qu'est-ce que je dois payer ce mois-ci ? ».")
         elif O.profil_de(memoire, utilisateur):
             st.caption("✅ Profil retenu pour vos rappels dans le chat (cliquez de nouveau pour le mettre à jour).")

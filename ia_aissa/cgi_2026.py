@@ -35,7 +35,8 @@ ARTICLES = {
     "101": "Droit à déduction : règle générale", "108": "Périodicité de la déclaration (TVA)",
     "110": "Déclaration mensuelle", "111": "Déclaration trimestrielle", "125": "Affectation du produit de la TVA "
     "et mesures transitoires", "133": "Droits proportionnels (enregistrement)", "144": "Cotisation minimale",
-    "145": "Tenue de la comptabilité", "155": "Télédéclaration", "156": "Retenue à la source sur les salaires et "
+    "145": "Tenue de la comptabilité", "151": "Déclaration des rémunérations allouées à des tiers et des produits "
+    "de location", "154 bis": "Déclaration des revenus fonciers versés à des personnes physiques (avant le 1er mars)", "155": "Télédéclaration", "157": "Retenue à la source sur les rémunérations allouées à des tiers et les produits de location", "156": "Retenue à la source sur les salaires et "
     "rentes viagères", "160": "Retenue à la source sur les produits bruts versés aux non-résidents",
     "160 bis": "Retenue à la source sur les revenus fonciers",
     "170": "Recouvrement par paiement spontané (IS)", "173": "Recouvrement par paiement spontané (IR)",

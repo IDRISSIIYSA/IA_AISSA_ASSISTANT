@@ -576,6 +576,39 @@ def test_echeance_payee_cochee_dans_le_chat_et_rappel_discret(tmp_path, monkeypa
     assert len(O.payees_de(mem, visiteur)) == 1 and O.payees_de(mem, "Aissa") != O.payees_de(mem, visiteur)
 
 
+def test_retenues_a_la_source_sur_loyers_et_honoraires_dans_le_calendrier(tmp_path):
+    """CGI 2026 (lu le 21/11/2026) : loyers à un particulier — dispense ≤ 40 000 DH/an, 10 % sous 120 000 DH, 15 % au-delà
+    (art. 160 bis, 73-II) ; honoraires à des personnes physiques — 10 % HT (art. 157, 73-II-B-8°) ; versement avant la
+    fin du mois suivant (art. 174) ; déclaration des loyers avant le 1er mars (art. 154 bis) ; rien pour l'auto-entrepreneur."""
+    import datetime
+    from ia_aissa import obligations as O
+    from ia_aissa.memoire import Memoire
+    assert (O.taux_ras_loyer(40_000), O.taux_ras_loyer(40_001), O.taux_ras_loyer(119_999),
+            O.taux_ras_loyer(120_000)) == (0.0, 0.10, 0.10, 0.15)
+    j = datetime.date(2026, 11, 21)
+    t = O.calendrier(O.FORMES[0], 2026, datetime.date(2015, 1, 1), 3e6, 0, 0, 0, 0, j, 8_000, 5_000)["tableau"]
+    loyers = t[t["Obligation"].str.startswith("Retenue à la source sur loyers")]
+    hono = t[t["Obligation"].str.startswith("Retenue à la source sur honoraires")]
+    assert len(loyers) == len(hono) == 12 and set(loyers["Montant estimé"]) == {800.0} and set(hono["Montant estimé"]) == {500.0}
+    assert loyers.iloc[0]["Date limite"] == "28/02/2026" and "10 % du loyer brut" in loyers.iloc[0]["Obligation"]
+    assert loyers.iloc[-1]["Date limite"] == "31/01/2027"                           # décembre : fin janvier
+    assert "15 %" in O.calendrier(O.FORMES[0], 2026, datetime.date(2015, 1, 1), 3e6, 0, 0, 0, 0, j, 10_000)["tableau"][
+        "Obligation"].str.cat()
+    assert not O.calendrier(O.FORMES[0], 2026, datetime.date(2015, 1, 1), 3e6, 0, 0, 0, 0, j, 3_000)["tableau"][
+        "Obligation"].str.contains("loyers").any()                                   # 36 000 DH/an : dispense
+    assert any("avant le 1er mars" in o for o in t["Obligation"]) and any("art. 151" in b for b in t["Base légale"])
+    assert not O.calendrier(O.FORMES[2], 2026, datetime.date(2015, 1, 1), 1e5, 0, 0, 0, 0, j, 8_000, 5_000)["tableau"][
+        "Obligation"].str.contains("Retenue").any()                                  # auto-entrepreneur : non concerné
+    # Profil, rappel et « j'ai payé la retenue sur loyers »
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    O.garder_profil(mem, "Aissa", {"forme": O.FORMES[0], "debut": datetime.date(2015, 1, 1), "ca": 3e6, "salaries": 0,
+                                   "masse": 0, "is_precedent": 0, "tva_mensuelle": 0, "loyer": 8_000, "honoraires": 5_000})
+    texte = O.reponse_rappel(mem, "Aissa", j)[0]
+    assert "Retenue à la source sur loyers de 10/2026" in texte and "Retenue à la source sur honoraires de 10/2026" in texte
+    cochees = O.marquer_payee(mem, "Aissa", "j'ai payé la retenue sur loyers", j)[1]
+    assert [e["Obligation"][:45] for e in cochees] == ["Retenue à la source sur loyers de 10/2026 (10"]
+
+
 def test_sauvegarde_complete_et_restauration_dans_une_base_vide(tmp_path):
     """Toute la mémoire exportée puis restaurée à l'identique dans une base vide ; refus si la base n'est pas vide."""
     import datetime

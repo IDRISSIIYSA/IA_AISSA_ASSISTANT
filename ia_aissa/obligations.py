@@ -17,6 +17,19 @@ from . import connaissances as K
 FORMES = ["Société (SARL, SARL AU, SA)", "Personne physique — résultat net réel ou simplifié",
           "Personne physique — auto-entrepreneur"]
 SEUIL_TVA_MENSUELLE = 1_000_000          # CGI, art. 108 : déclaration mensuelle à partir de 1 000 000 DH de CA
+# Retenues à la source sur loyers et honoraires versés à des personnes physiques (CGI 2026, lu le 21/11/2026) : à opérer
+# par les sociétés et les personnes au résultat net réel ou simplifié (art. 157 et 160 bis), versées avant la fin du
+# mois suivant (art. 174-IV et V).
+SEUIL_RAS_LOYERS = 40_000                # art. 160 bis : pas de retenue si le loyer brut annuel ≤ 40 000 DH
+SEUIL_TAUX_LOYERS = 120_000              # art. 73-II-B-5° (10 %) et C-4° (15 %) : selon le loyer brut annuel
+TAUX_RAS_HONORAIRES = 0.10               # art. 73-II-B-8° : honoraires HT versés à des personnes au réel ou simplifié
+
+
+def taux_ras_loyer(loyer_annuel_brut):
+    """Taux de la retenue sur les loyers versés à un propriétaire personne physique (0 si dispense)."""
+    if loyer_annuel_brut <= SEUIL_RAS_LOYERS:
+        return 0.0
+    return 0.10 if loyer_annuel_brut < SEUIL_TAUX_LOYERS else 0.15
 
 
 def fin_de_mois(annee, mois):
@@ -28,8 +41,10 @@ def mois_suivant(annee, mois):
 
 
 def calendrier(forme, annee, debut_activite, ca_annuel_ht, salaries, masse_brute_mensuelle, is_exercice_precedent,
-               tva_mensuelle_estimee=0.0, aujourdhui=None):
-    """Toutes les échéances de l'année : date limite, obligation, montant estimé, base légale, statut."""
+               tva_mensuelle_estimee=0.0, aujourdhui=None, loyer_mensuel=0.0, honoraires_mensuels=0.0):
+    """Toutes les échéances de l'année : date limite, obligation, montant estimé, base légale, statut.
+    loyer_mensuel : loyer brut versé à un propriétaire personne physique ; honoraires_mensuels : honoraires HT versés à
+    des personnes physiques au résultat net réel ou simplifié (retenues à la source, sauf pour l'auto-entrepreneur)."""
     aujourdhui = aujourdhui or datetime.date.today()
     ev = []
 
@@ -58,6 +73,29 @@ def calendrier(forme, annee, debut_activite, ca_annuel_ht, salaries, masse_brute
                     ir_mois, "CGI, art. 156 et 174")
         ajouter(datetime.date(annee, 2, 28 + calendar.isleap(annee)), "Déclaration",
                 f"Déclaration annuelle des traitements et salaires {annee - 1} (état 9421)", 0.0, "CGI, art. 79")
+    # Retenues à la source sur loyers et honoraires (sociétés et personnes au réel ou simplifié)
+    if not ae and (loyer_mensuel or honoraires_mensuels):
+        taux_loyer = taux_ras_loyer(loyer_mensuel * 12)
+        for m in range(1, 13):
+            if datetime.date(annee, m, 1) < debut_activite.replace(day=1):
+                continue
+            a, ms = mois_suivant(annee, m)
+            if taux_loyer:
+                ajouter(fin_de_mois(a, ms), "Impôt", f"Retenue à la source sur loyers de {m:02d}/{annee} "
+                        f"({taux_loyer * 100:.0f} % du loyer brut) : versement", round(loyer_mensuel * taux_loyer, 2),
+                        "CGI, art. 160 bis, 73-II et 174-IV")
+            if honoraires_mensuels:
+                ajouter(fin_de_mois(a, ms), "Impôt", f"Retenue à la source sur honoraires de {m:02d}/{annee} "
+                        "(10 % HT, prestataires personnes physiques) : versement",
+                        round(honoraires_mensuels * TAUX_RAS_HONORAIRES, 2), "CGI, art. 157, 73-II-B-8° et 174-V")
+        if taux_loyer:
+            ajouter(datetime.date(annee, 2, 28 + calendar.isleap(annee)), "Déclaration",
+                    f"Déclaration annuelle des loyers versés en {annee - 1} et des retenues (avant le 1er mars)", 0.0,
+                    "CGI, art. 154 bis")
+        if honoraires_mensuels:
+            ajouter(fin_de_mois(annee, 3) if societe else datetime.date(annee, 4, 30), "Déclaration",
+                    f"Déclaration des honoraires versés en {annee - 1} (avec la déclaration "
+                    f"{'du résultat fiscal' if societe else 'du revenu global'})", 0.0, "CGI, art. 151")
     # TVA
     if not ae:
         mensuelle = ca_annuel_ht >= SEUIL_TVA_MENSUELLE and not premiere_annee
@@ -173,7 +211,8 @@ FEUILLE_DE_ROUTE = [
 import json as _json
 
 CLE_PROFIL = "profil_obligations:{}"
-CHAMPS_PROFIL = ("forme", "debut", "ca", "benefice", "salaries", "masse", "is_precedent", "tva_mensuelle")
+CHAMPS_PROFIL = ("forme", "debut", "ca", "benefice", "salaries", "masse", "is_precedent", "tva_mensuelle", "loyer",
+                 "honoraires")
 
 
 def garder_profil(memoire, utilisateur, profil):
@@ -199,6 +238,8 @@ PAIEMENTS = [
     (r"acompte|\bis\b|impôt sur les sociétés|liquidation", r"^IS : acompte|^IS \d{4} : liquidation"),
     (r"auto[- ]?entrepreneur", r"^Auto-entrepreneur"),
     (r"9421|déclaration annuelle des (traitements|salaires)", r"^Déclaration annuelle des traitements"),
+    (r"loyers?|foncier", r"^Retenue à la source sur loyers"),
+    (r"honoraires?", r"^Retenue à la source sur honoraires"),
 ]
 
 
@@ -226,7 +267,8 @@ def rappel(profil, aujourdhui=None, horizon_jours=45, payees=frozenset()):
     tables = []
     for annee in (aujourdhui.year, aujourdhui.year + 1):          # décembre : les échéances de janvier aussi
         cal = calendrier(profil["forme"], annee, debut, float(profil.get("ca") or 0), salaries if masse else 0, masse,
-                         float(profil.get("is_precedent") or 0), float(profil.get("tva_mensuelle") or 0), aujourdhui)
+                         float(profil.get("is_precedent") or 0), float(profil.get("tva_mensuelle") or 0), aujourdhui,
+                         float(profil.get("loyer") or 0), float(profil.get("honoraires") or 0))
         tables.append(cal["tableau"])
     t = pd.concat(tables, ignore_index=True).drop_duplicates(subset=["Date limite", "Obligation"])
     dates = pd.to_datetime(t["Date limite"], format="%d/%m/%Y").dt.date
@@ -310,7 +352,8 @@ def marquer_payee(memoire, utilisateur, texte, aujourdhui=None):
     tables = [calendrier(profil["forme"], a, datetime.date.fromisoformat(profil["debut"]), float(profil.get("ca") or 0),
                          int(profil.get("salaries") or 0), float(profil.get("masse") or 0),
                          float(profil.get("is_precedent") or 0), float(profil.get("tva_mensuelle") or 0),
-                         aujourdhui)["tableau"] for a in (aujourdhui.year - 1, aujourdhui.year, aujourdhui.year + 1)]
+                         aujourdhui, float(profil.get("loyer") or 0),
+                         float(profil.get("honoraires") or 0))["tableau"] for a in (aujourdhui.year - 1, aujourdhui.year, aujourdhui.year + 1)]
     t_ = pd.concat(tables, ignore_index=True).drop_duplicates(subset=["Date limite", "Obligation"])
     t_ = t_.assign(_date=pd.to_datetime(t_["Date limite"], format="%d/%m/%Y").dt.date).sort_values("_date")
     fenetre = t_[(t_["_date"] >= aujourdhui - datetime.timedelta(days=60))

@@ -382,6 +382,8 @@ statut et vos chiffres ; demandez ensuite dans le chat « qu'est-ce que je dois 
 nkhalles ? ») : échéances du mois, montants estimés, base légale et prochaine échéance.
 « j'ai payé la CNSS » coche l'échéance du mois (plus rappelée), « annule mon dernier paiement » la décoche ; à
 l'ouverture, une ligne ⏰ signale une échéance non payée à moins de 5 jours.
+Le profil peut inclure le loyer versé à un propriétaire particulier et les honoraires versés à des personnes
+physiques : les retenues à la source (10 % ou 15 %, CGI art. 157 et 160 bis) et leurs déclarations entrent dans le calendrier.
 
 Démarrage rapide : PyTorch n'est importé qu'au premier cerveau utilisé (`ia_aissa/reseaux.py`) ; la page s'affiche
 sans l'attendre.
