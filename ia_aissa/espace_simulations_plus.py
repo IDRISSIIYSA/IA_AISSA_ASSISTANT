@@ -5,7 +5,6 @@ bâtiment, immobilier, énergie, statistiques, études de projets et business pl
 
 import datetime
 
-import pandas as pd
 import streamlit as st
 
 from . import baremes as B
@@ -16,6 +15,9 @@ from . import projets as P
 from . import simulations as S
 from .espace_simulations import CNSS_AMO, CODE_TRAVAIL, categorie_de, dh, pc
 from .rapports import rapport
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 
 def liste(texte):

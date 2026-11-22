@@ -12,7 +12,7 @@ import streamlit as st
 JS = """
 export default function(component) {
   const { setStateValue, data } = component;
-  const ecritures = (data && data.ecrire) || [];
+  const ecritures = Array.isArray(data) ? data : ((data && data.ecrire) || []);
   for (const [nom, valeur] of ecritures) {
     try { valeur === null ? localStorage.removeItem(nom) : localStorage.setItem(nom, valeur); } catch (e) {}
   }
@@ -50,7 +50,8 @@ def _monter():
 def ouvrir():
     """À appeler une fois par affichage, en haut de la page : applique les écritures en attente et relit le coffre."""
     ecritures = st.session_state.pop("coffre_ecritures", [])
-    resultat = _monter()(key="ia_aissa_coffre", data={"ecrire": ecritures}, on_valeurs_change=lambda: None)
+    # une liste, pas un dict : Streamlit ne cherche de tableaux (et n'importe pandas) que dans un dict
+    resultat = _monter()(key="ia_aissa_coffre", data=list(ecritures), on_valeurs_change=lambda: None)
     try:
         valeurs = dict(resultat["valeurs"] or {})
     except (KeyError, TypeError):

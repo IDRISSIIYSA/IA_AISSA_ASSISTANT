@@ -10,9 +10,11 @@ sont signalés comme non traités.
 import calendar
 import datetime
 
-import pandas as pd
 
 from . import connaissances as K
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 FORMES = ["Société (SARL, SARL AU, SA)", "Personne physique — résultat net réel ou simplifié",
           "Personne physique — auto-entrepreneur"]

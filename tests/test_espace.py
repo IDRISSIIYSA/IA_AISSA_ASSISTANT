@@ -1261,3 +1261,27 @@ def test_cotisation_minimale_exercice_par_exercice_2020_a_2026(tmp_path, monkeyp
     assert not at.exception and "10 000 DH" in texte().replace(" ", " ")         # 0,25 % × 4 MDH
     at.checkbox(key="is_base").check().run()
     assert not at.exception and "6 000 DH" in texte().replace(" ", " ")          # 0,15 % × 4 MDH
+
+
+def test_accueil_sans_pandas_et_temps_d_import_mesures(tmp_path):
+    """L'accueil s'ouvre sans importer pandas ni pyarrow (0,3 s à chaud, plusieurs secondes à froid sur le serveur) :
+    ils arrivent au premier tableau. Le temps d'import des gros modules est mesuré pour l'administration."""
+    import subprocess
+    import sys
+    script = f"""
+import os, sys
+os.environ["MEMOIRE_URL"] = "sqlite:///{tmp_path / 'm.db'}"
+sys.path.insert(0, {str(RACINE)!r})
+from streamlit.testing.v1 import AppTest
+at = AppTest.from_file({str(RACINE / 'controle_gestion_ia.py')!r}, default_timeout=300).run()
+from ia_aissa import chrono
+etats = {{l["Module"]: l for l in chrono.temps_imports()}}
+print("RESULTAT", bool(at.exception), "pandas" in sys.modules, "pyarrow" in sys.modules,
+      etats["pandas"]["État"].startswith("💤"), etats["sqlalchemy"]["Import (s)"] is not None)
+"""
+    sortie = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=600, cwd=tmp_path)
+    ligne = next(l for l in sortie.stdout.splitlines() if l.startswith("RESULTAT"))
+    assert ligne == "RESULTAT False False False True True", sortie.stdout[-2000:] + sortie.stderr[-2000:]
+    from ia_aissa import chrono, obligations
+    assert obligations.pd.DataFrame({"a": [1]}).shape == (1, 1)                       # le proxy se comporte comme pandas
+    assert {l["Module"] for l in chrono.temps_imports()} == set(chrono.SURVEILLES)

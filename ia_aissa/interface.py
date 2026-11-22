@@ -14,7 +14,6 @@ import time
 
 from urllib.parse import urlparse
 
-import pandas as pd
 import streamlit as st
 
 from . import coffre
@@ -23,6 +22,7 @@ from .assistant import (MOTEURS, NIVEAUX, ClientParesseux, client_moteur, conver
                         profil_conversation)
 from .autonomie import SEUIL_ETUDE, etudier_seule, noter_si_lacune
 from .avatar import avatar
+from .reseaux import Paresseux
 from .bibliotheque import ErreurBroutage, brouter_fichier, brouter_lien, chercher, digerer, visible_par
 from .corrections import a_reviser, corriger, reviser_tout
 from .croissance import afficher as afficher_croissance
@@ -216,6 +216,8 @@ STYLE = """<style>
   @media (prefers-reduced-motion: reduce) { [data-testid="stChatInputMicButton"],
     [data-testid="stChatInputApproveButton"], [data-testid="stChatInput"] { animation: none !important; } }
 </style>"""
+
+pd = Paresseux("pandas")              # pandas au premier tableau : pas au démarrage (0,3 s, plus à froid)
 
 
 @st.cache_resource(show_spinner="IA AISSA apprend à écouter (premier chargement)…")

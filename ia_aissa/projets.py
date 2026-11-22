@@ -6,10 +6,12 @@ Méthode des états prévisionnels du Plan comptable marocain (CGNC, loi n° 9-8
 amortissements au prorata (CGI, art. 10).
 """
 
-import pandas as pd
 
 from . import connaissances as K
 from . import simulations as S
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 
 def is_de_l_annee(resultat, chiffre_affaires, mois_depuis_creation):

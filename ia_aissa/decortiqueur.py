@@ -7,9 +7,11 @@ Délais et taux vérifiés le 30/10/2026 (CGI et cabinets cités). Les listes se
 courants : la liste complète est dans les articles cités.
 """
 
-import pandas as pd
 
 from . import baremes as B
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 SECTEURS = ["Tous secteurs (droit commun)", "Commerce et distribution", "Industrie", "Services et professions libérales",
             "Banques et assurances", "Hôtellerie et restauration", "Agriculture", "Immobilier et promotion immobilière",

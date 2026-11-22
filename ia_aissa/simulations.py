@@ -8,9 +8,11 @@ du seuil de rentabilité, des droits de douane et du stock optimal (Wilson) de l
 """
 
 import numpy as np
-import pandas as pd
 
 from . import connaissances as K
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 # Coefficients de l'amortissement dégressif au Maroc (CGI) selon la durée d'amortissement
 COEFFICIENTS_DEGRESSIFS = [(4, 1.5), (6, 2.0), (float("inf"), 3.0)]

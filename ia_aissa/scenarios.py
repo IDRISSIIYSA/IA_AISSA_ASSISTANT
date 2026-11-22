@@ -9,9 +9,11 @@ elle-même un rapport (PDF, Excel) avec les deux numéros de rapport d'origine.
 
 import re
 
-import pandas as pd
 
 from .rapports import rapport
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 _NOMBRE = re.compile(r"^\s*([−-]?\s*[\d\s  ]+(?:[,.]\d+)?)\s*(.*?)\s*$")
 

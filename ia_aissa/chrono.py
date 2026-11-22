@@ -14,13 +14,14 @@ Les mesures restent en mémoire du serveur (horodatées, au plus 2 000 par page)
 affichage.
 """
 
+import importlib.abc
+import importlib.machinery
 import os
 import statistics
+import sys
 import threading
 import time
 from collections import deque
-
-import pandas as pd
 
 OBJECTIF_S = 3.0
 GARDER = 2_000                  # par page : de quoi couvrir une journée chargée
@@ -94,7 +95,65 @@ def tableau():
         lignes.append({"Page": page, "Affichages mesurés": len(v), "Médiane (s)": round(statistics.median(v), 2),
                        "95e centile (s)": round(p95, 2), "Maximum (s)": round(v[-1], 2),
                        "Objectif < 3 s": "—" if page.endswith(SUFFIXE_REPONSE) else "✅" if p95 < OBJECTIF_S else "⚠️"})
+    import pandas as pd                               # au premier tableau seulement : pas au démarrage
     return pd.DataFrame(lignes)
+
+
+# ==========================================
+# Temps d'import des gros modules (mesuré au premier import, dans le processus du serveur)
+# ==========================================
+SURVEILLES = ("pandas", "numpy", "pyarrow", "sqlalchemy", "streamlit", "plotly", "openpyxl", "faster_whisper", "torch",
+              "cv2", "openai", "anthropic", "pypdf", "fpdf", "reportlab", "edge_tts", "gtts")
+SEUIL_IMPORT_S = 0.3            # au-delà, le module doit être importé à la demande (paresseux)
+_IMPORTS = {}                   # module → (secondes, horodatage)
+_local = threading.local()
+
+
+class _Chronometre(importlib.abc.MetaPathFinder):
+    """Chronomètre l'exécution des modules surveillés (sous-modules compris : temps cumulé)."""
+
+    def find_spec(self, nom, chemin, cible=None):
+        if nom not in SURVEILLES or nom in _IMPORTS or getattr(_local, "actif", False):
+            return None
+        _local.actif = True
+        try:
+            spec = importlib.machinery.PathFinder.find_spec(nom, chemin, cible)
+        finally:
+            _local.actif = False
+        if spec is None or spec.loader is None or not hasattr(spec.loader, "exec_module"):
+            return None
+        executer = spec.loader.exec_module
+
+        def exec_module(module):
+            debut = time.perf_counter()
+            try:
+                executer(module)
+            finally:
+                _IMPORTS[nom] = (time.perf_counter() - debut, time.time())
+        spec.loader.exec_module = exec_module
+        return spec
+
+
+def surveiller_imports():
+    """Installe le chronomètre (une seule fois) ; à appeler avant les imports à mesurer."""
+    if not any(isinstance(f, _Chronometre) for f in sys.meta_path):
+        sys.meta_path.insert(0, _Chronometre())
+
+
+def temps_imports():
+    """[{module, état, secondes}] : mesuré au premier import, « déjà chargé » s'il l'était avant le chronomètre,
+    « pas encore chargé » s'il attend son premier usage (paresseux)."""
+    lignes = []
+    for nom in SURVEILLES:
+        if nom in _IMPORTS:
+            s = _IMPORTS[nom][0]
+            lignes.append({"Module": nom, "Import (s)": round(s, 2),
+                           "État": "⚠️ lent (> 0,3 s)" if s > SEUIL_IMPORT_S else "✅ rapide"})
+        elif nom in sys.modules:
+            lignes.append({"Module": nom, "Import (s)": None, "État": "chargé avant la mesure (Streamlit)"})
+        else:
+            lignes.append({"Module": nom, "Import (s)": None, "État": "💤 pas encore chargé (à la demande)"})
+    return sorted(lignes, key=lambda l: -(l["Import (s)"] or 0))
 
 
 def alertes(maintenant=None):

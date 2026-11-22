@@ -14,12 +14,14 @@ Le contenu des conversations des visiteurs n'est jamais affiché ici : seulement
 import json
 from datetime import datetime, timedelta, timezone
 
-import pandas as pd
 import streamlit as st
 
 from . import admin
 from .ecole import MATIERES, charger
 from .partage import broutage_autonome, memoire
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 
 def espace_admin():
@@ -131,6 +133,11 @@ def temps_d_ouverture():
             st.dataframe(t, hide_index=True, width="stretch")
         else:
             st.caption("Pas encore de mesure depuis le démarrage du serveur.")
+        st.markdown("**Temps d'import des gros modules** (mesuré au premier import dans ce serveur, sous-modules compris)")
+        st.dataframe(chrono.temps_imports(), hide_index=True, width="stretch")
+        st.caption("💤 = pas encore chargé : importé seulement à son premier usage (pandas au premier tableau, PyTorch au "
+                   "premier cerveau, faster-whisper à la première voix…). ⚠️ = plus de 0,3 s : à garder hors du "
+                   "chemin d'ouverture de la page.")
 
 
 # ==========================================

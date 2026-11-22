@@ -17,10 +17,14 @@ Elles sont ramenées au format standard : periode, centre, budget, reel, revenus
 import random
 from collections import deque
 
-import numpy as np
-import pandas as pd
+from ia_aissa import chrono
 
-from ia_aissa.reseaux import Paresseux, classe_cerveau_controle, nn, torch   # PyTorch au premier usage
+chrono.surveiller_imports()             # temps d'import de pandas, numpy, PyTorch… (tableau de bord de l'administration)
+
+from ia_aissa.reseaux import Paresseux, classe_cerveau_controle, nn, torch   # noqa: E402 — PyTorch au premier usage
+
+np = Paresseux("numpy")                 # numpy et pandas au premier calcul : la page s'ouvre sans les attendre
+pd = Paresseux("pandas")
 
 optim = Paresseux("torch.optim")
 

@@ -19,7 +19,6 @@ import json
 import time
 from datetime import timezone
 
-import pandas as pd
 from pathlib import Path
 import math
 import operator
@@ -27,6 +26,9 @@ import re
 
 from . import connaissances as K
 from .ecole import MATIERES, PAR_CLE, SEUIL_CONFIANCE, mots, repondre, repondre_automatiquement
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 HORS_ANALOGIE = {"langues", "matiere_scolaire", "orientation"}
 VIDES = set("le la les de des du un une et au aux pour par en sur dans mon ma mes ton ta je tu il elle qui que "

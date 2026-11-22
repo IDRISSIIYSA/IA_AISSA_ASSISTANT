@@ -8,9 +8,10 @@ concept à la famille de sa matière, et chaque concept digéré en lisant (page
 
 import json
 
-import pandas as pd
-
 from .ecole import MATIERES, charger
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier graphique : pas au démarrage de la page
 
 FAMILLES = {
     "Sciences formelles": {"maths_financieres", "statistiques", "ia", "structures_donnees", "complexite", "fractions",

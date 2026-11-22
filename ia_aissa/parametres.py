@@ -10,12 +10,14 @@ garde chaque changement. Une alerte signale une nouvelle année dont la loi de f
 import datetime
 import json
 
-import pandas as pd
 
 from . import baremes as B
 from . import connaissances as K
 from . import obligations as O
 from . import simulations as S
+from .reseaux import Paresseux
+
+pd = Paresseux("pandas")              # au premier tableau : pas au démarrage
 
 VERIFIE_LE = B.VERIFIE_LE
 CNSS = "Dahir portant loi n° 1-72-184 (régime de sécurité sociale) ; décrets de fixation des taux"
