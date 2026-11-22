@@ -89,7 +89,7 @@ def affiner(cle, exemples, pas=None, part_corrections=None, lr=None, seed=0):
     """Révision par renforcement à partir du cerveau actuel. exemples : [(question, index de la bonne réponse)]."""
     m = PAR_CLE[cle]
     ancien, historique = ecole.charger(cle)
-    cerveau = copy.deepcopy(ancien)
+    cerveau = copy.deepcopy(ancien).float()             # on révise en float32 (le cerveau chargé est en float16)
     cerveau.train()
     pas = pas or (10_000 if cle == ORIENTATION else 3500)
     # peu de corrections = petite place dans les exercices, pour ne pas déséquilibrer ce qui est déjà su

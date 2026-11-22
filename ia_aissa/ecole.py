@@ -798,6 +798,9 @@ def revision_valide(cle):
     return donnees if donnees.get("base") == empreinte_base(cle) else None
 
 
+DEMI_PRECISION = True     # cerveaux en mémoire en float16 ; les fichiers et les entraînements restent en float32
+
+
 def charger(cle):
     if cle in _CACHE:
         return _CACHE[cle]
@@ -811,6 +814,8 @@ def charger(cle):
     cerveau = Cerveau(m.dim, len(m.actions))
     cerveau.load_state_dict(donnees["etat"])
     cerveau.eval()
+    if DEMI_PRECISION:
+        cerveau.half()                    # 28 → 14 Mo pour les 74 cerveaux, examen identique (mesuré le 22/11/2026)
     _CACHE[cle] = (cerveau, donnees["historique"])
     return _CACHE[cle]
 

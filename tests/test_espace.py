@@ -1285,3 +1285,19 @@ print("RESULTAT", bool(at.exception), "pandas" in sys.modules, "pyarrow" in sys.
     from ia_aissa import chrono, obligations
     assert obligations.pd.DataFrame({"a": [1]}).shape == (1, 1)                       # le proxy se comporte comme pandas
     assert {l["Module"] for l in chrono.temps_imports()} == set(chrono.SURVEILLES)
+
+
+def test_cerveaux_charges_en_float16_sans_baisse_a_l_examen():
+    """Les cerveaux d'école sont gardés en mémoire en float16 (moitié moins de mémoire) ; l'examen est le même qu'en
+    float32 (mesuré sur les 74 matières le 22/11/2026 : 99,60 % contre 99,59 %), la sortie reste en float32."""
+    import copy
+    import torch
+    from ia_aissa import ecole as E
+    for cle in ("orientation", "derivee", "credit", "ir", "tva"):
+        cerveau, _ = E.charger(cle)
+        assert next(cerveau.parameters()).dtype == torch.float16
+        epreuve = E.examen(E.PAR_CLE[cle], n=200)
+        plein = copy.deepcopy(cerveau).float()
+        assert abs(E.precision(cerveau, epreuve) - E.precision(plein, epreuve)) <= 0.01, cle
+        assert cerveau(epreuve[0][:2]).dtype == torch.float32
+    assert E.repondre("tva", "nuitée d'hôtel")[0]["reponse"] == "10 %"

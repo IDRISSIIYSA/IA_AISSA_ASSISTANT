@@ -42,7 +42,12 @@ def classe_cerveau_ecole():
                                                  vrai_nn.Linear(cache, n_actions))
 
             def forward(self, x):
-                return self.reseau(x)
+                # cerveau chargé en float16 (moitié moins de mémoire) : l'entrée suit sa précision, la sortie est
+                # toujours en float32 (softmax, comparaisons et pertes inchangées pour l'appelant)
+                poids = self.reseau[0].weight
+                if x.dtype != poids.dtype:
+                    x = x.to(poids.dtype)
+                return self.reseau(x).float()
 
         _CLASSES["ecole"] = Cerveau
     return _CLASSES["ecole"]
