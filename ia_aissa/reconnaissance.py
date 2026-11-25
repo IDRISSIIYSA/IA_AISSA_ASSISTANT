@@ -83,5 +83,6 @@ def qui_est_ce(empreinte, visages_connus):
 
 
 def moment_de_la_journee(maintenant=None):
-    h = (maintenant or datetime.now(FUSEAU)).hour
+    from .chrono import heure_du_maroc
+    h = (maintenant or heure_du_maroc()).hour             # GMT depuis le 20/09/2026, même si la base des fuseaux l'ignore
     return "matin" if 5 <= h < 12 else "apres_midi" if 12 <= h < 18 else "soir" if 18 <= h < 22 else "nuit"

@@ -133,6 +133,18 @@ def temps_d_ouverture():
             st.dataframe(t, hide_index=True, width="stretch")
         else:
             st.caption("Pas encore de mesure depuis le démarrage du serveur.")
+        tendance = chrono.tendance(memoire())
+        st.markdown("**Tendance d'un jour à l'autre** (résumé gardé en base chaque soir après 20 h, heure du Maroc)")
+        if tendance:
+            import pandas as pd
+            t_j = pd.DataFrame(tendance)
+            st.dataframe(t_j, hide_index=True, width="stretch")
+            courbe = t_j[~t_j["Page"].str.endswith(chrono.SUFFIXE_REPONSE)].pivot_table(
+                index="Jour", columns="Page", values="95e centile (s)")
+            if len(courbe) > 1:
+                st.line_chart(courbe)
+        else:
+            st.caption("Pas encore de résumé gardé : le premier sera pris ce soir, après 20 h.")
         st.markdown("**Temps d'import des gros modules** (mesuré au premier import dans ce serveur, sous-modules compris)")
         st.dataframe(chrono.temps_imports(), hide_index=True, width="stretch")
         st.caption("💤 = pas encore chargé : importé seulement à son premier usage (pandas au premier tableau, PyTorch au "

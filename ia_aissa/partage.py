@@ -140,6 +140,16 @@ def broutage_autonome():
     return demarrer(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle), par_jour)
 
 
+def resume_du_soir():
+    """À chaque visite : le soir, le résumé des temps d'ouverture de la journée est gardé en base (une fois par jour).
+    Une erreur de base ne gêne jamais la page."""
+    from .chrono import garder_resume_du_soir
+    try:
+        return garder_resume_du_soir(memoire())
+    except Exception:
+        return None
+
+
 def repas_du_jour():
     """À chaque visite : si IA AISSA n'a pas encore mangé aujourd'hui, elle lit en arrière-plan l'article de Wikipédia
     qui répond à une de ses lacunes (au plus un appel au grand moteur par jour). Secret facultatif :

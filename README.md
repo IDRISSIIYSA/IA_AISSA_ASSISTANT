@@ -393,7 +393,9 @@ toutes les tables (JSON compressé ; restauration dans une base vide en ligne de
 montre mémoire, disque, modules chargés, index de lecture (passages et mémoire estimée) et passages gardés (lus
 sur le web ou donnés) ; au-delà de 60 000 passages, un avertissement apparaît (rien n'est oublié sans décision). Sur un serveur dédié, deploy/sauvegarde.sh fait chaque
 nuit un pg_dump (30 jours gardés).
-Le panneau « ⏱️ Temps d'ouverture des pages » donne aussi le temps d'import de chaque gros module (pandas, numpy,
+Le panneau « ⏱️ Temps d'ouverture des pages » garde chaque soir (après 20 h, heure du Maroc — GMT depuis le
+20/09/2026) le résumé de la journée en base, pour suivre la tendance d'un redémarrage à l'autre ; il donne aussi le
+temps d'import de chaque gros module (pandas, numpy,
 PyTorch…) mesuré dans le serveur : l'accueil s'ouvre sans pandas ni PyTorch, chargés à leur premier usage. Les cerveaux d'école sont gardés
 en mémoire en float16 (moitié moins de mémoire, examen identique) ; les fichiers et les révisions restent en float32.
 

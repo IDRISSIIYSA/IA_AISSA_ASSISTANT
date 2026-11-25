@@ -156,6 +156,89 @@ def temps_imports():
     return sorted(lignes, key=lambda l: -(l["Import (s)"] or 0))
 
 
+# ==========================================
+# Résumé du soir, gardé en base : la tendance d'un redémarrage du serveur à l'autre
+# ==========================================
+CLE_RESUMES = "chrono:resumes"
+HEURE_DU_SOIR = 20               # heure du Maroc à partir de laquelle la journée est résumée
+GARDER_JOURS = 90
+
+
+# Heure légale du Maroc : GMT+1 (décret 2.18.855 de 2018, retour à GMT pendant le Ramadan) jusqu'au 20/09/2026 à 2 h,
+# puis GMT (décret 2.26.530, Bulletin officiel du 29/06/2026 ; vérifié le 25/11/2026 dans Médias24, Hespress, Le Brief).
+# La base des fuseaux du serveur peut ignorer ce changement (versions antérieures à 2026e) : elle est alors corrigée.
+RETOUR_GMT = 1_789_866_000       # 20/09/2026 à 2 h du matin (GMT+1), soit 01:00 UTC
+
+
+def heure_du_maroc(maintenant=None):
+    import datetime
+    instant = maintenant or time.time()
+    try:
+        from zoneinfo import ZoneInfo
+        local = datetime.datetime.fromtimestamp(instant, ZoneInfo("Africa/Casablanca"))
+    except Exception:                                   # sans base des fuseaux
+        local = None
+    if instant >= RETOUR_GMT:
+        if local is None or local.utcoffset() != datetime.timedelta(0):   # base trop ancienne : GMT, sans exception
+            local = datetime.datetime.fromtimestamp(instant, datetime.timezone.utc)
+    elif local is None:
+        local = datetime.datetime.fromtimestamp(instant, datetime.timezone(datetime.timedelta(hours=1)))
+    return local
+
+
+def resume(maintenant=None, fenetre_s=FENETRE_ALERTE_S):
+    """Par page (réponses comprises, à part) : nombre d'affichages, médiane, 95e centile et maximum sur la fenêtre."""
+    maintenant = maintenant or time.time()
+    pages = {}
+    for page, d in sorted(_MESURES.items()):
+        v = sorted(duree for quand, duree in d if maintenant - quand <= fenetre_s)
+        if v:
+            pages[page] = {"n": len(v), "mediane": round(statistics.median(v), 2), "p95": round(centile_95(v), 2),
+                           "max": round(v[-1], 2)}
+    return pages
+
+
+def resumes(memoire):
+    import json
+    brut = memoire.reglage(CLE_RESUMES) if memoire is not None else None
+    return json.loads(brut) if brut else {}
+
+
+def garder_resume_du_soir(memoire, maintenant=None):
+    """À chaque visite : après HEURE_DU_SOIR (heure du Maroc), garde une fois par jour le résumé des dernières 24 h,
+    avec l'âge du serveur et son démarrage à froid. Renvoie la date gardée, ou None (déjà fait, trop tôt, rien mesuré)."""
+    import json
+    local = heure_du_maroc(maintenant)
+    if local.hour < HEURE_DU_SOIR:
+        return None
+    jour = local.date().isoformat()
+    tous = resumes(memoire)
+    if jour in tous:
+        return None
+    pages = resume(maintenant)
+    if not pages:
+        return None
+    age = age_du_processus()
+    tous[jour] = {"pages": pages, "serveur_age_h": round(age / 3600, 1) if age else None,
+                  "demarrage_a_froid_s": round(_DEMARRAGE["secondes"], 1) if _DEMARRAGE.get("secondes") else None}
+    for vieux in sorted(tous)[:-GARDER_JOURS]:
+        del tous[vieux]
+    memoire.definir_reglage(CLE_RESUMES, json.dumps(tous, ensure_ascii=False))
+    return jour
+
+
+def tendance(memoire, jours=14):
+    """Les résumés gardés, une ligne par jour et par page (les plus récents d'abord), pour l'administration."""
+    lignes = []
+    for jour, r in sorted(resumes(memoire).items(), reverse=True)[:jours]:
+        for page, m in r["pages"].items():
+            lignes.append({"Jour": jour, "Page": page, "Affichages": m["n"], "Médiane (s)": m["mediane"],
+                           "95e centile (s)": m["p95"], "Maximum (s)": m["max"],
+                           "Serveur démarré depuis (h)": r.get("serveur_age_h"),
+                           "Démarrage à froid (s)": r.get("demarrage_a_froid_s")})
+    return lignes
+
+
 def alertes(maintenant=None):
     """Pages dont le 95e centile d'ouverture dépasse l'objectif sur les dernières 24 heures (réponses exclues)."""
     maintenant = maintenant or time.time()

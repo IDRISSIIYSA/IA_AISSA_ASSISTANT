@@ -1301,3 +1301,39 @@ def test_cerveaux_charges_en_float16_sans_baisse_a_l_examen():
         assert abs(E.precision(cerveau, epreuve) - E.precision(plein, epreuve)) <= 0.01, cle
         assert cerveau(epreuve[0][:2]).dtype == torch.float32
     assert E.repondre("tva", "nuitée d'hôtel")[0]["reponse"] == "10 %"
+
+
+def test_resume_du_soir_des_temps_garde_en_base(tmp_path):
+    """Le soir (après 20 h, heure du Maroc), une fois par jour : médiane, 95e centile et maximum par page gardés en base,
+    sur 90 jours au plus ; rien avant 20 h ni sans mesure ; la tendance se lit d'un redémarrage à l'autre."""
+    import datetime
+    import json
+    from ia_aissa import chrono
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    chrono.reinitialiser()
+    utc = datetime.timezone.utc
+    # heure légale : GMT+1 jusqu'au 20/09/2026 à 2 h, puis GMT (décret 2.26.530), même si la base des fuseaux l'ignore
+    assert chrono.heure_du_maroc(datetime.datetime(2026, 6, 1, 12, tzinfo=utc).timestamp()).hour == 13
+    assert chrono.heure_du_maroc(datetime.datetime(2026, 9, 20, 0, 59, tzinfo=utc).timestamp()).hour == 1
+    assert chrono.heure_du_maroc(datetime.datetime(2026, 9, 20, 1, 0, tzinfo=utc).timestamp()).hour == 1
+    assert chrono.heure_du_maroc(datetime.datetime(2026, 11, 25, 12, tzinfo=utc).timestamp()).hour == 12
+    soir = datetime.datetime(2026, 11, 25, 21, 30, tzinfo=utc).timestamp()
+    assert chrono.garder_resume_du_soir(mem, soir) is None                             # rien de mesuré
+    for i, d in enumerate([1.0, 2.0, 3.0, 4.0, 10.0]):
+        chrono.enregistrer("page", d, soir - 3600 + i)
+    chrono.enregistrer("page" + chrono.SUFFIXE_REPONSE, 12.0, soir - 60)
+    chrono.enregistrer("page", 99.0, soir - 2 * 86_400)                                  # hors des 24 h
+    matin = soir - 13 * 3600
+    assert chrono.heure_du_maroc(matin).hour == 8 and chrono.garder_resume_du_soir(mem, matin) is None
+    assert chrono.garder_resume_du_soir(mem, soir) == "2026-11-25"
+    assert chrono.garder_resume_du_soir(mem, soir + 600) is None                         # une fois par jour
+    r = chrono.resumes(mem)["2026-11-25"]["pages"]
+    assert r["page"] == {"n": 5, "mediane": 3.0, "p95": 10.0, "max": 10.0} and r["page — réponse"]["n"] == 1
+    lignes = chrono.tendance(mem)
+    assert {l["Page"] for l in lignes} == {"page", "page — réponse"} and lignes[0]["Jour"] == "2026-11-25"
+    vieux = {f"2026-{m:02d}-{j:02d}": {"pages": {}} for m in range(5, 9) for j in range(1, 29)}
+    mem.definir_reglage(chrono.CLE_RESUMES, json.dumps(vieux))
+    assert chrono.garder_resume_du_soir(mem, soir) == "2026-11-25"
+    assert len(chrono.resumes(mem)) == chrono.GARDER_JOURS and "2026-11-25" in chrono.resumes(mem)
+    chrono.reinitialiser()

@@ -33,7 +33,7 @@ from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_cont
 from .invention import annonce_darija, debattre, evoluer
 from .langues import ECRITURE_ARABE, LANGUES, detecter_langue, partie_dans_la_langue, phrase_a_travailler
 from .memoire import historique_api
-from .partage import broutage_autonome, etat_memoire, memoire, repas_du_jour, secret
+from .partage import broutage_autonome, etat_memoire, memoire, repas_du_jour, resume_du_soir, secret
 from .parole import charger_oreille, extrait_a_lire, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
@@ -1218,6 +1218,7 @@ def application():
         coffre.ouvrir()                 # ce que cet appareil retient : identité, connexion, clé API
         broutage_autonome()             # le travailleur autonome (démarré une seule fois par serveur)
         repas_du_jour()                 # une lacune nourrie par jour, en arrière-plan
+        resume_du_soir()                # le soir, résumé des temps d'ouverture gardé en base (tendance)
         prechauffage_unique()           # SDK des moteurs et aiguilleur chargés d'avance (une fois par serveur)
         from .espace_admin import espace_admin
         visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)
