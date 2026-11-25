@@ -98,6 +98,16 @@ def calendrier(forme, annee, debut_activite, ca_annuel_ht, salaries, masse_brute
             ajouter(fin_de_mois(annee, 3) if societe else datetime.date(annee, 4, 30), "Déclaration",
                     f"Déclaration des honoraires versés en {annee - 1} (avec la déclaration "
                     f"{'du résultat fiscal' if societe else 'du revenu global'})", 0.0, "CGI, art. 151")
+    # Taxe professionnelle : déclarations des éléments imposables (loi 47-06, art. 13 — version consolidée du 03/07/2025)
+    if not ae and annee > debut_activite.year:
+        if annee == debut_activite.year + 1:
+            ajouter(datetime.date(annee, 1, 31), "Déclaration", "Taxe professionnelle : déclaration récapitulative des "
+                    "éléments imposables (terrains, constructions, matériel, outillage, prix de revient) par établissement",
+                    0.0, "Loi 47-06, art. 13 (au plus tard le 31 janvier de l'année qui suit le début d'activité)")
+        else:
+            ajouter(datetime.date(annee, 1, 31), "Déclaration", f"Taxe professionnelle : déclaration des modifications "
+                    f"des éléments imposables faites en {annee - 1} (seulement si locaux, matériel ou outillage ont "
+                    "changé)", 0.0, "Loi 47-06, art. 13 (au plus tard le 31 janvier de l'année qui suit la modification)")
     # TVA
     if not ae:
         mensuelle = ca_annuel_ht >= SEUIL_TVA_MENSUELLE and not premiere_annee
@@ -168,9 +178,11 @@ def ce_que_je_paie(forme, ca_annuel_ht, benefice, debut_activite, annee, salarie
             ir = None
         lignes.append(("IR sur le revenu professionnel (barème)", ir, "CGI, art. 73-I ; minimum d'imposition art. 144"))
         lignes.append(("TVA (si assujetti)", None, "CGI, art. 87 et suivants"))
-    exon_tp = mois <= 60
-    lignes.append(("Taxe professionnelle", 0.0 if exon_tp else None, "Loi 47-06, art. 6 : exonérée 5 ans à compter du début "
-                   "d'activité" if exon_tp else "Loi 47-06 : 10 %, 20 % ou 30 % de la valeur locative selon la classe"))
+    exon_tp = annee - debut_activite.year < 5          # loi 47-06, art. 6-II-1° : 5 ans à compter de l'année du début
+    lignes.append(("Taxe professionnelle", 0.0 if exon_tp else None, "Loi 47-06, art. 6-II-1° : exonérée 5 ans à compter "
+                   f"de l'année du début d'activité (jusqu'en {debut_activite.year + 4})" if exon_tp else
+                   "Loi 47-06, art. 9 : 10 %, 20 % ou 30 % de la valeur locative selon la classe (droit minimum de "
+                   "300 à 1 200 DH en périmètre urbain) ; payée sur avis d'imposition (rôle, art. 10)"))
     lignes.append(("Taxe de services communaux", None, "Loi 47-06 : 10,5 % de la valeur locative (périmètre urbain)"))
     if salaries:
         brut = masse_brute_mensuelle / salaries
@@ -242,6 +254,7 @@ PAIEMENTS = [
     (r"9421|déclaration annuelle des (traitements|salaires)", r"^Déclaration annuelle des traitements"),
     (r"loyers?|foncier", r"^Retenue à la source sur loyers"),
     (r"honoraires?", r"^Retenue à la source sur honoraires"),
+    (r"taxe professionnelle|patente|éléments imposables", r"^Taxe professionnelle"),
 ]
 
 

@@ -387,6 +387,8 @@ nkhalles ? ») : échéances du mois, montants estimés, base légale et prochai
 l'ouverture, une ligne ⏰ signale une échéance non payée à moins de 5 jours.
 Le profil peut inclure le loyer versé à un propriétaire particulier et les honoraires versés à des personnes
 physiques : les retenues à la source (10 % ou 15 %, CGI art. 157 et 160 bis) et leurs déclarations entrent dans le calendrier.
+La taxe professionnelle y figure aussi : déclaration des éléments imposables chaque 31 janvier (loi 47-06, art. 13),
+exonération de 5 ans à compter de l'année du début d'activité (art. 6).
 
 Démarrage rapide : PyTorch n'est importé qu'au premier cerveau utilisé (`ia_aissa/reseaux.py`) ; la page s'affiche
 sans l'attendre.

@@ -609,6 +609,36 @@ def test_retenues_a_la_source_sur_loyers_et_honoraires_dans_le_calendrier(tmp_pa
     assert [e["Obligation"][:45] for e in cochees] == ["Retenue à la source sur loyers de 10/2026 (10"]
 
 
+def test_taxe_professionnelle_declarations_du_31_janvier_et_exoneration_de_5_ans(tmp_path):
+    """Loi 47-06 (version consolidée du 03/07/2025, adala.justice.gov.ma, lue le 25/11/2026) : déclaration récapitulative
+    des éléments imposables le 31 janvier de l'année qui suit le début d'activité, puis déclaration des modifications
+    chaque 31 janvier (art. 13) ; exonération de 5 ans à compter de l'année du début (art. 6-II-1°) ; rien pour
+    l'auto-entrepreneur ni l'année du début."""
+    import datetime
+    from ia_aissa import obligations as O
+    from ia_aissa.memoire import Memoire
+    j = datetime.date(2026, 11, 25)
+    tp = lambda forme, debut, annee: [r for _, r in O.calendrier(forme, annee, debut, 1e6, 0, 0, 0, 0, j)["tableau"]
+                                      .iterrows() if r["Obligation"].startswith("Taxe professionnelle")]
+    premiere = tp(O.FORMES[0], datetime.date(2025, 6, 1), 2026)
+    assert len(premiere) == 1 and premiere[0]["Date limite"] == "31/01/2026" and "récapitulative" in premiere[0][
+        "Obligation"] and "art. 13" in premiere[0]["Base légale"]
+    suite = tp(O.FORMES[1], datetime.date(2015, 1, 1), 2027)
+    assert len(suite) == 1 and "modifications" in suite[0]["Obligation"] and "en 2026" in suite[0]["Obligation"]
+    assert not tp(O.FORMES[0], datetime.date(2026, 3, 1), 2026) and not tp(O.FORMES[2], datetime.date(2015, 1, 1), 2026)
+    ligne = lambda debut: O.ce_que_je_paie(O.FORMES[0], 1e6, 1e5, debut, 2026, 0, 0).set_index(
+        "Impôt ou charge").loc["Taxe professionnelle"]
+    assert "jusqu'en 2026" in ligne(datetime.date(2022, 12, 1))["Base légale"]           # 2022 à 2026
+    assert "valeur locative" in ligne(datetime.date(2021, 12, 1))["Base légale"]         # exonération finie en 2025
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    O.garder_profil(mem, "Aissa", {"forme": O.FORMES[0], "debut": datetime.date(2015, 1, 1), "ca": 1e6, "salaries": 0,
+                                   "masse": 0, "is_precedent": 0, "tva_mensuelle": 0})
+    jan = datetime.date(2027, 1, 20)
+    assert "Taxe professionnelle" in O.rappel_discret(mem, "Aissa", datetime.date(2027, 1, 28))
+    cochees = O.marquer_payee(mem, "Aissa", "j'ai fait la déclaration de taxe professionnelle", jan)[1]
+    assert cochees and cochees[0]["Obligation"].startswith("Taxe professionnelle")
+
+
 def test_sauvegarde_complete_et_restauration_dans_une_base_vide(tmp_path):
     """Toute la mémoire exportée puis restaurée à l'identique dans une base vide ; refus si la base n'est pas vide."""
     import datetime
