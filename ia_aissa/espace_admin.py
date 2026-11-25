@@ -175,6 +175,7 @@ def apprentissage(mem, afficher_element):
             mem.supprimer_reglage(cle)
             st.rerun()
     tester_ses_apprentissages(mem)
+    affinage_du_modele_local(mem)
     banc_d_essai(mem)
     baremes_historiques(mem)
     mises_a_jour_des_taux(mem)
@@ -196,6 +197,35 @@ def apprentissage(mem, afficher_element):
         st.dataframe(corrections.sort_values("id", ascending=False)[["cree_le", "matiere", "question", "bonne_reponse",
                                                                      "source", "apprise"]].head(100),
                      hide_index=True, width="stretch")
+
+
+def affinage_du_modele_local(mem):
+    """Corrections prêtes pour l'affinage LoRA, jeu JSONL à télécharger, mesures AVANT / APRÈS."""
+    from . import affinage as A
+    e = A.etat_affinage(mem)
+    with st.expander(f"🎯 Affinage LoRA du modèle local — {e['corrections']}/{e['seuil']} corrections",
+                     expanded=e["pret"]):
+        st.progress(min(1.0, e["corrections"] / e["seuil"]),
+                    text=("✅ Assez de corrections validées : l'affinage peut être lancé sur un serveur avec carte "
+                          "graphique." if e["pret"] else f"Encore {e['seuil'] - e['corrections']} correction(s) "
+                          "validée(s) avant l'affinage."))
+        if e["ecartes"]:
+            st.caption(f"{e['ecartes']} correction(s) écartée(s) : leur réponse contient un chiffre absent des sources.")
+        st.download_button("⬇️ Télécharger le jeu d'affinage (JSONL)", A.jsonl(mem), file_name="affinage.jsonl",
+                           mime="application/jsonl", key="affinage_jsonl",
+                           help="Corrections validées + exemples de refus, au format du modèle local.")
+        avant, apres, ecart = A.comparaison(e["mesures"])
+        if avant or apres:
+            c = st.columns(3)
+            c[0].metric("Chiffres non sourcés — avant", f"{avant['taux']:.0%}" if avant else "—",
+                        help=avant and f"{avant['modele']}, le {avant['date']}")
+            c[1].metric("Après l'affinage", f"{apres['taux']:.0%}" if apres else "—",
+                        delta=f"{ecart:+.1f} points" if ecart is not None else None, delta_color="inverse",
+                        help=apres and f"{apres['modele']}, le {apres['date']}")
+            st.dataframe(e["mesures"][::-1], hide_index=True, width="stretch")
+        st.caption("Sur le serveur avec carte graphique (deploy/README.md) : python -m ia_aissa.affinage mesurer "
+                   "--modele qwen2.5:3b --garder avant ; python deploy/affiner_lora.py affinage.jsonl ; puis "
+                   "--modele ia-aissa-local --garder apres. Les mesures apparaissent ici.")
 
 
 def tester_ses_apprentissages(mem):

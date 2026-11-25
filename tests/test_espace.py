@@ -205,6 +205,8 @@ def test_espace_administrateur_s_affiche(tmp_path, monkeypatch):
     assert [t.label for t in at.tabs] == ["📊 Tableau de bord", "📈 Apprentissage", "📚 Livres", "🕹️ Commandes",
                                           "👥 Visiteurs et accès", "🔑 Clés et sécurité"]
     assert any(m.label == "Corrections à valider" for m in at.metric)
+    assert any(e.label.startswith("🎯 Affinage LoRA du modèle local — ") and e.label.endswith("/20 corrections")
+               for e in at.expander), [e.label for e in at.expander]
 
 
 def test_creation_de_l_admin_exige_le_code_des_secrets(tmp_path, monkeypatch):

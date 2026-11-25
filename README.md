@@ -10,6 +10,9 @@ et espagnol, à l'écrit comme à l'oral.
 Sans clé d'API payante : le moteur « Modèle local (Ollama) » est activé par `OLLAMA_URL`. Ses calculs exacts et ses
 fiches vérifiées répondent d'abord ; le petit modèle ne fait que parler, à partir de ses lectures, et tout chiffre non
 sourcé est signalé. Installation sur un VPS en une commande (Docker, Ollama, HTTPS) : voir [deploy/README.md](deploy/README.md).
+Affinage LoRA du modèle local sur les corrections validées : l'administration (onglet 📈 Apprentissage) compte les
+corrections utilisables (20 conseillées), télécharge le jeu JSONL et compare le taux de chiffres non sourcés AVANT et
+APRÈS (`python -m ia_aissa.affinage mesurer --garder avant|apres` sur le serveur avec carte graphique).
 
 ## Données ouvertes (`ia_aissa/donnees_ouvertes.py`)
 

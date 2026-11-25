@@ -121,3 +121,33 @@ def test_jeu_d_affinage_lora_et_mesure_des_chiffres_non_sources(tmp_path):
     avant, apres = A.mesurer(invente), A.mesurer(honnete)
     assert avant["taux"] == 1.0 and apres["taux"] == 0.0 and avant["questions"] == len(A.QUESTIONS_MESURE)
     assert "27" in avant["details"][0]["chiffres_non_sources"]
+
+
+def test_tableau_de_bord_de_l_affinage_jsonl_et_mesures_avant_apres(tmp_path):
+    """Administration : corrections utilisables sur le seuil de 20, jeu JSONL téléchargeable, mesures gardées AVANT et
+    APRÈS l'affinage et leur écart en points."""
+    import json
+    import pytest
+    from ia_aissa import affinage as A
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    e = A.etat_affinage(mem)
+    assert (e["corrections"], e["seuil"], e["pret"], e["mesures"]) == (0, 20, False, [])
+    for i in range(20):
+        mem.ajouter_correction("Aissa", "comptabilite", f"loyer du dépôt numéro {i}", "6131 Locations et charges "
+                               "locatives", "utilisateur")
+    e = A.etat_affinage(mem)
+    assert e["corrections"] == 20 and e["pret"]
+    lignes = A.jsonl(mem).decode("utf-8").splitlines()
+    assert len(lignes) == 20 + len(A.QUESTIONS_SANS_SOURCE) and json.loads(lignes[0])["messages"][2]["role"] == "assistant"
+    bilan = lambda taux: {"questions": 13, "avec_chiffre_non_source": round(13 * taux), "taux": taux}
+    A.garder_mesure(mem, "qwen2.5:3b", bilan(0.385), "avant")
+    assert A.comparaison(A.mesures(mem))[2] is None                                 # pas encore d'APRÈS
+    A.garder_mesure(mem, "ia-aissa-local", bilan(0.077), "apres")
+    avant, apres, ecart = A.comparaison(A.mesures(mem))
+    assert avant["modele"] == "qwen2.5:3b" and apres["moment"] == "après" and ecart == -30.8
+    with pytest.raises(ValueError):
+        A.garder_mesure(mem, "x", bilan(0.1), "pendant")
+    for i in range(60):
+        A.garder_mesure(mem, "x", bilan(0.1), "avant")
+    assert len(A.mesures(mem)) == 50
