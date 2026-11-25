@@ -915,7 +915,12 @@ def test_alerte_quand_le_95e_centile_d_une_page_depasse_3_s_sur_une_journee():
     alertes = chrono.alertes(maintenant)
     assert len(alertes) == 1 and "« Lente »" in alertes[0] and "6.0 s" in alertes[0]
     t = chrono.tableau().set_index("Page")
-    assert t.loc["Chat" + chrono.SUFFIXE_REPONSE, "Objectif < 3 s"] == "—"
+    assert t.loc["Chat" + chrono.SUFFIXE_REPONSE, "Objectif"] == "✅ < 15 s"        # 12 s : sous les 15 s
+    assert t.loc["Lente", "Objectif"] == "⚠️ < 3 s"
+    for i in range(10):                                   # réponses lentes : leur propre alerte, à 15 s
+        chrono.enregistrer("Lent" + chrono.SUFFIXE_REPONSE, 20.0 if i % 2 else 8.0, maintenant - i)
+    reponses = [a for a in chrono.alertes(maintenant) if a.startswith("🐌")]
+    assert len(reponses) == 1 and "« Lent »" in reponses[0] and "20.0 s" in reponses[0] and "< 15 s" in reponses[0]
     with chrono.Chrono("Page") as c:                      # un message envoyé : l'affichage est compté comme réponse
         chrono.marquer_reponse()
     assert "Page" + chrono.SUFFIXE_REPONSE in set(chrono.tableau()["Page"])

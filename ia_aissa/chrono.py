@@ -24,6 +24,11 @@ import time
 from collections import deque
 
 OBJECTIF_S = 3.0
+OBJECTIF_REPONSE_S = 15.0       # une réponse (réflexion, calcul, lecture) : 95e centile sous 15 s
+
+
+def objectif(page):
+    return OBJECTIF_REPONSE_S if page.endswith(SUFFIXE_REPONSE) else OBJECTIF_S
 GARDER = 2_000                  # par page : de quoi couvrir une journée chargée
 FENETRE_ALERTE_S = 86_400       # une journée
 MIN_MESURES_ALERTE = 5          # pas d'alerte sur une seule ouverture lente
@@ -94,7 +99,7 @@ def tableau():
         p95 = centile_95(v)
         lignes.append({"Page": page, "Affichages mesurés": len(v), "Médiane (s)": round(statistics.median(v), 2),
                        "95e centile (s)": round(p95, 2), "Maximum (s)": round(v[-1], 2),
-                       "Objectif < 3 s": "—" if page.endswith(SUFFIXE_REPONSE) else "✅" if p95 < OBJECTIF_S else "⚠️"})
+                       "Objectif": f"{'✅' if p95 < objectif(page) else '⚠️'} < {objectif(page):.0f} s"})
     import pandas as pd                               # au premier tableau seulement : pas au démarrage
     return pd.DataFrame(lignes)
 
@@ -240,14 +245,20 @@ def tendance(memoire, jours=14):
 
 
 def alertes(maintenant=None):
-    """Pages dont le 95e centile d'ouverture dépasse l'objectif sur les dernières 24 heures (réponses exclues)."""
+    """Pages dont le 95e centile dépasse son objectif sur les dernières 24 heures : ouverture (< 3 s) et, à part,
+    réponses aux messages (< 15 s)."""
     maintenant = maintenant or time.time()
     messages = []
     for page, d in sorted(_MESURES.items()):
-        if page.endswith(SUFFIXE_REPONSE):
-            continue
         jour = [duree for quand, duree in d if maintenant - quand <= FENETRE_ALERTE_S]
-        if len(jour) >= MIN_MESURES_ALERTE and (p95 := centile_95(jour)) > OBJECTIF_S:
+        if len(jour) < MIN_MESURES_ALERTE or (p95 := centile_95(jour)) <= objectif(page):
+            continue
+        if page.endswith(SUFFIXE_REPONSE):
+            messages.append(f"🐌 Réponses de « {page[:-len(SUFFIXE_REPONSE)]} » : 95e centile de {p95:.1f} s sur les "
+                            f"dernières 24 heures ({len(jour)} réponses, objectif < {OBJECTIF_REPONSE_S:.0f} s). "
+                            "Pistes : grand moteur lent ou en panne (dernier appel ci-dessous), cerveaux chargés au "
+                            "premier usage, index de lecture reconstruit, analyse d'un gros fichier.")
+        else:
             messages.append(f"🐢 « {page} » : 95e centile d'ouverture de {p95:.1f} s sur les dernières 24 heures "
                             f"({len(jour)} ouvertures, objectif < {OBJECTIF_S:.0f} s). Pistes : serveur réveillé "
                             "récemment, tâches de fond (broutage, révisions), mémoire du serveur.")

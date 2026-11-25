@@ -123,8 +123,8 @@ def temps_d_ouverture():
     from . import chrono
     t = chrono.tableau()
     froid = chrono.demarrage_a_froid()
-    with st.expander("⏱️ Temps d'ouverture des pages (objectif < 3 s)", expanded=bool(len(t)) and "⚠️" in set(
-            t["Objectif < 3 s"])):
+    with st.expander("⏱️ Temps d'ouverture des pages (< 3 s) et des réponses (< 15 s)", expanded=bool(len(t)) and any(
+            o.startswith("⚠️") for o in t["Objectif"])):
         if froid is not None:
             st.caption(f"Démarrage à froid du serveur (imports et premier affichage) : {froid:.1f} s — payé une seule "
                        "fois, quand Streamlit Cloud réveille l'application. Les cerveaux sont chargés à la demande, "
