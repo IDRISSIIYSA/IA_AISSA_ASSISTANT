@@ -123,6 +123,106 @@ def alerte_passages(etat, seuil=SEUIL_PASSAGES):
 
 
 # ==========================================
+# Sauvegarde automatique hebdomadaire vers un stockage objet compatible S3 (AWS S3, Neon Object Storage, R2…)
+# ==========================================
+# Secrets (Streamlit Cloud, jamais dans le dépôt) : SAUVEGARDE_S3_ENDPOINT (ex. https://s3.eu-west-3.amazonaws.com),
+# SAUVEGARDE_S3_BUCKET, SAUVEGARDE_S3_CLE (identifiant de clé), SAUVEGARDE_S3_SECRET, SAUVEGARDE_S3_REGION (facultatif).
+# Signature AWS Signature Version 4 écrite ici (une trentaine de lignes) plutôt que boto3 (lourd pour le petit serveur).
+SECRETS_S3 = ("SAUVEGARDE_S3_ENDPOINT", "SAUVEGARDE_S3_BUCKET", "SAUVEGARDE_S3_CLE", "SAUVEGARDE_S3_SECRET")
+CLE_AUTO = "sauvegarde:auto"
+PERIODE_AUTO_JOURS = 7
+
+
+def config_s3(secret):
+    """La configuration lue dans les secrets (secret(nom) → valeur), ou None s'il en manque une."""
+    valeurs = {n: secret(n) for n in SECRETS_S3}
+    if not all(valeurs.values()):
+        return None
+    return {"endpoint": valeurs["SAUVEGARDE_S3_ENDPOINT"].rstrip("/"), "bucket": valeurs["SAUVEGARDE_S3_BUCKET"],
+            "cle": valeurs["SAUVEGARDE_S3_CLE"], "secret": valeurs["SAUVEGARDE_S3_SECRET"],
+            "region": secret("SAUVEGARDE_S3_REGION") or "us-east-1"}
+
+
+def signer_v4(methode, url, en_tetes, corps_sha256, cle, secret_cle, region, service="s3", quand=None):
+    """En-têtes signés (AWS Signature Version 4) : Authorization, x-amz-date, x-amz-content-sha256, host."""
+    import hashlib
+    import hmac
+    from urllib.parse import quote, urlsplit
+    quand = quand or datetime.now(timezone.utc)
+    amz_date, jour = quand.strftime("%Y%m%dT%H%M%SZ"), quand.strftime("%Y%m%d")
+    u = urlsplit(url)
+    en_tetes = {k.lower(): str(v).strip() for k, v in en_tetes.items()}
+    en_tetes.update({"host": u.netloc, "x-amz-date": amz_date})
+    if service == "s3":
+        en_tetes["x-amz-content-sha256"] = corps_sha256
+    noms = sorted(en_tetes)
+    requete = "\n".join([methode, quote(u.path or "/", safe="/~"), u.query,
+                         "".join(f"{n}:{en_tetes[n]}\n" for n in noms), ";".join(noms), corps_sha256])
+    portee = f"{jour}/{region}/{service}/aws4_request"
+    a_signer = "\n".join(["AWS4-HMAC-SHA256", amz_date, portee, hashlib.sha256(requete.encode()).hexdigest()])
+    k = ("AWS4" + secret_cle).encode()
+    for morceau in (jour, region, service, "aws4_request"):
+        k = hmac.new(k, morceau.encode(), hashlib.sha256).digest()
+    signature = hmac.new(k, a_signer.encode(), hashlib.sha256).hexdigest()
+    en_tetes["authorization"] = (f"AWS4-HMAC-SHA256 Credential={cle}/{portee}, SignedHeaders={';'.join(noms)}, "
+                                 f"Signature={signature}")
+    return en_tetes
+
+
+def envoyer_s3(octets, nom, config, envoyer=None):
+    """Dépose `octets` sous `nom` dans le bucket (adresse « chemin » : endpoint/bucket/nom). Renvoie le code HTTP."""
+    import hashlib
+    url = f"{config['endpoint']}/{config['bucket']}/{nom}"
+    en_tetes = signer_v4("PUT", url, {"content-type": "application/gzip"}, hashlib.sha256(octets).hexdigest(),
+                         config["cle"], config["secret"], config["region"])
+    if envoyer is None:
+        import requests
+        envoyer = lambda u, h, d: requests.put(u, headers=h, data=d, timeout=120).status_code
+    return envoyer(url, en_tetes, octets)
+
+
+def verifier_restauration(octets, bilan):
+    """Restaure la sauvegarde dans une base de test temporaire (fichier SQLite sur disque : pas de mémoire en plus) et
+    compare le nombre de lignes de chaque table. Renvoie (vrai si identique, {table: lignes restaurées})."""
+    import tempfile
+    from .memoire import Memoire
+    with tempfile.TemporaryDirectory() as dossier:
+        test = Memoire(f"sqlite:///{dossier}/verification.db")
+        restaure = restaurer(test, octets)
+        test.moteur.dispose()
+    return all(restaure.get(t, 0) == n for t, n in bilan.items()), restaure
+
+
+def derniere_auto(memoire):
+    brut = memoire.reglage(CLE_AUTO)
+    return json.loads(brut) if brut else None
+
+
+def sauvegarde_hebdomadaire(memoire, config, maintenant=None, envoyer=None):
+    """Une fois tous les PERIODE_AUTO_JOURS jours : exporte, vérifie la restauration sur une base de test, puis envoie
+    vers le stockage objet (seulement si la vérification réussit). Renvoie le compte rendu, ou None si pas encore dû."""
+    maintenant = maintenant or datetime.now(timezone.utc)
+    d = derniere_auto(memoire)
+    if d and d.get("statut") == "envoyée" and (maintenant - datetime.fromisoformat(d["date"])).days < PERIODE_AUTO_JOURS:
+        return None
+    octets, bilan = exporter(memoire)
+    ok, _ = verifier_restauration(octets, bilan)
+    nom = f"ia_aissa/ia_aissa_{maintenant:%Y-%m-%d}.json.gz"
+    compte = {"date": maintenant.isoformat(), "fichier": nom, "octets": len(octets), "lignes": sum(bilan.values()),
+              "restauration_verifiee": ok}
+    if not ok:
+        compte["statut"] = "non envoyée : la restauration de test ne retrouve pas toutes les lignes"
+    else:
+        try:
+            code = envoyer_s3(octets, nom, config, envoyer)
+            compte["statut"] = "envoyée" if 200 <= code < 300 else f"refusée par le stockage (HTTP {code})"
+        except Exception as e:                           # réseau, adresse… : jamais la clé dans le message
+            compte["statut"] = f"échec de l'envoi ({type(e).__name__})"
+    memoire.definir_reglage(CLE_AUTO, json.dumps(compte, ensure_ascii=False))
+    return compte
+
+
+# ==========================================
 # Santé du serveur
 # ==========================================
 def _meminfo():

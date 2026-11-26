@@ -140,6 +140,39 @@ def broutage_autonome():
     return demarrer(memoire(), MOTEURS[moteur], lambda: client_moteur(moteur, cle), par_jour)
 
 
+_SAUVEGARDE_EN_COURS = {"fil": None}
+
+
+def sauvegarde_auto():
+    """À chaque visite : si les secrets du stockage objet sont fournis et que la dernière sauvegarde automatique a plus
+    de 7 jours, elle est faite en arrière-plan (export, restauration de test, envoi). Jamais au démarrage du serveur."""
+    import threading
+    if os.environ.get("IA_AISSA_TESTS") or serveur_tout_juste_demarre():
+        return False
+    fil = _SAUVEGARDE_EN_COURS["fil"]
+    if fil is not None and fil.is_alive():
+        return False
+    from .sauvegarde import PERIODE_AUTO_JOURS, config_s3, derniere_auto, sauvegarde_hebdomadaire
+    config = config_s3(secret)
+    if config is None:
+        return False
+    mem = memoire()
+    d = derniere_auto(mem)
+    if d and d.get("statut") == "envoyée":
+        from datetime import datetime, timezone
+        if (datetime.now(timezone.utc) - datetime.fromisoformat(d["date"])).days < PERIODE_AUTO_JOURS:
+            return False
+
+    def travailler():
+        try:
+            sauvegarde_hebdomadaire(mem, config)
+        except Exception:
+            pass
+    _SAUVEGARDE_EN_COURS["fil"] = threading.Thread(target=travailler, daemon=True, name="sauvegarde-auto")
+    _SAUVEGARDE_EN_COURS["fil"].start()
+    return True
+
+
 def resume_du_soir():
     """À chaque visite : le soir, le résumé des temps d'ouverture de la journée est gardé en base (une fois par jour).
     Une erreur de base ne gêne jamais la page."""

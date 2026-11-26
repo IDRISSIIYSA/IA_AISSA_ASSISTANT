@@ -639,6 +639,50 @@ def test_taxe_professionnelle_declarations_du_31_janvier_et_exoneration_de_5_ans
     assert cochees and cochees[0]["Obligation"].startswith("Taxe professionnelle")
 
 
+def test_sauvegarde_hebdomadaire_vers_un_stockage_objet_s3(tmp_path, monkeypatch):
+    """Signature AWS Signature V4 conforme aux vecteurs officiels d'AWS (« get-vanilla » et l'exemple GET Object de la
+    documentation S3) ; sauvegarde hebdomadaire : export, restauration de test, envoi seulement si elle réussit."""
+    import datetime
+    from ia_aissa import sauvegarde as SV
+    from ia_aissa.memoire import Memoire
+    vide = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    h = SV.signer_v4("GET", "https://example.amazonaws.com/", {}, vide, "AKIDEXAMPLE",
+                     "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "us-east-1", service="service",
+                     quand=datetime.datetime(2015, 8, 30, 12, 36, tzinfo=datetime.timezone.utc))
+    assert h["authorization"].endswith("Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31")
+    h = SV.signer_v4("GET", "https://examplebucket.s3.amazonaws.com/test.txt", {"range": "bytes=0-9"}, vide,
+                     "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "us-east-1",
+                     quand=datetime.datetime(2013, 5, 24, tzinfo=datetime.timezone.utc))
+    assert h["authorization"].endswith("Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41")
+    secrets = {"SAUVEGARDE_S3_ENDPOINT": "https://s3.example.com/", "SAUVEGARDE_S3_BUCKET": "sauvegardes",
+               "SAUVEGARDE_S3_CLE": "AKIDTEST", "SAUVEGARDE_S3_SECRET": "secret-de-test"}
+    assert SV.config_s3(lambda n: None) is None
+    config = SV.config_s3(secrets.get)
+    assert config["endpoint"] == "https://s3.example.com" and config["region"] == "us-east-1"
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    mem.ajouter_correction("Aissa", "tva", "nuitée d'hôtel", "10 %", "utilisateur")
+    envois = []
+
+    def envoyer(url, en_tetes, octets):
+        envois.append((url, en_tetes, len(octets)))
+        return 200
+    lundi = datetime.datetime(2026, 11, 23, 10, tzinfo=datetime.timezone.utc)
+    r = SV.sauvegarde_hebdomadaire(mem, config, lundi, envoyer)
+    assert r["statut"] == "envoyée" and r["restauration_verifiee"] and r["lignes"] >= 1
+    url, en_tetes, taille = envois[0]
+    assert url == "https://s3.example.com/sauvegardes/ia_aissa/ia_aissa_2026-11-23.json.gz" and taille == r["octets"]
+    assert en_tetes["authorization"].startswith("AWS4-HMAC-SHA256 Credential=AKIDTEST/") and "secret-de-test" not in str(
+        en_tetes)
+    assert SV.sauvegarde_hebdomadaire(mem, config, lundi + datetime.timedelta(days=6), envoyer) is None  # < 7 jours
+    assert SV.sauvegarde_hebdomadaire(mem, config, lundi + datetime.timedelta(days=7), lambda *a: 403)["statut"] == \
+        "refusée par le stockage (HTTP 403)"
+    assert SV.sauvegarde_hebdomadaire(mem, config, lundi + datetime.timedelta(days=7), envoyer)["statut"] == "envoyée"
+    monkeypatch.setattr(SV, "verifier_restauration", lambda o, b: (False, {}))          # restauration ratée : rien envoyé
+    n = len(envois)
+    r = SV.sauvegarde_hebdomadaire(mem, config, lundi + datetime.timedelta(days=30), envoyer)
+    assert r["statut"].startswith("non envoyée") and len(envois) == n and SV.derniere_auto(mem) == r
+
+
 def test_sauvegarde_complete_et_restauration_dans_une_base_vide(tmp_path):
     """Toute la mémoire exportée puis restaurée à l'identique dans une base vide ; refus si la base n'est pas vide."""
     import datetime

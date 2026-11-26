@@ -320,6 +320,20 @@ def sauvegarde_de_la_memoire(mem):
             octets, bilan = exporter(mem)
         st.session_state["sauvegarde_octets"] = octets
         st.success(f"{sum(bilan.values())} lignes dans {len(bilan)} tables ({len(octets) / 1e6:.1f} Mo).")
+    from .partage import secret
+    from .sauvegarde import SECRETS_S3, config_s3, derniere_auto
+    auto = derniere_auto(mem)
+    if config_s3(secret) is None:
+        st.caption("☁️ Sauvegarde automatique hebdomadaire vers un stockage objet (S3, Neon Object Storage…) : désactivée. "
+                   "Pour l'activer, ajoutez dans les Secrets de Streamlit Cloud " + ", ".join(SECRETS_S3)
+                   + " (et SAUVEGARDE_S3_REGION si besoin) — jamais dans le dépôt.")
+    elif auto:
+        (st.success if auto["statut"] == "envoyée" else st.warning)(
+            f"☁️ Dernière sauvegarde automatique : {auto['date'][:16].replace('T', ' ')} UTC — {auto['statut']} "
+            f"({auto['lignes']} lignes, {auto['octets'] / 1e6:.1f} Mo, restauration de test "
+            f"{'réussie' if auto['restauration_verifiee'] else 'en échec'}) → {auto['fichier']}")
+    else:
+        st.caption("☁️ Sauvegarde automatique configurée : la première sera faite à la prochaine visite (en arrière-plan).")
     if st.session_state.get("sauvegarde_octets"):
         st.download_button("⬇️ Télécharger la sauvegarde", st.session_state["sauvegarde_octets"],
                            file_name=f"ia_aissa_{datetime.now(timezone.utc):%Y-%m-%d}.json.gz",
