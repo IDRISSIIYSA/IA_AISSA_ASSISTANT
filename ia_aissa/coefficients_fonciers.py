@@ -2,13 +2,13 @@
 Coefficients de réévaluation du prix d'acquisition pour l'IR sur les profits fonciers (CGI, art. 65-II), fixés chaque
 année par arrêté du ministre de l'Économie et des Finances.
 
-Année 2026 (cessions réalisées en 2026) : arrêté du 6 février 2026 (n° 230-26 selon CAE Experts), publié au Bulletin
-officiel n° 7486 du 26 février 2026 selon Le Matin (n° 7488 selon CAE Experts). Tableau complet recopié de CAE Experts
-le 06/11/2026 ; les six valeurs que cite Le Matin (1980, 2000, 2010, 2022, 2024, 2025) concordent exactement. Le
-Bulletin officiel (sgg.gov.ma) refuse les connexions automatiques : tableau à confirmer sur le BO au besoin.
+Année 2026 (cessions réalisées en 2026) : arrêté de la ministre de l'économie et des finances n° 230-26 du 6 février
+2026, Bulletin officiel n° 7488 du 5 mars 2026 (édition de traduction officielle, p. 258-259 ; texte arabe : BO n° 7486
+du 26 février 2026). Les 80 coefficients (1946 à 2025) ont été comparés un à un au PDF officiel (sgg.gov.ma) le
+26/11/2026 : identiques au tableau recopié le 06/11/2026 de CAE Experts et Le Matin.
 
-Acquisitions de 1945 et avant : « taux forfaitaire de 3 % » par an, dont les modalités ne sont pas détaillées par ces
-sources — non calculé (saisie manuelle).
+Acquisitions de 1945 et avant : l'arrêté écrit seulement « Année 1945 et années antérieures : 3% », sans en préciser
+l'application — non calculé (saisie manuelle, d'après le notaire ou la DGI).
 
 Chaque année, l'administrateur ajoute le nouveau tableau (arrêté de février) depuis l'administration (onglet 📈
 Apprentissage) en le collant tel quel, avec sa source : il est vérifié (années consécutives jusqu'à l'année précédant la
@@ -21,8 +21,8 @@ import re
 from datetime import datetime, timezone
 
 ANNEE_DU_TABLEAU = 2026
-SOURCE = ("Arrêté du ministre de l'Économie et des Finances du 6 février 2026 (BO n° 7486 du 26/02/2026 selon Le Matin) ; "
-          "tableau lu sur CAE Experts et Le Matin le 06/11/2026")
+SOURCE = ("Arrêté n° 230-26 du 6 février 2026 (Bulletin officiel n° 7488 du 5 mars 2026, p. 258-259 ; texte arabe : "
+          "BO n° 7486 du 26 février 2026), vérifié sur le BO le 26/11/2026")
 _VALEURS = """
 1946 57,773 1947 44,991 1948 31,717 1949 25,479 1950 24,885 1951 22,105 1952 18,862 1953 18,262 1954 19,916
 1955 18,862 1956 16,018 1957 16,880 1958 13,803 1959 13,803 1960 13,280 1961 12,671 1962 12,459 1963 11,463

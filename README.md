@@ -370,7 +370,8 @@ vous venez d'essayer), et l'affiche aussi en écriture arabe (« شكرا على
 Sur téléphone : vérifié en 360 px (petits Android) et en paysage, où l'alien entier est réduit au-dessus de la barre de
 saisie ; dès 6 messages, un bouton ⬆️👽 ramène à l'alien.
 
-Coefficients du profit foncier (`ia_aissa/coefficients_fonciers.py`, CGI art. 65-II) : tableau 2026 vérifié ; chaque
+Coefficients du profit foncier (`ia_aissa/coefficients_fonciers.py`, CGI art. 65-II) : tableau 2026 vérifié sur le
+Bulletin officiel n° 7488 (arrêté n° 230-26) ; chaque
 année, l'administrateur colle le nouveau tableau (arrêté de février) avec sa source, il est vérifié puis gardé ; les
 anciens tableaux restent pour les ventes des années passées.
 

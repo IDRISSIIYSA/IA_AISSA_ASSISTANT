@@ -324,8 +324,8 @@ def calculer(texte):
                         f"multipliés par ce coefficient). _Source : {CF.source(vente)}._ La simulation « Plus-value "
                         "immobilière (profit foncier) » l'applique d'elle-même.",
                         [f"Année d'acquisition trouvée : {a}.", "Tableau officiel de l'année de cession."])
-            return (f"Pour un bien acquis en {a}, je n'ai pas de coefficient sûr : avant 1946, l'arrêté prévoit un "
-                    "taux forfaitaire de 3 % par an dont je n'ai pas les modalités exactes. Demandez le calcul à "
+            return (f"Pour un bien acquis en {a}, je n'ai pas de coefficient sûr : pour 1945 et avant, l'arrêté "
+                    "indique seulement « 3% », sans préciser comment l'appliquer. Demandez le calcul à "
                     "votre notaire ou à la DGI, puis saisissez-le dans la simulation « Plus-value immobilière "
                     f"(profit foncier) ». _Source : {CF.SOURCE}._", [f"Année d'acquisition trouvée : {a}."])
     from .taux_exercice import exercice_dans, repondre_par_exercice
