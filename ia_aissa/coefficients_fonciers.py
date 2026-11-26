@@ -9,7 +9,16 @@ Bulletin officiel (sgg.gov.ma) refuse les connexions automatiques : tableau à c
 
 Acquisitions de 1945 et avant : « taux forfaitaire de 3 % » par an, dont les modalités ne sont pas détaillées par ces
 sources — non calculé (saisie manuelle).
+
+Chaque année, l'administrateur ajoute le nouveau tableau (arrêté de février) depuis l'administration (onglet 📈
+Apprentissage) en le collant tel quel, avec sa source : il est vérifié (années consécutives jusqu'à l'année précédant la
+vente, coefficients ≥ 1 et décroissants à long terme), gardé en base et chargé au démarrage. Les tableaux des années
+passées restent : une vente de 2026 garde le tableau 2026 même quand celui de 2027 est ajouté.
 """
+
+import json
+import re
+from datetime import datetime, timezone
 
 ANNEE_DU_TABLEAU = 2026
 SOURCE = ("Arrêté du ministre de l'Économie et des Finances du 6 février 2026 (BO n° 7486 du 26/02/2026 selon Le Matin) ; "
@@ -29,10 +38,76 @@ _mots = _VALEURS.split()
 COEFFICIENTS_2026 = {int(a): float(c.replace(",", ".")) for a, c in zip(_mots[::2], _mots[1::2])}
 
 
-def coefficient(annee_acquisition, annee_cession=ANNEE_DU_TABLEAU):
-    """Le coefficient officiel, ou None (autre année de cession que celle du tableau, ou acquisition avant 1946)."""
-    if annee_cession != ANNEE_DU_TABLEAU:
+CLE_TABLEAU = "coefficients_fonciers:{}"
+PREMIERE_ANNEE = 1946
+_TABLEAUX = {ANNEE_DU_TABLEAU: {"valeurs": COEFFICIENTS_2026, "source": SOURCE}}
+
+
+def lire_tableau(texte, annee_cession):
+    """Le tableau collé (« 1946 57,773 1947 44,991 … », une année par ligne ou en colonnes) → {année: coefficient}.
+    Lève ValueError avec la raison si le tableau est incomplet ou invraisemblable."""
+    paires = re.findall(r"\b(19[4-9]\d|20\d\d)\s*[:;|\t ]\s*(\d{1,3}(?:[.,]\d{1,4})?)\b", texte or "")
+    valeurs = {int(a): float(c.replace(",", ".")) for a, c in paires}
+    attendues = set(range(PREMIERE_ANNEE, annee_cession))
+    manquantes = sorted(attendues - set(valeurs))
+    if manquantes:
+        raise ValueError(f"{len(manquantes)} année(s) manquante(s) entre {PREMIERE_ANNEE} et {annee_cession - 1} "
+                         f"(par exemple {', '.join(map(str, manquantes[:5]))}).")
+    en_trop = sorted(set(valeurs) - attendues)
+    if en_trop:
+        raise ValueError(f"Année(s) hors du tableau d'une vente en {annee_cession} : {', '.join(map(str, en_trop[:5]))}.")
+    if any(v < 1 for v in valeurs.values()):
+        raise ValueError("Un coefficient est inférieur à 1 : vérifiez la virgule décimale.")
+    if valeurs[PREMIERE_ANNEE] < 5 * valeurs[annee_cession - 1]:
+        raise ValueError("Les coefficients ne décroissent pas des années anciennes vers les récentes : tableau inversé ?")
+    return valeurs
+
+
+def enregistrer_tableau(memoire, annee_cession, texte, source, auteur="administrateur"):
+    """Vérifie, garde en base et charge le tableau des ventes de `annee_cession`. Renvoie le nombre d'années."""
+    if not (source or "").strip():
+        raise ValueError("Indiquez la source (arrêté, Bulletin officiel, date).")
+    valeurs = lire_tableau(texte, int(annee_cession))
+    donnees = {"valeurs": {str(a): c for a, c in valeurs.items()}, "source": source.strip(), "auteur": auteur,
+               "ajoute_le": datetime.now(timezone.utc).strftime("%d/%m/%Y")}
+    memoire.definir_reglage(CLE_TABLEAU.format(int(annee_cession)), json.dumps(donnees, ensure_ascii=False))
+    _TABLEAUX[int(annee_cession)] = {"valeurs": valeurs, "source": donnees["source"], "ajoute_le": donnees["ajoute_le"]}
+    return len(valeurs)
+
+
+def charger(memoire):
+    """Charge les tableaux ajoutés par l'administrateur (au démarrage du serveur). Renvoie les années disponibles."""
+    for cle, brut in (memoire.reglages("coefficients_fonciers:") if memoire is not None else {}).items():
+        try:
+            annee, d = int(cle.split(":")[1]), json.loads(brut)
+            if annee != ANNEE_DU_TABLEAU:              # le tableau 2026 vérifié dans le code reste la référence
+                _TABLEAUX[annee] = {"valeurs": {int(a): c for a, c in d["valeurs"].items()}, "source": d["source"],
+                                    "ajoute_le": d.get("ajoute_le")}
+        except (ValueError, KeyError, IndexError):
+            continue
+    return annees_disponibles()
+
+
+def annees_disponibles():
+    return sorted(_TABLEAUX)
+
+
+def derniere_annee():
+    return max(_TABLEAUX)
+
+
+def source(annee_cession):
+    t = _TABLEAUX.get(annee_cession)
+    return t["source"] if t else None
+
+
+def coefficient(annee_acquisition, annee_cession=None):
+    """Le coefficient officiel du tableau de l'année de la vente (par défaut le plus récent), ou None (pas de tableau
+    pour cette année de vente, ou acquisition avant 1946)."""
+    annee_cession = annee_cession or derniere_annee()
+    tableau = _TABLEAUX.get(annee_cession)
+    if tableau is None:
         return None
-    if annee_acquisition >= ANNEE_DU_TABLEAU:
+    if annee_acquisition >= annee_cession:
         return 1.0                                 # acquis l'année même de la cession : pas de réévaluation
-    return COEFFICIENTS_2026.get(int(annee_acquisition))
+    return tableau["valeurs"].get(int(annee_acquisition))

@@ -370,6 +370,10 @@ vous venez d'essayer), et l'affiche aussi en écriture arabe (« شكرا على
 Sur téléphone : vérifié en 360 px (petits Android) et en paysage, où l'alien entier est réduit au-dessus de la barre de
 saisie ; dès 6 messages, un bouton ⬆️👽 ramène à l'alien.
 
+Coefficients du profit foncier (`ia_aissa/coefficients_fonciers.py`, CGI art. 65-II) : tableau 2026 vérifié ; chaque
+année, l'administrateur colle le nouveau tableau (arrêté de février) avec sa source, il est vérifié puis gardé ; les
+anciens tableaux restent pour les ventes des années passées.
+
 Taux par exercice (`ia_aissa/taux_exercice.py`) : les taux transitoires de l'IS 2023-2026 (note circulaire DGI n° 733)
 et ceux de la TVA des produits de la réforme 2024-2026 (note circulaire DGI n° 735), par catégorie et par tranche.
 « taux IS 2024 », « TVA sur 1000 DH d'électricité en 2025 » : la réponse cite le taux de l'exercice et sa source.

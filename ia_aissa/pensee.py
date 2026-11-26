@@ -316,11 +316,12 @@ def calculer(texte):
         annee = re.search(r"(?<![\d.,])(1[89]\d\d|20[0-4]\d)(?![\d.,])", t)
         if annee:
             a = int(annee.group(1))
-            c = CF.coefficient(a)
+            vente = CF.derniere_annee()
+            c = CF.coefficient(a, vente)
             if c is not None:
                 return (f"Coefficient de réévaluation pour un bien acquis en **{a}** et vendu en "
-                        f"{CF.ANNEE_DU_TABLEAU} : **{str(c).replace('.', ',')}** (prix d'acquisition, frais et travaux "
-                        f"multipliés par ce coefficient). _Source : {CF.SOURCE}._ La simulation « Plus-value "
+                        f"{vente} : **{str(c).replace('.', ',')}** (prix d'acquisition, frais et travaux "
+                        f"multipliés par ce coefficient). _Source : {CF.source(vente)}._ La simulation « Plus-value "
                         "immobilière (profit foncier) » l'applique d'elle-même.",
                         [f"Année d'acquisition trouvée : {a}.", "Tableau officiel de l'année de cession."])
             return (f"Pour un bien acquis en {a}, je n'ai pas de coefficient sûr : avant 1946, l'arrêté prévoit un "

@@ -860,3 +860,35 @@ def test_courbe_de_la_memoire_du_serveur_heure_par_heure(tmp_path):
         SV.noter_memoire(mem, t0 + h * 3600, mesure(500, 1 + h))
     assert len(SV.courbe_memoire(mem)) == SV.GARDER_POINTS
     SV._DERNIER_POINT["t"] = 0.0
+
+
+def test_tableau_annuel_des_coefficients_fonciers_ajoute_par_l_administrateur(tmp_path):
+    """Le tableau d'une nouvelle année (arrêté de février) est collé avec sa source, vérifié, gardé en base, rechargé au
+    démarrage ; le tableau 2026 reste pour les ventes de 2026. (Valeurs 2027 fictives : test seulement.)"""
+    import pytest
+    from ia_aissa import coefficients_fonciers as CF
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    try:
+        texte = "\n".join(f"{a} : {str(round(c * 1.02, 3)).replace('.', ',')}" for a, c in CF.COEFFICIENTS_2026.items())
+        texte += "\n2026 : 1,000"
+        with pytest.raises(ValueError, match="source"):
+            CF.enregistrer_tableau(mem, 2027, texte, "")
+        with pytest.raises(ValueError, match="manquante"):
+            CF.lire_tableau(texte.replace("1980 : ", "1980 ; x "), 2027)
+        with pytest.raises(ValueError, match="inférieur à 1"):
+            CF.lire_tableau(texte.replace("2026 : 1,000", "2026 : 0,5"), 2027)
+        with pytest.raises(ValueError, match="hors du tableau"):
+            CF.lire_tableau(texte + "\n2027 : 1,0", 2027)
+        assert CF.enregistrer_tableau(mem, 2027, texte, "Arrêté du … février 2027 (test)") == 81
+        assert CF.annees_disponibles() == [2026, 2027] and CF.derniere_annee() == 2027
+        assert CF.coefficient(1980, 2027) == round(4.646 * 1.02, 3) and CF.coefficient(1980, 2026) == 4.646
+        assert CF.coefficient(2026, 2027) == 1.0 and CF.coefficient(1940, 2027) is None
+        assert CF.source(2027).startswith("Arrêté du") and CF.coefficient(1980, 2028) is None
+        from ia_aissa.pensee import penser
+        assert "vendu en 2027" in penser("coefficient de réévaluation d'un bien acheté en 1980")[0]
+        del CF._TABLEAUX[2027]                                            # redémarrage : relu en base
+        assert CF.charger(mem) == [2026, 2027] and CF.coefficient(1980, 2027) == round(4.646 * 1.02, 3)
+    finally:
+        CF._TABLEAUX.pop(2027, None)
+    assert CF.derniere_annee() == 2026 and CF.coefficient(1980) == 4.646

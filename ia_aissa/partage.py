@@ -93,6 +93,11 @@ def memoire():
         appliquer(m)
     except Exception:
         pass
+    try:                                          # tableaux annuels des coefficients du profit foncier ajoutés par l'admin
+        from .coefficients_fonciers import charger as charger_coefficients
+        charger_coefficients(m)
+    except Exception:
+        pass
     return m
 
 

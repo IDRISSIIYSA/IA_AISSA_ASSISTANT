@@ -806,10 +806,11 @@ def construire_plus(nom, memoire, c):
         officiel = CF.coefficient(annee_a, annee_c)
         if officiel is not None:
             st.caption(f"Coefficient officiel {annee_c} pour un bien acquis en {annee_a} : **{officiel:g}** "
-                       f"({CF.SOURCE}). Modifiable si votre notaire indique autre chose.")
+                       f"({CF.source(annee_c)}). Modifiable si votre notaire indique autre chose.")
         else:
             st.warning("Coefficient officiel non disponible pour ce cas "
-                       + (f"(tableau connu : ventes de {CF.ANNEE_DU_TABLEAU})" if annee_c != CF.ANNEE_DU_TABLEAU
+                       + (f"(tableaux connus : ventes de {', '.join(map(str, CF.annees_disponibles()))})"
+                          if annee_c not in CF.annees_disponibles()
                           else "(acquisition avant 1946 : taux forfaitaire, à vérifier)")
                        + " : saisissez celui de l'arrêté de l'année de la vente.")
         coef = c3[1].number_input("Coefficient de réévaluation", 1.0, 80.0, officiel or 1.30, 0.001, format="%.3f",
@@ -849,7 +850,7 @@ def construire_plus(nom, memoire, c):
                         "Exonérations : cessions de l'année ≤ 140 000 DH ; résidence principale occupée 5 ans au moins "
                         "(au-delà de 4 000 000 DH, 3 % sur la fraction excédentaire)."],
                        ["CGI, art. 61-II, 63, 65, 73-II-F-6°, 83, 144-II, 173 et 184",
-                        "Coefficient : " + (CF.SOURCE if officiel is not None and abs(coef - officiel) < 1e-9
+                        "Coefficient : " + (CF.source(annee_c) if officiel is not None and abs(coef - officiel) < 1e-9
                                             else "saisi par l'utilisateur"),
                         f"Vérifié le {B.VERIFIE_LE} (Upsilon Consulting — profit foncier 2026 ; ReaConsult)"],
                        aujourdhui.year, remarques=["Coefficient de réévaluation à lire dans la circulaire de la DGI de "

@@ -187,6 +187,7 @@ def apprentissage(mem, afficher_element):
             st.rerun()
     tester_ses_apprentissages(mem)
     affinage_du_modele_local(mem)
+    coefficients_du_profit_foncier(mem)
     banc_d_essai(mem)
     baremes_historiques(mem)
     mises_a_jour_des_taux(mem)
@@ -208,6 +209,29 @@ def apprentissage(mem, afficher_element):
         st.dataframe(corrections.sort_values("id", ascending=False)[["cree_le", "matiere", "question", "bonne_reponse",
                                                                      "source", "apprise"]].head(100),
                      hide_index=True, width="stretch")
+
+
+def coefficients_du_profit_foncier(mem):
+    """Ajouter chaque année le tableau des coefficients de réévaluation (arrêté de février), avec sa source."""
+    from . import coefficients_fonciers as CF
+    annees = CF.charger(mem)
+    with st.expander(f"🏠 Coefficients du profit foncier — tableaux des ventes de {', '.join(map(str, annees))}"):
+        st.caption("Chaque année, un arrêté de février fixe le tableau des coefficients de réévaluation (CGI, art. 65-II) "
+                   "pour les ventes de l'année. Collez-le tel quel (année puis coefficient), avec sa source : il est "
+                   "vérifié puis gardé ; les tableaux des années passées restent pour les ventes antérieures.")
+        c = st.columns([1, 3])
+        annee = c[0].number_input("Ventes de l'année", 2027, 2050, max(CF.derniere_annee() + 1, 2027),
+                                  key="cf_annee")
+        source = c[1].text_input("Source (arrêté, Bulletin officiel, date)", key="cf_source",
+                                 placeholder="Arrêté du … février …, Bulletin officiel n° … du …")
+        texte = st.text_area("Tableau (1946 … jusqu'à l'année précédente)", key="cf_texte", height=140,
+                             placeholder="1946 57,773\n1947 44,991\n…")
+        if st.button("Vérifier et enregistrer le tableau", key="cf_enregistrer"):
+            try:
+                n = CF.enregistrer_tableau(mem, annee, texte, source)
+                st.success(f"Tableau des ventes de {annee} enregistré ({n} années). Simulation et chat l'utilisent.")
+            except ValueError as e:
+                st.error(f"Tableau refusé : {e}")
 
 
 def affinage_du_modele_local(mem):
