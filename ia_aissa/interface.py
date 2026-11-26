@@ -33,8 +33,8 @@ from .espace import EXTENSIONS_DONNEES, EXTENSIONS_LECTURE, ROLES, analyser_cont
 from .invention import annonce_darija, debattre, evoluer
 from .langues import ECRITURE_ARABE, LANGUES, detecter_langue, partie_dans_la_langue, phrase_a_travailler
 from .memoire import historique_api
-from .partage import broutage_autonome, etat_memoire, memoire, repas_du_jour, resume_du_soir, sauvegarde_auto, \
-    secret
+from .partage import broutage_autonome, etat_memoire, memoire, memoire_du_serveur, repas_du_jour, resume_du_soir, \
+    sauvegarde_auto, secret
 from .parole import charger_oreille, extrait_a_lire, synthetiser, transcrire
 from .reconnaissance import Yeux, moment_de_la_journee, qui_est_ce
 from .visage import SALUTATIONS
@@ -1221,6 +1221,7 @@ def application():
         repas_du_jour()                 # une lacune nourrie par jour, en arrière-plan
         resume_du_soir()                # le soir, résumé des temps d'ouverture gardé en base (tendance)
         sauvegarde_auto()               # chaque semaine, si un stockage objet est configuré (secrets SAUVEGARDE_S3_…)
+        memoire_du_serveur()            # un point par heure : courbe de la mémoire du processus
         prechauffage_unique()           # SDK des moteurs et aiguilleur chargés d'avance (une fois par serveur)
         from .espace_admin import espace_admin
         visiteurs = st.Page(espace_visiteur, title="IA AISSA", icon="👽", default=True)

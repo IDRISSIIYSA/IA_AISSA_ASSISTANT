@@ -273,6 +273,71 @@ def sante():
     }
 
 
+# Courbe de la mémoire : un point par heure (à la première visite de l'heure), 14 jours gardés en base
+CLE_COURBE = "sante:memoire"
+INTERVALLE_S = 3600
+GARDER_POINTS = 14 * 24
+SEUIL_SATURATION = 0.85          # part de la mémoire totale du serveur au-delà de laquelle le 502 menace
+_DERNIER_POINT = {"t": 0.0}
+
+
+def courbe_memoire(memoire):
+    brut = memoire.reglage(CLE_COURBE) if memoire is not None else None
+    return json.loads(brut) if brut else []
+
+
+def noter_memoire(memoire, maintenant=None, mesure=None):
+    """Ajoute un point (mémoire du processus, pic, mémoire libre, âge du serveur) si le dernier a plus d'une heure.
+    Le contrôle se fait d'abord en mémoire : la base n'est lue qu'une fois par heure. Renvoie le point, ou None."""
+    import time
+    maintenant = maintenant or time.time()
+    if maintenant - _DERNIER_POINT["t"] < INTERVALLE_S:
+        return None
+    points = courbe_memoire(memoire)
+    if points and maintenant - points[-1]["t"] < INTERVALLE_S:          # un autre processus vient de noter
+        _DERNIER_POINT["t"] = points[-1]["t"]
+        return None
+    s = mesure or sante()
+    point = {"t": round(maintenant), "processus_mo": s["processus_mo"], "pic_mo": s["processus_pic_mo"],
+             "libre_mo": s["memoire_disponible_mo"], "total_mo": s["memoire_totale_mo"],
+             "age_h": round(s["age_s"] / 3600, 1) if s.get("age_s") else None}
+    points = (points + [point])[-GARDER_POINTS:]
+    memoire.definir_reglage(CLE_COURBE, json.dumps(points))
+    _DERNIER_POINT["t"] = maintenant
+    return point
+
+
+def depuis_le_redemarrage(points):
+    """Les points du processus actuel : on remonte tant que l'âge du serveur décroît d'un point à l'autre."""
+    suite = []
+    for p in reversed(points):
+        if suite and (p.get("age_h") is None or suite[-1].get("age_h") is None or p["age_h"] >= suite[-1]["age_h"]):
+            break
+        suite.append(p)
+    return suite[::-1]
+
+
+def alerte_memoire(points, horizon_h=48):
+    """Message si, depuis le redémarrage, la mémoire du processus monte au point d'atteindre SEUIL_SATURATION de la
+    mémoire totale dans moins de `horizon_h` heures (pente par moindres carrés, au moins 6 points)."""
+    import statistics
+    suite = depuis_le_redemarrage(points)
+    if len(suite) < 6 or not suite[-1].get("total_mo"):
+        return None
+    pente, _ = statistics.linear_regression([p["t"] / 3600 for p in suite], [p["processus_mo"] for p in suite])
+    limite = SEUIL_SATURATION * suite[-1]["total_mo"]
+    reste = limite - suite[-1]["processus_mo"]
+    if pente <= 0.5 or reste <= 0:                      # moins de 0,5 Mo/h : stable
+        return None if reste > 0 else (f"⚠️ La mémoire du processus ({suite[-1]['processus_mo']} Mo) dépasse "
+                                       f"{SEUIL_SATURATION:.0%} de la mémoire du serveur : redémarrage conseillé.")
+    heures = reste / pente
+    if heures > horizon_h:
+        return None
+    return (f"📈 La mémoire du processus monte de {pente:.0f} Mo par heure depuis le redémarrage "
+            f"({suite[-1]['processus_mo']} Mo) : {SEUIL_SATURATION:.0%} de la mémoire du serveur serait atteint dans "
+            f"environ {heures:.0f} h (risque d'erreur 502). Pistes : index de lecture, cerveaux en cache, redémarrage.")
+
+
 def lignes_sante(s):
     """La santé en phrases courtes, pour l'administration."""
     age = s["age_s"]

@@ -94,7 +94,8 @@ def tableau_de_bord(mem):
     from . import chrono
     for alerte in chrono.alertes():                     # 95e centile d'une page > 3 s sur 24 heures
         st.error(alerte)
-    from .sauvegarde import SEUIL_PASSAGES, alerte_passages, alerte_sauvegarde, etat_bibliotheque, lignes_sante, sante
+    from .sauvegarde import (SEUIL_PASSAGES, alerte_memoire, alerte_passages, alerte_sauvegarde, courbe_memoire,
+                             etat_bibliotheque, lignes_sante, sante)
     rappel = alerte_sauvegarde(mem)
     if rappel:
         st.warning(rappel)
@@ -105,8 +106,19 @@ def tableau_de_bord(mem):
     etat_serveur = lignes_sante(sante()) + [
         f"Passages en mémoire : {biblio['total']} ({biblio['web']} lus seule sur le web, {biblio['autres']} donnés), "
         f"seuil d'alerte {SEUIL_PASSAGES}."]
-    with st.expander("🩺 Santé du serveur", expanded=etat_serveur[0].startswith("⚠️")):
+    points = courbe_memoire(mem)
+    tendance_memoire = alerte_memoire(points)
+    if tendance_memoire:
+        st.warning(tendance_memoire)
+    with st.expander("🩺 Santé du serveur", expanded=etat_serveur[0].startswith("⚠️") or bool(tendance_memoire)):
         st.markdown("\n".join(f"- {l}" for l in etat_serveur))
+        if len(points) > 1:
+            courbe = pd.DataFrame(points)
+            courbe["heure"] = pd.to_datetime(courbe["t"], unit="s")
+            st.caption("Mémoire (Mo), un point par heure sur 14 jours : processus d'IA AISSA et mémoire libre du serveur "
+                       "(une chute du processus = un redémarrage).")
+            st.line_chart(courbe.set_index("heure")[["processus_mo", "libre_mo"]].rename(
+                columns={"processus_mo": "Processus", "libre_mo": "Libre sur le serveur"}))
     dernier = mem.reglage("moteur:dernier_appel")
     if dernier:
         d = json.loads(dernier)
@@ -136,7 +148,6 @@ def temps_d_ouverture():
         tendance = chrono.tendance(memoire())
         st.markdown("**Tendance d'un jour à l'autre** (résumé gardé en base chaque soir après 20 h, heure du Maroc)")
         if tendance:
-            import pandas as pd
             t_j = pd.DataFrame(tendance)
             st.dataframe(t_j, hide_index=True, width="stretch")
             courbe = t_j[~t_j["Page"].str.endswith(chrono.SUFFIXE_REPONSE)].pivot_table(

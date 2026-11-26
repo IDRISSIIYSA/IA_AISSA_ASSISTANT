@@ -173,6 +173,15 @@ def sauvegarde_auto():
     return True
 
 
+def memoire_du_serveur():
+    """À chaque visite : un point par heure de la courbe de mémoire du processus (tableau de bord). Jamais bloquant."""
+    from .sauvegarde import noter_memoire
+    try:
+        return noter_memoire(memoire())
+    except Exception:
+        return None
+
+
 def resume_du_soir():
     """À chaque visite : le soir, le résumé des temps d'ouverture de la journée est gardé en base (une fois par jour).
     Une erreur de base ne gêne jamais la page."""

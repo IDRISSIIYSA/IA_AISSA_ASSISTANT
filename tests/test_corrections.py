@@ -829,3 +829,34 @@ def test_articles_du_cgi_cites_existent_dans_l_edition_2026():
     assert CGI.article("99").startswith("Article 99 du CGI (édition 2026, livre premier)")
     from ia_aissa.decortiqueur import FICHES
     assert "ne leur prévoit plus de taux réduit" in str(FICHES)
+
+
+def test_courbe_de_la_memoire_du_serveur_heure_par_heure(tmp_path):
+    """Un point par heure (base lue au plus une fois par heure), 14 jours gardés ; l'alerte ne regarde que le processus
+    actuel (depuis le dernier redémarrage) et prévient quand la pente mène à 85 % de la mémoire en moins de 48 h."""
+    from ia_aissa import sauvegarde as SV
+    from ia_aissa.memoire import Memoire
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    SV._DERNIER_POINT["t"] = 0.0
+    mesure = lambda mo, age_h: {"processus_mo": mo, "processus_pic_mo": mo + 10, "memoire_disponible_mo": 2048 - mo,
+                                "memoire_totale_mo": 2048, "age_s": age_h * 3600}
+    t0 = 1_800_000_000.0
+    assert SV.noter_memoire(mem, t0, mesure(400, 1))["processus_mo"] == 400
+    assert SV.noter_memoire(mem, t0 + 1800, mesure(410, 1.5)) is None                  # moins d'une heure
+    SV._DERNIER_POINT["t"] = 0.0                                                         # autre processus : la base suffit
+    assert SV.noter_memoire(mem, t0 + 1800, mesure(410, 1.5)) is None
+    for h in range(1, 10):                                                               # +100 Mo par heure
+        SV.noter_memoire(mem, t0 + h * 3600, mesure(400 + 100 * h, 1 + h))
+    points = SV.courbe_memoire(mem)
+    assert len(points) == 10 and points[-1]["age_h"] == 10
+    alerte = SV.alerte_memoire(points)
+    assert alerte and "100 Mo par heure" in alerte and "502" in alerte                   # 1 300 → 1 741 Mo en ~4 h
+    redemarre = points + [dict(points[-1], t=points[-1]["t"] + 3600 * k, processus_mo=300, age_h=k) for k in range(1, 4)]
+    assert SV.depuis_le_redemarrage(redemarre)[0]["age_h"] == 1 and SV.alerte_memoire(redemarre) is None
+    stable = [dict(p, processus_mo=500) for p in points]
+    assert SV.alerte_memoire(stable) is None
+    for h in range(10, 10 + SV.GARDER_POINTS):
+        SV._DERNIER_POINT["t"] = 0.0
+        SV.noter_memoire(mem, t0 + h * 3600, mesure(500, 1 + h))
+    assert len(SV.courbe_memoire(mem)) == SV.GARDER_POINTS
+    SV._DERNIER_POINT["t"] = 0.0

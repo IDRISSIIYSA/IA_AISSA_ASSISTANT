@@ -395,7 +395,8 @@ sans l'attendre.
 
 Sauvegarde et santé (`ia_aissa/sauvegarde.py`) : dans l'administration, « 💾 Sauvegarde de la mémoire » télécharge
 toutes les tables (JSON compressé ; restauration dans une base vide en ligne de commande) et « 🩺 Santé du serveur »
-montre mémoire, disque, modules chargés, index de lecture (passages et mémoire estimée) et passages gardés (lus
+montre (avec la courbe heure par heure de la mémoire sur 14 jours et une alerte quand elle monte vers la saturation)
+mémoire, disque, modules chargés, index de lecture (passages et mémoire estimée) et passages gardés (lus
 sur le web ou donnés) ; au-delà de 60 000 passages, un avertissement apparaît (rien n'est oublié sans décision). Sur un serveur dédié, deploy/sauvegarde.sh fait chaque
 nuit un pg_dump (30 jours gardés).
 Sauvegarde automatique hebdomadaire vers un stockage objet compatible S3 (AWS S3, Neon Object Storage, R2…) : ajoutez
