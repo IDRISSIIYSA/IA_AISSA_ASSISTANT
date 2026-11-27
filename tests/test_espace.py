@@ -1359,3 +1359,42 @@ def test_resume_du_soir_des_temps_garde_en_base(tmp_path):
     assert chrono.garder_resume_du_soir(mem, soir) == "2026-11-25"
     assert len(chrono.resumes(mem)) == chrono.GARDER_JOURS and "2026-11-25" in chrono.resumes(mem)
     chrono.reinitialiser()
+
+
+def test_trois_scenarios_cote_a_cote_avec_verdict_et_graphique(tmp_path, monkeypatch):
+    """A, puis B gardés ; le résultat courant devient C : tableau à trois colonnes, verdict parmi les trois, graphique
+    des résultats en DH, rapport de comparaison des trois."""
+    from streamlit.testing.v1 import AppTest
+    from ia_aissa.scenarios import donnees_graphique, rapport_comparaison, verdict_plusieurs
+    sc = lambda v: {"resultats": {"VAN": v, "TRI": "12 %"}, "entrees": {}, "numero": v, "categorie": "x",
+                    "references": [], "annee": 2026}
+    trois = [("A", sc("100 DH")), ("B", sc("300 DH")), ("C", sc("200 DH"))]
+    v = verdict_plusieurs("Investissement (VAN, TRI)", trois)
+    assert v.startswith("🏆 Le scénario B est le plus avantageux selon la valeur actuelle nette (VAN) : 300 DH")
+    assert "A : 100 DH ; C : 200 DH" in v
+    assert verdict_plusieurs("Investissement (VAN, TRI)", [("A", sc("3 DH")), ("B", sc("3 DH")), ("C", sc("1 DH"))]
+                             ).startswith("⚖️ Égalité en tête")
+    g = donnees_graphique("Investissement (VAN, TRI)", trois)
+    assert list(g.index) == ["VAN"] and list(g.columns) == ["Scénario A", "Scénario B", "Scénario C"]  # TRI : en %
+    r3 = rapport_comparaison("Investissement (VAN, TRI)", *(s for _, s in trois))
+    assert r3["titre"].startswith("Comparaison de trois scénarios") and "Scénario C (rapport)" in r3["entrees"]
+    monkeypatch.setenv("MEMOIRE_URL", f"sqlite:///{tmp_path / 'm.db'}")
+
+    def page():
+        from ia_aissa.espace_simulations import afficher
+        from ia_aissa.partage import memoire
+        afficher("Crédit (échéancier)", memoire())
+
+    at = AppTest.from_function(page, default_timeout=300).run()
+    next(b for b in at.button if b.key == "garder_A_Crédit (échéancier)").click().run()
+    at.number_input(key="cr_cap").set_value(300_000.0).run()
+    next(b for b in at.button if b.key == "garder_B_Crédit (échéancier)").click().run()
+    assert any("scénario C" in c.value for c in at.caption)                       # B gardé : on attend C
+    at.number_input(key="cr_cap").set_value(150_000.0).run()
+    assert not at.exception and any("Scénarios A, B ou C" in m.value for m in at.markdown)
+    t = at.dataframe[-1].value
+    assert {"Scénario A", "Scénario B", "Scénario C", "Écart (C − A)"} <= set(t.columns)
+    assert any("Le scénario C est le plus avantageux selon le total remboursé" in m.value for m in at.success)
+    next(b for b in at.button if b.key == "oublier_A_Crédit (échéancier)").click().run()
+    assert "scenario_A_Crédit (échéancier)" not in at.session_state
+    assert "scenario_B_Crédit (échéancier)" not in at.session_state

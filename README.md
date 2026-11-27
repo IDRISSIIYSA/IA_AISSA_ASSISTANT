@@ -413,8 +413,8 @@ temps d'import de chaque gros module (pandas, numpy,
 PyTorch…) mesuré dans le serveur : l'accueil s'ouvre sans pandas ni PyTorch, chargés à leur premier usage. Les cerveaux d'école sont gardés
 en mémoire en float16 (moitié moins de mémoire, examen identique) ; les fichiers et les révisions restent en float32.
 
-Comparer deux scénarios : sous chaque simulation, « 📌 Garder comme scénario A », changez vos chiffres, et IA AISSA
-met A et B côte à côte avec les écarts et dit lequel est le plus avantageux selon le critère de la simulation
+Comparer jusqu'à trois scénarios : sous chaque simulation, « 📌 Garder comme scénario A » (puis B), changez vos
+chiffres, et IA AISSA met les scénarios côte à côte (avec un graphique des résultats en DH) avec les écarts et dit lequel est le plus avantageux selon le critère de la simulation
 (total remboursé, VAN, impôt dû, net pour le vendeur…), dans un rapport de comparaison en PDF et Excel.
 
 Loi de finances (`ia_aissa/lecture_loi.py`) : chaque janvier, l'administrateur dépose la loi de finances en PDF ;

@@ -176,32 +176,47 @@ def afficher(nom, memoire):
 
 
 def comparaison(nom, r, memoire):
-    """Garder ce résultat comme scénario A, puis le comparer au scénario courant (B) dans un même rapport."""
-    from .scenarios import comparer, rapport_comparaison, verdict
-    cle = f"scenario_A_{nom}"
-    a = st.session_state.get(cle)
+    """Garder ce résultat comme scénario A (puis B) : le résultat courant devient le scénario suivant (B, puis C), et
+    les scénarios sont mis côte à côte (tableau, verdict, graphique, rapport)."""
+    from .scenarios import comparer, comparer_plusieurs, donnees_graphique, rapport_comparaison, verdict_plusieurs
+    cle_a, cle_b = f"scenario_A_{nom}", f"scenario_B_{nom}"
+    a, b = st.session_state.get(cle_a), st.session_state.get(cle_b)
     c = st.columns(2)
-    if c[0].button("📌 Garder comme scénario A" if a is None else "📌 Remplacer le scénario A par celui-ci",
-                   key=f"garder_A_{nom}", width="stretch",
-                   help="Gardez ce résultat, changez vos chiffres : je mets les deux scénarios côte à côte."):
-        st.session_state[cle] = a = r
-        st.toast("Scénario A gardé : changez vos chiffres pour obtenir le scénario B.")
     if a is None:
+        if c[0].button("📌 Garder comme scénario A", key=f"garder_A_{nom}", width="stretch",
+                       help="Gardez ce résultat, changez vos chiffres : je mets les scénarios côte à côte (jusqu'à 3)."):
+            st.session_state[cle_a] = a = r
+            st.toast("Scénario A gardé : changez vos chiffres pour obtenir le scénario B.")
+        if a is None:
+            return
+    elif b is None and r["entrees"] != a["entrees"]:
+        if c[0].button("📌 Garder aussi comme scénario B", key=f"garder_B_{nom}", width="stretch",
+                       help="Un troisième jeu de chiffres deviendra le scénario C."):
+            st.session_state[cle_b] = b = r
+            st.toast("Scénario B gardé : changez encore vos chiffres pour obtenir le scénario C.")
+    if c[1].button("🗑️ Oublier les scénarios", key=f"oublier_A_{nom}", width="stretch"):
+        st.session_state.pop(cle_a, None)
+        st.session_state.pop(cle_b, None)
         return
-    if c[1].button("🗑️ Oublier le scénario A", key=f"oublier_A_{nom}", width="stretch"):
-        st.session_state.pop(cle, None)
+    gardes = [("A", a)] + ([("B", b)] if b is not None else [])
+    courant = "B" if b is None else "C"
+    if any(g["numero"] == r["numero"] or g["entrees"] == r["entrees"] for _, g in gardes):
+        st.markdown("#### ⚖️ Scénario A ou scénario B ?" if b is None else "#### ⚖️ Scénarios A, B ou C ?")
+        st.caption(f"Changez vos chiffres ci-dessus : le résultat courant deviendra le scénario {courant}.")
         return
-    st.markdown("#### ⚖️ Scénario A ou scénario B ?")
-    if a["numero"] == r["numero"] or (a["entrees"] == r["entrees"]):
-        st.caption("Changez vos chiffres ci-dessus : le résultat courant deviendra le scénario B.")
-        return
-    t = comparer(a, r)
-    phrase = verdict(nom, a, r)
+    scenarios = gardes + [(courant, r)]
+    st.markdown("#### ⚖️ Scénario A ou scénario B ?" if len(scenarios) == 2 else "#### ⚖️ Scénarios A, B ou C ?")
+    phrase = verdict_plusieurs(nom, scenarios)
     if phrase:
         icone, texte = phrase.split(" ", 1)
         st.success(texte, icon=icone)
+    t = comparer(a, r) if len(scenarios) == 2 else comparer_plusieurs(scenarios)
     st.dataframe(t, hide_index=True, width="stretch")
-    rc = rapport_comparaison(nom, a, r)
+    graphique = donnees_graphique(nom, scenarios)
+    if graphique is not None:
+        st.caption("Résultats clés en DH, scénario par scénario")
+        st.bar_chart(graphique, stack=False, horizontal=True)
+    rc = rapport_comparaison(nom, a, b, r) if b is not None else rapport_comparaison(nom, a, r)
     c2 = st.columns(2)
     if c2[0].download_button("📄 Comparaison PDF", pdf(rc), f"{rc['numero']}.pdf", "application/pdf",
                              key=f"pdf_cmp_{nom}", width="stretch"):

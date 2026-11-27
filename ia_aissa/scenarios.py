@@ -93,6 +93,58 @@ def verdict(nom, a, b):
             f"(écart B − A : {ecart(texte_a, texte_b)}), car ce critère doit être le {sens_mot} possible.")
 
 
+def verdict_plusieurs(nom, scenarios):
+    """Comme verdict(), pour deux scénarios ou plus : [(étiquette, rapport)] → la phrase, ou None."""
+    if len(scenarios) == 2:
+        return verdict(nom, scenarios[0][1], scenarios[1][1])
+    if nom not in CRITERES:
+        return None
+    rubrique, sens, quoi = CRITERES[nom]
+    lus = [(lettre, r["resultats"].get(rubrique), *valeur(r["resultats"].get(rubrique))) for lettre, r in scenarios]
+    if any(v is None for _, _, v, _ in lus) or len({u for *_, u in lus}) != 1:
+        return None
+    choisir = min if sens == "min" else max
+    meilleur = choisir(lus, key=lambda x: x[2])
+    if sum(1 for x in lus if abs(x[2] - meilleur[2]) < 1e-9) > 1:
+        return f"⚖️ Égalité en tête sur {quoi} ({meilleur[1]}) : choisissez selon les autres résultats du tableau."
+    autres = " ; ".join(f"{lettre} : {texte}" for lettre, texte, _, _ in lus if lettre != meilleur[0])
+    sens_mot = "plus bas" if sens == "min" else "plus élevé"
+    return (f"🏆 Le scénario {meilleur[0]} est le plus avantageux selon {quoi} : {meilleur[1]} ({autres}), car ce "
+            f"critère doit être le {sens_mot} possible.")
+
+
+def comparer_plusieurs(scenarios):
+    """Tableau à n scénarios : Rubrique, Nature, une colonne par scénario, Écart (dernier − premier)."""
+    premier, dernier = scenarios[0][0], scenarios[-1][0]
+    lignes = []
+    for nature, cle in (("Entrée", "entrees"), ("Résultat", "resultats")):
+        rubriques = list(dict.fromkeys(r for _, s in scenarios for r in s[cle]))
+        for r in rubriques:
+            ligne = {"Rubrique": r, "Nature": nature}
+            ligne.update({f"Scénario {lettre}": s[cle].get(r, "—") for lettre, s in scenarios})
+            ligne[f"Écart ({dernier} − {premier})"] = ecart(ligne[f"Scénario {premier}"], ligne[f"Scénario {dernier}"])
+            lignes.append(ligne)
+    return pd.DataFrame(lignes)
+
+
+def donnees_graphique(nom, scenarios, maximum=5):
+    """Les résultats clés en DH, comparables dans tous les scénarios (le critère d'abord) : DataFrame rubrique ×
+    scénario pour un graphique en barres ; None s'il n'y en a pas."""
+    critere = CRITERES.get(nom, (None,))[0]
+    rubriques = list(dict.fromkeys(r for _, s in scenarios for r in s["resultats"]))
+    if critere in rubriques:
+        rubriques.remove(critere)
+        rubriques.insert(0, critere)
+    lignes = {}
+    for r in rubriques:
+        lus = [valeur(s["resultats"].get(r, "")) for _, s in scenarios]
+        if all(v is not None and u == "DH" for v, u in lus) and len({v for v, _ in lus}) > 1:
+            lignes[r] = {f"Scénario {lettre}": v for (lettre, _), (v, _) in zip(scenarios, lus)}
+        if len(lignes) >= maximum:
+            break
+    return pd.DataFrame(lignes).T if lignes else None
+
+
 def comparer(a, b):
     """Tableau : Rubrique, Nature, Scénario A, Scénario B, Écart (B − A)."""
     lignes = []
@@ -105,18 +157,20 @@ def comparer(a, b):
     return pd.DataFrame(lignes)
 
 
-def rapport_comparaison(nom, a, b):
-    t = comparer(a, b)
-    differents = t[(t["Nature"] == "Résultat") & ~t["Écart (B − A)"].isin(["", "="])]
-    phrase = verdict(nom, a, b)
-    return rapport(f"Comparaison de deux scénarios — {nom}", a["categorie"],
-                   {"Scénario A (rapport)": a["numero"], "Scénario B (rapport)": b["numero"]},
+def rapport_comparaison(nom, a, b, c=None):
+    scenarios = [("A", a), ("B", b)] + ([("C", c)] if c is not None else [])
+    t = comparer(a, b) if c is None else comparer_plusieurs(scenarios)
+    col = t.columns[-1]
+    differents = t[(t["Nature"] == "Résultat") & ~t[col].isin(["", "="])]
+    phrase = verdict_plusieurs(nom, scenarios)
+    return rapport(f"Comparaison de {'deux' if c is None else 'trois'} scénarios — {nom}", a["categorie"],
+                   {f"Scénario {lettre} (rapport)": s["numero"] for lettre, s in scenarios},
                    {**({"Le plus avantageux": phrase.lstrip("🏆⚖️ ")} if phrase else {}),
                     "Résultats qui changent": f"{len(differents)} sur {int((t['Nature'] == 'Résultat').sum())}",
-                    **{f"Écart — {l['Rubrique']}": l["Écart (B − A)"] for _, l in differents.head(6).iterrows()}},
+                    **{f"Écart — {l['Rubrique']}": l[col] for _, l in differents.head(6).iterrows()}},
                    ["Les deux scénarios sont calculés par la même simulation, avec les mêmes textes et taux.",
-                    "Écart = scénario B − scénario A, quand les deux valeurs sont des nombres de même unité "
-                    "(les pourcentages en points)."],
+                    f"{col.split(' (')[0]} = scénario {col[-6]} − scénario A, quand les deux valeurs sont des "
+                    "nombres de même unité (les pourcentages en points)."],
                    [*dict.fromkeys(a["references"] + b["references"])], a.get("annee"), tableau=t,
                    remarques=["Comparez des scénarios réalistes : un écart favorable sur le papier doit être confirmé "
                               "par vos justificatifs et, si besoin, par votre expert-comptable."])
