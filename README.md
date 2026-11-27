@@ -419,7 +419,7 @@ chiffres, et IA AISSA met les scénarios côte à côte (avec un graphique des r
 
 Loi de finances (`ia_aissa/lecture_loi.py`) : chaque janvier, l'administrateur dépose la loi de finances en PDF ;
 IA AISSA propose les taux et seuils qui ont changé, et le nouveau barème de l'IR s'il change (article et extrait à
-l'appui), appliqués seulement après validation.
+l'appui) — un PDF scanné est lu par reconnaissance de caractères (Tesseract, installé par packages.txt),, appliqués seulement après validation.
 
 Voix : une réponse mixte (darija, français, anglais, espagnol…) est lue phrase par phrase, chacune avec la voix de sa
 langue.

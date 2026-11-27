@@ -928,3 +928,38 @@ def test_tableau_annuel_des_coefficients_fonciers_ajoute_par_l_administrateur(tm
     finally:
         CF._TABLEAUX.pop(2027, None)
     assert CF.derniere_annee() == 2026 and CF.coefficient(1980) == 4.646
+
+
+def test_loi_de_finances_scannee_lue_par_ocr(tmp_path, monkeypatch):
+    """Un PDF fait d'une image (scan) : lu par Tesseract si le serveur l'a, sinon message clair avec un OCR en ligne."""
+    import shutil
+    import pytest
+    from fpdf import FPDF
+    from PIL import Image, ImageDraw, ImageFont
+    from ia_aissa import lecture_loi as L
+    from ia_aissa.memoire import Memoire
+    police = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    image = Image.new("L", (2000, 420), 255)
+    dessin = ImageDraw.Draw(image)
+    fonte = ImageFont.truetype(police, 40) if Path(police).exists() else ImageFont.load_default()
+    for i, ligne in enumerate(["Article 7. La deduction des frais professionnels",
+                               "est plafonnee a 40 000 dirhams par an."]):
+        dessin.text((40, 60 + 90 * i), ligne, fill=0, font=fonte)
+    image.save(tmp_path / "scan.png")
+    doc = FPDF()
+    doc.add_page()
+    doc.image(str(tmp_path / "scan.png"), x=5, y=10, w=200)
+    octets = bytes(doc.output())
+    assert len(L.texte_du_pdf(octets).strip()) < L.CARACTERES_PAR_PAGE                 # aucun texte : un scan
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    monkeypatch.setattr(L, "ocr_disponible", lambda: False)
+    with pytest.raises(L.PdfScanne, match="iwelah.com/fr/ocr-pdf"):
+        L.analyser(mem, octets, "LF_scannee.pdf", 2027)
+    monkeypatch.undo()
+    if shutil.which("tesseract") is None:
+        pytest.skip("Tesseract absent : la lecture OCR est testée là où il est installé (packages.txt)")
+    lu = L.lire_pdf(octets)
+    assert lu["ocr"] and lu["pages_lues"] == 1 and "plafonn" in lu["texte"]
+    trouvees = L.analyser(mem, octets, "LF_scannee.pdf", 2027)
+    frais = [t for t in trouvees if t["cle"] == "plafond_frais_pro"]
+    assert frais and frais[0]["valeur"] == 40_000 and frais[0]["ocr"] and frais[0]["article"] == "7"

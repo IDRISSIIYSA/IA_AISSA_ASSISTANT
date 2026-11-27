@@ -47,6 +47,59 @@ def texte_du_pdf(octets):
     return "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(octets)).pages)
 
 
+# ==========================================
+# PDF scanné (images sans texte) : reconnaissance de caractères avec Tesseract, si le serveur l'a
+# (Streamlit Cloud : paquets tesseract-ocr et tesseract-ocr-fra dans packages.txt). Sans lui : lien vers un OCR en ligne.
+# ==========================================
+MAX_PAGES_OCR = 60               # une loi de finances scannée : au-delà, trop long pour le petit serveur
+CARACTERES_PAR_PAGE = 50         # moins de texte que cela par page : PDF scanné
+OCR_EN_LIGNE = "https://iwelah.com/fr/ocr-pdf/"
+
+
+class PdfScanne(ValueError):
+    """PDF fait d'images et pas d'OCR sur le serveur."""
+
+
+def ocr_disponible():
+    import shutil
+    return shutil.which("tesseract") is not None
+
+
+def ocr_pdf(octets, max_pages=MAX_PAGES_OCR):
+    """Texte des images de chaque page (Tesseract, français). Renvoie (texte, pages lues, pages du PDF)."""
+    import subprocess
+    import tempfile
+    from pypdf import PdfReader
+    pages = PdfReader(io.BytesIO(octets)).pages
+    morceaux = []
+    with tempfile.TemporaryDirectory() as dossier:
+        for n, page in enumerate(pages[:max_pages]):
+            for k, image in enumerate(page.images):
+                chemin = f"{dossier}/p{n}_{k}{image.name[image.name.rfind('.'):] if '.' in image.name else '.png'}"
+                with open(chemin, "wb") as f:
+                    f.write(image.data)
+                lu = subprocess.run(["tesseract", chemin, "-", "-l", "fra", "--psm", "6"], capture_output=True,
+                                    text=True, timeout=120)
+                morceaux.append(lu.stdout)
+    return "\n".join(morceaux), min(len(pages), max_pages), len(pages)
+
+
+def lire_pdf(octets):
+    """{texte, ocr (bool), pages_lues, pages} : le texte du PDF, ou celui de ses images s'il est scanné.
+    Lève PdfScanne si le PDF est scanné et que le serveur n'a pas d'OCR."""
+    from pypdf import PdfReader
+    texte = texte_du_pdf(octets)
+    pages = len(PdfReader(io.BytesIO(octets)).pages)
+    if len(texte.strip()) >= CARACTERES_PAR_PAGE * max(pages, 1):
+        return {"texte": texte, "ocr": False, "pages_lues": pages, "pages": pages}
+    if not ocr_disponible():
+        raise PdfScanne(f"Ce PDF est une image scannée ({pages} page(s)) et la reconnaissance de caractères n'est pas "
+                        f"installée sur ce serveur : passez-le d'abord à un OCR (par exemple {OCR_EN_LIGNE}) puis "
+                        "déposez le PDF obtenu.")
+    texte, lues, total = ocr_pdf(octets)
+    return {"texte": texte, "ocr": True, "pages_lues": lues, "pages": total}
+
+
 _ANCIENNE = re.compile(r"\bde\s+(?:[\w-]+\s+){0,4}\(?\d[\d  .,]*\)?\s*(?:%|dirhams|DH)(?:\s+susvis[ée]e?s?)?(?=\s+à\s)", re.I)
 
 
@@ -158,13 +211,16 @@ def analyser(memoire, octets, nom_fichier, annee):
     """Lit le PDF, garde les propositions (en attente de validation) et les renvoie."""
     from . import parametres as P
     actuelles = {cle: getattr(module, attribut) for cle, module, attribut, *_ in P.PARAMETRES}
-    texte = texte_du_pdf(octets)
+    lecture = lire_pdf(octets)
+    texte = lecture["texte"]
     trouvees = propositions(texte, actuelles)
     bareme = proposition_bareme(texte, annee, memoire)
     if bareme:
         trouvees.append(bareme)
+    memoire.definir_reglage("loi:derniere_lecture", json.dumps(
+        {"fichier": nom_fichier, "ocr": lecture["ocr"], "pages_lues": lecture["pages_lues"], "pages": lecture["pages"]}))
     for t in trouvees:
-        t.update(fichier=nom_fichier, annee=int(annee), statut="à valider",
+        t.update(fichier=nom_fichier, annee=int(annee), statut="à valider", ocr=lecture["ocr"],
                  lu_le=datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M"))
     memoire.definir_reglage(CLE_REGLAGE, json.dumps(en_attente(memoire) + trouvees, ensure_ascii=False))
     return trouvees

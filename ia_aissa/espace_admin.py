@@ -569,7 +569,13 @@ def lire_la_loi_de_finances(mem):
             try:
                 trouvees = L.analyser(mem, fichier.getvalue(), fichier.name, annee)
                 st.success(f"{len(trouvees)} proposition(s) trouvée(s)." if trouvees else
-                           "Aucun taux ou seuil suivi n'a changé dans ce texte (ou le PDF est une image scannée).")
+                           "Aucun taux ou seuil suivi n'a changé dans ce texte.")
+                lecture = json.loads(mem.reglage("loi:derniere_lecture") or "{}")
+                if lecture.get("ocr"):
+                    st.info(f"PDF scanné : lu par reconnaissance de caractères ({lecture['pages_lues']} page(s) sur "
+                            f"{lecture['pages']}). Relisez chaque extrait : l'OCR peut confondre un chiffre.")
+            except L.PdfScanne as e:
+                st.warning(str(e))
             except Exception as e:
                 st.error(f"Lecture impossible : {e}")
     for i, p in enumerate(L.en_attente(mem)):
@@ -586,7 +592,7 @@ def lire_la_loi_de_finances(mem):
                 st.markdown(f"**{P.PAR_CLE[p['cle']][3]}** : {P.afficher_valeur(p['actuelle'], unite)} → "
                             f"**{P.afficher_valeur(p['valeur'], unite)}** — loi de finances {p['annee']}"
                             + (f", article {p['article']}" if p["article"] else ""))
-            st.caption(f"« {p['extrait']} »")
+            st.caption(("🔎 Lu par OCR — vérifiez les chiffres. " if p.get("ocr") else "") + f"« {p['extrait']} »")
             c = st.columns(2)
             if c[0].button("✅ Valider et appliquer", key=f"lf_ok_{i}_{p['cle']}_{str(p['valeur'])[:40]}", width="stretch"):
                 try:
