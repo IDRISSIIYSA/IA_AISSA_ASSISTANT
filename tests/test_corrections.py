@@ -734,6 +734,38 @@ def test_coefficients_de_reevaluation_du_profit_foncier_2026():
     assert "pas de coefficient sûr" in penser("coefficient de réévaluation 1940", None)[0]
 
 
+def test_loi_de_finances_nouveau_bareme_de_l_ir_propose_puis_valide(tmp_path):
+    """Le barème de l'IR rédigé comme l'article 73-I (lu aussi sur le CGI 2026 officiel) est reconnu, ses sommes à
+    déduire recalculées ; proposé seulement s'il change ; appliqué à l'année après validation. (Barème 2027 fictif.)"""
+    from fpdf import FPDF
+    from ia_aissa import baremes as B
+    from ia_aissa import lecture_loi as L
+    from ia_aissa.memoire import Memoire
+    officiel = ("Article 73. I.- Bareme de calcul : - la tranche du revenu allant jusqu'a 40 000 dirhams est exoneree ; "
+                "- 10% pour la tranche du revenu allant de 40.001 a 60.000 dirhams ; - 20% pour la tranche du revenu "
+                "allant de 60.001 a 80.000 dirhams ; - 30% pour la tranche du revenu allant de 80.001 a 100.000 "
+                "dirhams ; - 34% pour la tranche du revenu allant de 100.001 a 180.000 dirhams ; - 37% pour le surplus.")
+    lu = L.bareme_ir(officiel)
+    assert [t[2] for t in lu["tranches"]] == [0, 4_000, 10_000, 18_000, 22_000, 27_400]       # comme le CGI 2025-2026
+    assert lu["tranches"][-1][0] is None and lu["article"] == "73"
+    assert L.proposition_bareme(officiel, 2026) is None                                       # inchangé : rien
+    assert L.bareme_ir("- 10% pour la tranche du revenu allant de 40.001 a 60.000 dirhams") is None   # incomplet
+    nouveau = officiel.replace("40 000 dirhams est", "45 000 dirhams est").replace("40.001", "45.001")
+    doc = FPDF()
+    doc.add_page()
+    doc.set_font("Helvetica", size=10)
+    doc.multi_cell(0, 6, nouveau)
+    mem = Memoire(f"sqlite:///{tmp_path / 'm.db'}")
+    trouvees = [t for t in L.analyser(mem, bytes(doc.output()), "LF_2027.pdf", 2027) if t.get("type") == "bareme_ir"]
+    assert len(trouvees) == 1 and trouvees[0]["valeur"][0][0] == 45_000 and trouvees[0]["valeur"][1][2] == 4_500
+    assert B.periode("ir", 2027, mem) is None                                                  # pas avant validation
+    index = next(i for i, p in enumerate(L.en_attente(mem)) if p.get("type") == "bareme_ir")
+    L.decider(mem, index, True)
+    r = B.ir_annee(120_000, 2027, mem)
+    assert r["taux_marginal"] == 0.34 and r["ir_annuel"] == round(120_000 * 0.34 - r["somme_a_deduire"], 2)
+    assert "73-I" in B.periode("ir", 2027, mem)["loi"] and not any(p.get("type") == "bareme_ir" for p in L.en_attente(mem))
+
+
 def test_lecture_de_la_loi_de_finances_propose_les_taux_a_valider(tmp_path):
     """Loi de finances en PDF → propositions (article, extrait) ; rien n'est appliqué avant validation."""
     from fpdf import FPDF

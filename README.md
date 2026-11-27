@@ -418,7 +418,8 @@ chiffres, et IA AISSA met les scénarios côte à côte (avec un graphique des r
 (total remboursé, VAN, impôt dû, net pour le vendeur…), dans un rapport de comparaison en PDF et Excel.
 
 Loi de finances (`ia_aissa/lecture_loi.py`) : chaque janvier, l'administrateur dépose la loi de finances en PDF ;
-IA AISSA propose les taux et seuils qui ont changé (article et extrait à l'appui), appliqués seulement après validation.
+IA AISSA propose les taux et seuils qui ont changé, et le nouveau barème de l'IR s'il change (article et extrait à
+l'appui), appliqués seulement après validation.
 
 Voix : une réponse mixte (darija, français, anglais, espagnol…) est lue phrase par phrase, chacune avec la voix de sa
 langue.

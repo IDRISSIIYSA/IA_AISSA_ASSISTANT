@@ -96,11 +96,73 @@ def propositions(texte, valeurs_actuelles):
     return trouvees
 
 
+# Barème de l'IR (CGI, art. 73-I), tel que la loi de finances le rédige : « la tranche du revenu allant jusqu'à
+# 40 000 dirhams est exonérée ; 10% pour la tranche du revenu allant de 40.001 à 60.000 dirhams ; … ; 37% pour le surplus »
+_NOMBRE_LOI = r"(\d{1,3}(?:[ .  ]\d{3})+|\d+)"
+_EXONEREE = re.compile(r"tranche du revenu allant jusqu.{1,3}" + _NOMBRE_LOI + r"\s*dirhams est exon", re.I)
+_TRANCHE = re.compile(r"(\d{1,2}(?:,\d{1,2})?)\s*%\s*pour la tranche du revenu allant de\s*" + _NOMBRE_LOI
+                      + r"\s*(?:dirhams\s*)?(?:à|a)\s*" + _NOMBRE_LOI + r"\s*dirhams", re.I)
+_SURPLUS = re.compile(r"(\d{1,2}(?:,\d{1,2})?)\s*%\s*pour le surplus", re.I)
+
+
+def _entier(texte):
+    return float(re.sub(r"[ .  ]", "", texte))
+
+
+def bareme_ir(texte):
+    """Le barème de l'IR trouvé dans le texte : [(plafond ou None, taux, somme à déduire)] avec l'extrait, ou None.
+    La somme à déduire est recalculée tranche par tranche (D = D précédente + écart de taux × plafond précédent)."""
+    texte = re.sub(r"\s+", " ", texte or "")
+    exo = _EXONEREE.search(texte)
+    surplus = _SURPLUS.search(texte, exo.end()) if exo else None
+    if not exo or not surplus:
+        return None
+    morceau = texte[exo.start():surplus.end()]
+    tranches = [(_entier(exo.group(1)), 0.0)]
+    for m in _TRANCHE.finditer(morceau):
+        de, a, taux = _entier(m.group(2)), _entier(m.group(3)), float(m.group(1).replace(",", ".")) / 100
+        if abs(de - (tranches[-1][0] + 1)) > 1 or a <= de:     # tranches contiguës et croissantes seulement
+            return None
+        tranches.append((a, taux))
+    tranches.append((None, float(surplus.group(1).replace(",", ".")) / 100))
+    if len(tranches) < 4 or any(t2[1] <= t1[1] for t1, t2 in zip(tranches, tranches[1:])):
+        return None
+    bareme, deduction = [], 0.0
+    for i, (plafond, taux) in enumerate(tranches):
+        if i:
+            deduction += (taux - tranches[i - 1][1]) * tranches[i - 1][0]
+        bareme.append((plafond, taux, round(deduction, 2)))
+    article = next((a for p, a in reversed([(m.start(), m.group(1)) for m in _ARTICLE.finditer(texte)])
+                    if p <= exo.start()), None)
+    return {"tranches": bareme, "extrait": morceau[:600], "article": article}
+
+
+def proposition_bareme(texte, annee, memoire=None):
+    """Proposition du barème de l'IR pour `annee`, seulement s'il diffère de celui en vigueur cette année-là."""
+    from . import baremes as B
+    trouve = bareme_ir(texte)
+    if trouve is None:
+        return None
+    actuel = B.periode("ir", int(annee), memoire)
+    if actuel is not None:
+        en_vigueur = [(None if t[0] == float("inf") else t[0], t[1], t[2]) for t in actuel["bareme"]]
+        if len(en_vigueur) == len(trouve["tranches"]) and all(
+                (a[0] == b[0]) and abs(a[1] - b[1]) < 1e-9 and abs(a[2] - b[2]) < 0.5
+                for a, b in zip(en_vigueur, trouve["tranches"])):
+            return None
+    return {"type": "bareme_ir", "cle": "bareme_ir", "valeur": trouve["tranches"], "actuelle": actuel and actuel["loi"],
+            "article": trouve["article"], "extrait": trouve["extrait"]}
+
+
 def analyser(memoire, octets, nom_fichier, annee):
     """Lit le PDF, garde les propositions (en attente de validation) et les renvoie."""
     from . import parametres as P
     actuelles = {cle: getattr(module, attribut) for cle, module, attribut, *_ in P.PARAMETRES}
-    trouvees = propositions(texte_du_pdf(octets), actuelles)
+    texte = texte_du_pdf(octets)
+    trouvees = propositions(texte, actuelles)
+    bareme = proposition_bareme(texte, annee, memoire)
+    if bareme:
+        trouvees.append(bareme)
     for t in trouvees:
         t.update(fichier=nom_fichier, annee=int(annee), statut="à valider",
                  lu_le=datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M"))
@@ -118,7 +180,13 @@ def decider(memoire, index, valider, auteur="administrateur"):
     from . import parametres as P
     attente = en_attente(memoire)
     p = attente.pop(index)
-    if valider:
+    if valider and p.get("type") == "bareme_ir":
+        from .baremes import ajouter_bareme_ir
+        ajouter_bareme_ir(memoire, p["annee"], p["annee"], f"Loi de finances {p['annee']}"
+                          + (f", article {p['article']}" if p["article"] else "") + " (CGI, art. 73-I)",
+                          f"{p['fichier']} (déposé et lu le {p['lu_le']}), validé par l'{auteur}",
+                          [tuple(t) for t in p["valeur"]])
+    elif valider:
         P.mettre_a_jour(memoire, p["cle"], p["valeur"], f"01/01/{p['annee']}",
                         f"Loi de finances {p['annee']}" + (f", article {p['article']}" if p["article"] else ""),
                         f"{p['fichier']} (déposé et lu le {p['lu_le']}), validé par l'{auteur}", auteur=auteur)

@@ -573,20 +573,28 @@ def lire_la_loi_de_finances(mem):
             except Exception as e:
                 st.error(f"Lecture impossible : {e}")
     for i, p in enumerate(L.en_attente(mem)):
-        unite = P.PAR_CLE[p["cle"]][4]
         with st.container(border=True):
-            st.markdown(f"**{P.PAR_CLE[p['cle']][3]}** : {P.afficher_valeur(p['actuelle'], unite)} → "
-                        f"**{P.afficher_valeur(p['valeur'], unite)}** — loi de finances {p['annee']}"
-                        + (f", article {p['article']}" if p["article"] else ""))
+            if p.get("type") == "bareme_ir":
+                st.markdown(f"**Nouveau barème de l'IR pour {p['annee']}** (en vigueur jusqu'ici : "
+                            f"{p['actuelle'] or 'aucun barème vérifié'}) — loi de finances {p['annee']}"
+                            + (f", article {p['article']}" if p["article"] else ""))
+                st.dataframe([{"Tranche jusqu'à (DH)": "au-delà" if t[0] is None else f"{t[0]:,.0f}".replace(",", " "),
+                               "Taux": f"{t[1]:.0%}", "Somme à déduire (DH)": f"{t[2]:,.0f}".replace(",", " ")}
+                              for t in p["valeur"]], hide_index=True)
+            else:
+                unite = P.PAR_CLE[p["cle"]][4]
+                st.markdown(f"**{P.PAR_CLE[p['cle']][3]}** : {P.afficher_valeur(p['actuelle'], unite)} → "
+                            f"**{P.afficher_valeur(p['valeur'], unite)}** — loi de finances {p['annee']}"
+                            + (f", article {p['article']}" if p["article"] else ""))
             st.caption(f"« {p['extrait']} »")
             c = st.columns(2)
-            if c[0].button("✅ Valider et appliquer", key=f"lf_ok_{i}_{p['cle']}_{p['valeur']}", width="stretch"):
+            if c[0].button("✅ Valider et appliquer", key=f"lf_ok_{i}_{p['cle']}_{str(p['valeur'])[:40]}", width="stretch"):
                 try:
                     L.decider(mem, i, True)
                     st.rerun()
                 except ValueError as e:
                     st.error(f"Refusé : {e}")
-            if c[1].button("✖ Rejeter", key=f"lf_non_{i}_{p['cle']}_{p['valeur']}", width="stretch"):
+            if c[1].button("✖ Rejeter", key=f"lf_non_{i}_{p['cle']}_{str(p['valeur'])[:40]}", width="stretch"):
                 L.decider(mem, i, False)
                 st.rerun()
 
