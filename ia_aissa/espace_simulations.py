@@ -177,7 +177,7 @@ def afficher(nom, memoire):
 
 def comparaison(nom, r, memoire):
     """Garder ce résultat comme scénario A, puis le comparer au scénario courant (B) dans un même rapport."""
-    from .scenarios import comparer, rapport_comparaison
+    from .scenarios import comparer, rapport_comparaison, verdict
     cle = f"scenario_A_{nom}"
     a = st.session_state.get(cle)
     c = st.columns(2)
@@ -196,6 +196,10 @@ def comparaison(nom, r, memoire):
         st.caption("Changez vos chiffres ci-dessus : le résultat courant deviendra le scénario B.")
         return
     t = comparer(a, r)
+    phrase = verdict(nom, a, r)
+    if phrase:
+        icone, texte = phrase.split(" ", 1)
+        st.success(texte, icon=icone)
     st.dataframe(t, hide_index=True, width="stretch")
     rc = rapport_comparaison(nom, a, r)
     c2 = st.columns(2)

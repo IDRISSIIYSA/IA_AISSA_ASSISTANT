@@ -955,12 +955,27 @@ def test_comparer_deux_scenarios_cote_a_cote(tmp_path, monkeypatch):
     t = at.dataframe[-1].value
     capital = t[t["Rubrique"].str.contains("Capital", case=False)].iloc[0]
     assert capital["Écart (B − A)"] == "+100 000 DH"
+    # verdict : emprunter moins coûte moins cher au total → A (200 000 DH) plus avantageux que B (300 000 DH)
+    assert any("Le scénario A est le plus avantageux selon le total remboursé" in m.value for m in at.success), [
+        m.value for m in at.success]
     a = at.session_state["scenario_A_Crédit (échéancier)"]
     from ia_aissa.espace_simulations import construire  # noqa: F401 (le rapport B vient de la même simulation)
     rc = rapport_comparaison("Crédit (échéancier)", a, {**a, "numero": "B", "entrees": {**a["entrees"],
                                                                                          "Capital": "300 000 DH"}})
     assert rc["tableau"] is not None and "Scénario A (rapport)" in rc["entrees"]
     assert list(comparer(a, a)["Écart (B − A)"].unique()) in (["="], ["=", ""], ["", "="], [""])
+    from ia_aissa.scenarios import verdict
+    sc = lambda r: {"resultats": r}
+    assert verdict("Investissement (VAN, TRI)", sc({"VAN": "120 000 DH"}), sc({"VAN": "150 000 DH"})).startswith(
+        "🏆 Le scénario B est le plus avantageux selon la valeur actuelle nette (VAN) : 150 000 DH contre 120 000 DH")
+    v = verdict("IS (impôt sur les sociétés)", sc({"IS dû": "80 000 DH"}), sc({"IS dû": "95 000 DH"}))
+    assert "scénario A" in v and "+15 000 DH" in v and "le plus bas possible" in v
+    assert verdict("IR (impôt sur le revenu)", sc({"IR annuel": "10 000 DH"}), sc({"IR annuel": "10 000 DH"})).startswith(
+        "⚖️ Égalité")
+    assert verdict("Acheter ou louer", sc({}), sc({})) is None                    # pas de critère unique
+    assert verdict("IS (impôt sur les sociétés)", sc({"IS dû": "80 000 DH"}), sc({"IS dû": "—"})) is None
+    assert "Le plus avantageux" in rapport_comparaison("Investissement (VAN, TRI)", {**a, "resultats": {"VAN": "1 DH"}},
+                                                       {**a, "numero": "B", "resultats": {"VAN": "2 DH"}})["resultats"]
 
 
 def test_voix_reponse_mixte_phrase_par_phrase(monkeypatch):
