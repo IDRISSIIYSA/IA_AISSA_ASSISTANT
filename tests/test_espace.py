@@ -1398,3 +1398,17 @@ def test_trois_scenarios_cote_a_cote_avec_verdict_et_graphique(tmp_path, monkeyp
     next(b for b in at.button if b.key == "oublier_A_Crédit (échéancier)").click().run()
     assert "scenario_A_Crédit (échéancier)" not in at.session_state
     assert "scenario_B_Crédit (échéancier)" not in at.session_state
+
+
+def test_voix_marocaine_pour_le_darija_en_ecriture_arabe():
+    """Le darija écrit en arabe prend la voix marocaine (mots propres au darija, négation « ما…ش » en un mot) ; l'arabe
+    standard garde la sienne, même avec des mots communs aux deux (عندك، كيف، خدمة…)."""
+    from ia_aissa.langues import ECRITURE_ARABE, detecter_langue
+    for darija in ("شكون نتا؟", "ماعرفتش شنو نقول ليك", "راه مزيانة بزاف", "فين خدام دابا؟", "ديالكم هادشي؟",
+                   "صيفط ليا الدوفي عافاك", "بغيتي شي حاجة؟"):
+        assert detecter_langue(darija) == "Darija", darija
+    for standard in ("هل عندك سؤال؟", "مرحبا بكم في موقعنا، كيف حالكم اليوم؟", "ما يعيش فيه الإنسان",
+                     "الضريبة على القيمة المضافة في المغرب", "ماذا تريد أن تعرف عن الخدمة؟", "سير العمل جيد"):
+        assert detecter_langue(standard) == "Arabe", standard
+    reconnues = sum(detecter_langue(a) == "Darija" for a in ECRITURE_ARABE.values())
+    assert reconnues >= 27, reconnues                       # les phrases de l'atelier de prononciation

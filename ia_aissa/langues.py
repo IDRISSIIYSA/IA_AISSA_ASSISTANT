@@ -157,8 +157,28 @@ MOTS = {
                "safi", "hna", "nta", "nti", "ana", "3lik", "3lach", "fin", "kidayr", "ghadi", "machi", "had", "hadchi",
                "smahli", "baraka", "chokran", "salam", "zwin", "khoya", "khti", "mezyan", "kolchi", "dima"},
 }
-DARIJA_ARABE = {"واش", "ديال", "بغيت", "كيفاش", "دابا", "هاد", "هادشي", "شنو", "بزاف", "كاين", "غادي", "ماشي",
-                "كيداير", "لاباس", "مزيان", "فين", "علاش", "شحال", "واخا", "صافي", "داز", "نهارك", "كنبغي", "ديالك"}
+# Mots propres au darija (absents de l'arabe standard, ou presque) : un seul suffit pour choisir la voix marocaine.
+# Les mots communs aux deux (كيف، غدا، في، هذا…) n'y sont pas, pour qu'un texte en arabe standard garde sa voix.
+DARIJA_ARABE = {
+    # mots de liaison et questions
+    "واش", "ديال", "كيفاش", "دابا", "هاد", "هادشي", "هادي", "هادا", "هادوك", "هاديك", "هاداك", "شنو", "شنا", "شكون",
+    "فين", "منين", "فاش", "علاش", "شحال", "بشحال", "بزاف", "شوية", "شويا", "شي", "والو", "ياك", "راه", "راها", "راني",
+    "راك", "راكي", "واخا", "صافي", "كاين", "كاينة", "كاينين", "ماشي", "غادي", "غادية", "ديما", "البارح", "مزيان",
+    "مزيانة", "زوين", "زوينة", "بصح", "لاباس", "داز", "نهارك", "دغيا", "حيت", "باش", "مورا",
+    # possessifs « ديال… »
+    "ديالك", "ديالي", "ديالو", "ديالها", "ديالنا", "ديالكم", "ديالهم",
+    # pronoms
+    "نتا", "نتي", "نتوما", "حنا", "هوما",
+    # verbes courants (préfixes ك / غ du darija)
+    "بغيت", "بغيتي", "بغينا", "بغيتو", "كنبغي", "كتبغي", "كيبغي", "كيداير", "كيدايرة", "كيدايرين", "كندير", "كتدير",
+    "كيدير", "كنقول", "كتقول", "كيقول", "كنعرف", "كتعرف", "عرفتي", "فهمتي", "كنهضر", "كتهضر", "هضر", "نهضرو", "جيت",
+    "جيتي", "مشيت", "مشيتي", "خاصني", "خاصك", "خاصنا",
+    # personnes et choses du quotidien
+    "خويا", "ختي", "الدراري", "عافاك", "صيفط", "صيفطي",
+}
+# La négation du darija « ما…ش » en un seul mot : ماعرفتش، ماكاينش، مافهمتش… (écrite en deux mots, « ما خلصش », elle
+# n'est pas retenue : « ما يعيش » est aussi de l'arabe standard)
+NEGATION_DARIJA = _re.compile(r"^ما[؀-ۿ]{2,}ش$")
 ARABE = _re.compile(r"[؀-ۿ]")
 LATIN = _re.compile(r"[A-Za-zÀ-ÿ]")
 
@@ -170,7 +190,8 @@ def detecter_langue(texte, defaut="Français"):
     nb_arabe, nb_latin = len(ARABE.findall(texte)), len(LATIN.findall(texte))
     if nb_arabe > nb_latin:
         mots_arabes = set(_re.findall(r"[؀-ۿ]+", texte))
-        return "Darija" if mots_arabes & DARIJA_ARABE else "Arabe"
+        darija = mots_arabes & DARIJA_ARABE or any(NEGATION_DARIJA.match(m) for m in mots_arabes)
+        return "Darija" if darija else "Arabe"
     # Écriture latine : la voix marocaine lit mal le darija en lettres latines (3lik, l7sab) ; on choisit la voix
     # française, anglaise ou espagnole qui lit le mieux le texte
     mots = _re.findall(r"[a-zà-ÿ0-9']+", texte.lower())
