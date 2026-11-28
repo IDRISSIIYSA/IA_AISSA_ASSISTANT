@@ -1415,4 +1415,7 @@ def test_voix_marocaine_pour_le_darija_en_ecriture_arabe():
                      "الضريبة على القيمة المضافة في المغرب", "ماذا تريد أن تعرف عن الخدمة؟", "سير العمل جيد"):
         assert detecter_langue(standard) == "Arabe", standard
     reconnues = sum(detecter_langue(a) == "Darija" for a in ECRITURE_ARABE.values())
-    assert reconnues >= 27, reconnues                       # les phrases de l'atelier de prononciation
+    assert reconnues >= 29, reconnues                       # les phrases de l'atelier de prononciation
+    # « ف + ال » collés devant un lieu ou un moment : darija ; ailleurs, « فال… » reste de l'arabe standard
+    assert detecter_langue("السلعة فالبور") == detecter_langue("كنت فالدار") == "Darija"
+    assert detecter_langue("فالحل هو الحوار") == detecter_langue("فالضريبة تحسب على الدخل") == "Arabe"

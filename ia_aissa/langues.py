@@ -176,6 +176,11 @@ DARIJA_ARABE = {
     # personnes et choses du quotidien
     "خويا", "ختي", "الدراري", "عافاك", "صيفط", "صيفطي",
 }
+# « ف + ال » collés (فالوقت، فالبور، فالدار…) : en darija, « dans le / à la » devant un lieu ou un moment. Seulement
+# devant ces noms-là : en arabe standard, « فال… » se lit aussi « fa-l… » (« donc le… », comme فالحل).
+LIEUX_ET_MOMENTS = ("وقت", "بور", "دار", "ديور", "مغرب", "صباح", "عشية", "ليل", "خدمة", "سوق", "بنك", "إدارة", "ادارة",
+                    "مكتب", "طريق", "مدينة", "بلاد", "شهر", "عام", "سيمانة", "كار", "طوموبيل", "حانوت", "قهوة")
+FI_AL_DARIJA = _re.compile(r"^فال(?:" + "|".join(LIEUX_ET_MOMENTS) + r")$")
 # La négation du darija « ما…ش » en un seul mot : ماعرفتش، ماكاينش، مافهمتش… (écrite en deux mots, « ما خلصش », elle
 # n'est pas retenue : « ما يعيش » est aussi de l'arabe standard)
 NEGATION_DARIJA = _re.compile(r"^ما[؀-ۿ]{2,}ش$")
@@ -190,7 +195,8 @@ def detecter_langue(texte, defaut="Français"):
     nb_arabe, nb_latin = len(ARABE.findall(texte)), len(LATIN.findall(texte))
     if nb_arabe > nb_latin:
         mots_arabes = set(_re.findall(r"[؀-ۿ]+", texte))
-        darija = mots_arabes & DARIJA_ARABE or any(NEGATION_DARIJA.match(m) for m in mots_arabes)
+        darija = (mots_arabes & DARIJA_ARABE or any(NEGATION_DARIJA.match(m) or FI_AL_DARIJA.match(m)
+                                                    for m in mots_arabes))
         return "Darija" if darija else "Arabe"
     # Écriture latine : la voix marocaine lit mal le darija en lettres latines (3lik, l7sab) ; on choisit la voix
     # française, anglaise ou espagnole qui lit le mieux le texte
