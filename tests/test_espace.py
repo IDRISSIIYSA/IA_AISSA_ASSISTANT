@@ -996,7 +996,11 @@ def test_voix_reponse_mixte_phrase_par_phrase(monkeypatch):
     monkeypatch.setattr(I, "_PANNE_VOIX", {"echecs": 0, "jusqu_a": 0.0})
     I._VOIX_GARDEES.clear()
     audio = I._dire_mixte("La TVA est de 20 %. The standard VAT rate in Morocco is 20 percent.", "Français")
-    assert audio == b"<Fran\xc3\xa7ais><English>" and {l for l, _ in dites} == {"Français", "English"}
+    from ia_aissa.parole import SILENCE_MP3
+    assert audio == b"<Fran\xc3\xa7ais>" + SILENCE_MP3 + b"<English>" and {l for l, _ in dites} == {"Français",
+                                                                                                  "English"}
+    # silence : ~0,3 s de trames MP3 au format des voix edge-tts (24 kHz, mono), sans en-tête ID3
+    assert SILENCE_MP3[:2] == b"\xff\xf3" and SILENCE_MP3[2] >> 4 == 6 and 1_500 < len(SILENCE_MP3) < 3_000
     dites.clear()
     I._VOIX_GARDEES.clear()
     monkeypatch.setattr(I, "synthetiser", lambda t, l: None if l == "English" else dites.append((l, t)) or b"<fr>")

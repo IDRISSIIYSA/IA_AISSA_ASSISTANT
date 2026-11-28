@@ -282,7 +282,8 @@ def _dire_mixte(texte, langue, attente=ATTENTE_VOIX_S, ecriture_arabe=None):
         with ThreadPoolExecutor(len(segments)) as fabrique:
             audios = list(fabrique.map(lambda s: _dire(s[1], s[0], attente), segments))
         if all(audios):
-            return b"".join(audios)
+            from .parole import SILENCE_MP3
+            return SILENCE_MP3.join(audios)          # une courte pause au changement de langue (donc de voix)
     return _dire(partie_dans_la_langue(texte, langue), langue, attente)
 
 
